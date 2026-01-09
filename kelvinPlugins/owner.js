@@ -57,7 +57,25 @@ module.exports = [
             }
         }
     },
+    {
+        command: ['private'],
+        operate: async ({ kelvin, m, reply, botNumber, getSetting, Access, mess }) => {
+            if (!Access) return reply(global.mess.owner);
+            
+            kelvin.public = false;
+            reply(`*${getSetting(botNumber, 'botname', 'Vesper-Xmd')} successfully changed to private mode*.`);
+        }
+    },
     
+    {
+        command: ['public'],
+        operate: async ({ kelvin, m, reply, botNumber, getSetting, Access, mess }) => {
+            if (!Access) return reply(global.mess.owner);
+            
+            kelvin.public = true;
+            reply(`*${getSetting(botNumber, 'botname', 'Vesper-Xmd')} successfully changed to public mode*.`);
+        }
+    },   
     {
         command: ['toviewonce', 'tovo', 'tovv', 'vv'],
         operate: async ({ kelvin, m, reply, quoted, mime, Access, mess }) => {
