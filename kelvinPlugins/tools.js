@@ -1,0 +1,951 @@
+const moment = require('moment-timezone');
+const {translate} = require('@vitalets/google-translate-api')
+const googleTTS = require('google-tts-api')
+const PDFDocument = require('pdfkit')
+const fs = require('fs');
+const fetch = require("node-fetch")
+const { exec } = require('child_process');
+const timezones = global.timezones || "Africa/Kampala"; // Default to Uganda timezone
+const {styletext, remind, Wikimedia, wallpaper} = require('../start/lib/scraper')
+const { takeCommand } = require('../start/kelvinCmds/commands');
+const { obfuscateJS } = require("../start/lib/encapsulation");
+
+module.exports = [
+    {
+        command: ['time'],
+        operate: async ({ kelvin, m, reply, text, prefix, global }) => {
+            try {
+                let countryName = text.trim();
+                
+                if (!countryName) {
+                    // If no country provided, show current bot time
+                    const now = moment().tz(global.timezones || "Africa/Kampala");
+                    const timeInfo = `
+     *Current Bot Time* 
+    
+    🌍 *Timezone:* ${now.format('z (Z)')}
+    📅 *Date:* ${now.format('dddd, MMMM Do YYYY')}
+    🕒 *Time:* ${now.format('h:mm:ss A')}
+    📆 *Week Number:* ${now.format('WW')}
+    ⏳ *Day of Year:* ${now.format('DDD')}
+    
+    *Usage:* ${prefix}time [country name]
+    *Example:* ${prefix}time Japan
+                    `.trim();
+
+                    return await kelvin.sendMessage(m.chat, { 
+                        text: `${global.wm || ''}\n\n${timeInfo}`
+                    }, { quoted: m });
+                }
+
+                // Get timezone for the country
+                const timezones = moment.tz.zonesForCountry(countryName);
+                
+                if (!timezones || timezones.length === 0) {
+                    return reply(`❌ *Country not found!*\nPlease provide a valid country name.\n\nExample: ${prefix}time Japan`);
+                }
+
+                // Use the first timezone for that country
+                const primaryTimezone = timezones[0];
+                const now = moment().tz(primaryTimezone);
+                
+                const timeInfo = `
+    ⏰ *Time in ${countryName.toUpperCase()}* ⏰
+    
+    🌍 *Timezone:* ${primaryTimezone} (${now.format('Z')})
+    📅 *Date:* ${now.format('dddd, MMMM Do YYYY')}
+    🕒 *Time:* ${now.format('h:mm:ss A')}
+    🕛 *24-hour format:* ${now.format('HH:mm:ss')}
+    📆 *Week Number:* ${now.format('WW')}
+    ⏳ *Day of Year:* ${now.format('DDD')}
+    
+    *Other timezones in ${countryName}:* ${timezones.slice(0, 5).join(', ')}${timezones.length > 5 ? '...' : ''}
+                `.trim();
+
+                await kelvin.sendMessage(m.chat, { text: timeInfo }, { quoted: m });
+
+            } catch (error) {
+                console.error('Error in time command:', error);
+                reply('❌ *Unable to fetch time information.*\nPlease try a different country name or try again later.');
+            }
+        }
+    },
+    {
+        command: ['calculate', 'calc', 'math'],
+        operate: async ({ reply, text, prefix }) => {
+            try {
+                if (!text) return reply(`📝 *Examples:*\n${prefix}calc 5 + 3\n${prefix}calc 10% of 200\n${prefix}calc 2^3\n${prefix}calc sqrt(16)`);
+
+                // Clean and prepare the expression
+                const expr = text
+                    .replace(/×/g, '*')
+                    .replace(/÷/g, '/')
+                    .replace(/π/g, Math.PI.toString())
+                    .replace(/\^/g, '**')
+                    .replace(/sqrt\(/g, 'Math.sqrt(')
+                    .replace(/sin\(/g, 'Math.sin(')
+                    .replace(/cos\(/g, 'Math.cos(')
+                    .replace(/tan\(/g, 'Math.tan(')
+                    .replace(/log\(/g, 'Math.log10(')
+                    .replace(/ln\(/g, 'Math.log(')
+                    .replace(/abs\(/g, 'Math.abs(')
+                    .replace(/%/g, '/100')
+                    .replace(/deg/g, 'deg')
+                    .replace(/,/g, ';')
+                    .trim();
+
+                // Validate expression for safety
+                const safeRegex = /^[0-9+\-*/().\s\^%πesincoqrtanlgabMh\s]+$/i;
+                if (!safeRegex.test(expr)) {
+                    return reply('❌ *Invalid characters in expression.*\nOnly numbers, basic operators, and math functions are allowed.');
+                }
+
+                let result;
+                
+                // Handle percentage calculations
+                if (text.includes('%')) {
+                    const percentMatch = text.match(/(\d+(?:\.\d+)?)%\s*(of)?\s*(\d+(?:\.\d+)?)/i);
+                    if (percentMatch) {
+                        const percent = parseFloat(percentMatch[1]);
+                        const number = parseFloat(percentMatch[3]);
+                        result = (percent / 100) * number;
+                    }
+                }
+                
+                // Handle unit conversions (optional - you can remove if not needed)
+                const convertUnits = (value, fromUnit, toUnit) => {
+                    const conversions = {
+                        // Length
+                        'cm': { 'm': 0.01, 'km': 0.00001, 'inch': 0.393701, 'ft': 0.0328084 },
+                        'm': { 'cm': 100, 'km': 0.001, 'inch': 39.3701, 'ft': 3.28084 },
+                        'km': { 'm': 1000, 'cm': 100000, 'mile': 0.621371 },
+                        // Temperature (requires special handling)
+                        'c': { 'f': (c) => (c * 9/5) + 32, 'k': (c) => c + 273.15 },
+                        'f': { 'c': (f) => (f - 32) * 5/9, 'k': (f) => (f - 32) * 5/9 + 273.15 },
+                        // Weight
+                        'kg': { 'g': 1000, 'lb': 2.20462 },
+                        'g': { 'kg': 0.001, 'lb': 0.00220462 },
+                    };
+                    
+                    if (fromUnit === toUnit) return value;
+                    
+                    if (['c', 'f'].includes(fromUnit)) {
+                        const tempFunc = conversions[fromUnit]?.[toUnit];
+                        if (tempFunc) return tempFunc(value);
+                    } else {
+                        const rate = conversions[fromUnit]?.[toUnit];
+                        if (rate) return value * rate;
+                    }
+                    
+                    return undefined;
+                };
+                
+                if (text.toLowerCase().includes('to')) {
+                    const conversionMatch = text.match(/(\d+(?:\.\d+)?)\s*(\w+)\s*to\s*(\w+)/i);
+                    if (conversionMatch) {
+                        const value = parseFloat(conversionMatch[1]);
+                        const fromUnit = conversionMatch[2].toLowerCase();
+                        const toUnit = conversionMatch[3].toLowerCase();
+                        
+                        result = convertUnits(value, fromUnit, toUnit);
+                        if (result !== undefined) {
+                            return reply(`*Conversion:* ${value} ${fromUnit} = ${result.toFixed(6).replace(/\.?0+$/, '')} ${toUnit}`);
+                        }
+                    }
+                }
+
+                // Evaluate mathematical expression
+                if (result === undefined) {
+                    try {
+                        // Use Function constructor for safer evaluation
+                        result = Function('"use strict"; return (' + expr + ')')();
+                        
+                        // Check if result is valid
+                        if (typeof result !== 'number' || isNaN(result) || !isFinite(result)) {
+                            throw new Error('Invalid result');
+                        }
+                        
+                    } catch (evalError) {
+                        console.error('Calculation error:', evalError);
+                        return reply('❌ *Could not calculate the expression.*\nPlease check your syntax and try again.');
+                    }
+                }
+
+                // Format the result
+                let formattedResult = result;
+                if (Number.isInteger(result)) {
+                    formattedResult = result.toString();
+                } else {
+                    formattedResult = result.toFixed(6).replace(/\.?0+$/, '');
+                }
+
+                // Create response
+                const calculationResponse = `
+    🧮 *CALCULATION RESULT*
+    
+    *Expression:* ${text}
+    *Result:* ${formattedResult}
+    
+    *Full precision:* ${result}
+                `.trim();
+
+                reply(calculationResponse);
+
+            } catch (error) {
+                console.error('Error in calculate command:', error);
+                reply('❌ *An error occurred during calculation.*\nPlease try a different expression.');
+            }
+        }
+    },
+    {
+        command: ['dev', 'developer', 'owner', 'creator'],
+        operate: async ({ reply, m, kelvin,  }) => {
+            try {
+                const devInfo = {
+                    name: "Kevin Tech",
+                    number: "256742932677",
+                    organization: "Jexploit Development Team",
+                    note: "Bot Developer"
+                };
+
+                const vcard = `BEGIN:VCARD
+    VERSION:3.0
+    FN:${devInfo.name}
+    ORG:${devInfo.organization};
+    TEL;type=CELL;type=VOICE;waid=${devInfo.number}:${devInfo.number}
+    NOTE:${devInfo.note}
+    END:VCARD`;
+
+                // Send contact with caption
+                await kelvin.sendMessage(
+                    m.chat, 
+                    {
+                        contacts: {
+                            displayName: devInfo.name,
+                            contacts: [{
+                                displayName: devInfo.name,
+                                vcard: vcard
+                            }]
+                        },
+                        caption: `👨‍💻 *Developer Contact*\nClick "Share contact" above to save.\n\n📞 *WhatsApp:* wa.me/${devInfo.number}`,
+                        contextInfo: {
+                            mentionedJid: [m.sender]
+                        }
+                    },
+                    { quoted: m }
+                );
+
+            } catch (error) {
+                console.error('Error in dev command:', error);
+                reply("❌ Failed to send developer contact. Please try again.");
+            }
+        }
+    },
+    {
+        command: ['say', 'tts', 'speak'],
+        operate: async ({ reply, m, kelvin, text, args }) => {
+            if (!text) return reply("*Text needed!*\n\nExample: .say Hello world");
+
+            try {
+                // Check if googleTTS module is available
+                if (typeof googleTTS === 'undefined') {
+                    return reply("*TTS module not available.*\nPlease install: npm install google-tts-api");
+                }
+
+                const ttsData = await googleTTS.getAllAudioBase64(text, {
+                    lang: "en",
+                    slow: false,
+                    host: "https://translate.google.com",
+                    timeout: 10000,
+                });
+
+                if (!ttsData.length) return reply("*Failed to generate TTS audio.*");
+
+                const tempFiles = [];
+                for (let i = 0; i < ttsData.length; i++) {
+                    let filePath = `/tmp/tts_part${i}.mp3`;
+                    fs.writeFileSync(filePath, Buffer.from(ttsData[i].base64, "base64"));
+                    tempFiles.push(filePath);
+                }
+
+                let mergedFile = "/tmp/tts_merged.mp3";
+                let ffmpegCommand = `ffmpeg -i "concat:${tempFiles.join('|')}" -acodec copy ${mergedFile}`;
+                
+                exec(ffmpegCommand, async (err) => {
+                    if (err) {
+                        console.error("FFmpeg error:", err);
+                        tempFiles.forEach(file => {
+                            try { fs.unlinkSync(file); } catch (e) {}
+                        });
+                        return reply("*Error merging audio files.*");
+                    }
+
+                    await kelvin.sendMessage(
+                        m.chat,
+                        {
+                            audio: fs.readFileSync(mergedFile),
+                            mimetype: "audio/mp4",
+                            mp3: true,
+                            fileName: "tts_audio.mp3",
+                        },
+                        { quoted: m }
+                    );
+
+                    // Clean up temporary files
+                    tempFiles.forEach(file => {
+                        try { fs.unlinkSync(file); } catch (e) {}
+                    });
+                    try { fs.unlinkSync(mergedFile); } catch (e) {}
+                });
+
+            } catch (error) {
+                console.error("Error in TTS Command:", error);
+                reply("*An error occurred while processing the TTS request.*");
+            }
+        }
+    },
+    {
+        command: ['tinylink', 'shorten', 'shorturl', 'tinyurl'],
+        operate: async ({ reply, prefix, text, axios }) => {
+            if (!text) return reply(`*Example:* ${prefix}shorten https://github.com/Kevintech-hub/Vinic-Xmd-`);
+            
+            // Check if URL is valid
+            if (!text.startsWith('http')) {
+                text = 'https://' + text;
+            }
+            
+            const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+            if (!urlPattern.test(text)) {
+                return reply("*Invalid URL format!*\nPlease provide a valid URL.");
+            }
+            
+            try {
+                const response = await axios.get(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(text)}`);
+                
+                if (response.data && response.data.includes('http')) {
+                    reply(`🔗 *URL Shortened Successfully!*\n\n📌 *Original URL:*\n${text}\n\n✨ *Shortened URL:*\n${response.data}`);
+                } else {
+                    reply("*Failed to shorten URL. Please try again later.*");
+                }
+            } catch (error) {
+                console.error('URL shortening error:', error);
+                reply('*An error occurred while shortening the URL.*\nPlease try again later.');
+            }
+        }
+    },
+    {
+        command: ['vcc', 'vccgen', 'cardgen', 'generatecard'],
+        operate: async ({ reply, fetch, text }) => {
+            try {
+                // Parse arguments for custom type/count
+                let cardType = "MasterCard";
+                let count = 5;
+                
+                if (text) {
+                    const args = text.toLowerCase().split(' ');
+                    if (args.includes('visa')) cardType = "Visa";
+                    if (args.includes('amex') || args.includes('american')) cardType = "American Express";
+                    if (args.includes('discover')) cardType = "Discover";
+                    
+                    const countMatch = text.match(/(\d+)/);
+                    if (countMatch && parseInt(countMatch[1]) > 0 && parseInt(countMatch[1]) <= 20) {
+                        count = parseInt(countMatch[1]);
+                    }
+                }
+
+                const apiUrl = `${global.mess?.siputzx || 'https://api.siputzx.xyz'}/api/tools/vcc-generator?type=${cardType}&count=${count}`;
+
+                const response = await fetch(apiUrl);
+                const result = await response.json();
+
+                if (!result.status || !result.data || result.data.length === 0) {
+                    return reply("❌ *Unable to generate VCCs.*\nThe service might be temporarily unavailable.");
+                }
+
+                let responseMessage = `🎴 *Generated ${cardType} Virtual Credit Cards*\n`;
+                responseMessage += `📊 *Count:* ${count}\n`;
+                responseMessage += `⏰ *Generated at:* ${new Date().toLocaleTimeString()}\n\n`;
+                responseMessage += `⚠️ *Disclaimer:* These are test cards for development purposes only.\n\n`;
+
+                result.data.forEach((card, index) => {
+                    responseMessage += `▰▰▰▰▰▰▰▰▰▰▰▰▰\n`;
+                    responseMessage += `💳 *Card ${index + 1}:*\n`;
+                    responseMessage += `🔢 *Number:* \`${card.cardNumber}\`\n`;
+                    responseMessage += `📅 *Expiry:* ${card.expirationDate}\n`;
+                    responseMessage += `👤 *Holder:* ${card.cardholderName}\n`;
+                    responseMessage += `🔐 *CVV:* \`${card.cvv}\`\n`;
+                });
+
+                responseMessage += `\n▰▰▰▰▰▰▰▰▰▰▰▰▰\n`;
+                responseMessage += `*Note:* These cards are not valid for real transactions.`;
+
+                reply(responseMessage);
+
+            } catch (error) {
+                console.error("Error fetching VCC data:", error);
+                reply("❌ *An error occurred while generating VCCs.*\nPlease try again later.");
+            }
+        }
+    },
+    {
+        command: ['qrcode', 'qr'],
+        operate: async ({ reply, m, kelvin, text }) => {
+            if (!text) return reply("Enter text or URL");
+
+            try {
+                let res = await fetch(`https://api.qrserver.com/v1/create-qr-code/?data=${text}&size=200x200`);
+                let qrCodeUrl = res.url;
+
+                await kelvin.sendMessage(m.chat, { 
+                    image: { url: qrCodeUrl },
+                    caption: `QR Code for: ${text}`
+                }, { quoted: m });
+            } catch (error) {
+                console.error('Error generating QR code:', error);
+                reply('An error occurred while generating the QR code.');
+            }
+        }
+    },
+    {
+        command: ['getdevice', 'device'],
+        operate: async ({ reply, m, text, getDevice }) => {
+            if (!m.quoted) {
+                return reply('*Please quote a message to use this command!*');
+            }
+            
+            console.log('Quoted Message:', m.quoted);
+            console.log('Quoted Key:', m.quoted?.key);
+
+            try {
+                const quotedMsg = await m.getQuotedMessage();
+
+                if (!quotedMsg) {
+                    return reply('*Could not detect, please try with newly sent message!*');
+                }
+
+                const messageId = quotedMsg.key.id;
+
+                const device = getDevice(messageId) || 'Unknown';
+
+                reply(`The message is sent from *${device}* device.`);
+            } catch (err) {
+                console.error('Error determining device:', err);
+                reply('Error determining device: ' + err.message);
+            }
+        }
+    },
+    {
+        command: ['browse', 'fetch'],
+        operate: async ({ reply, m, kelvin, text, fetch }) => {
+            if (!text) return reply("Enter URL");
+
+            try {
+                let res = await fetch(text);
+
+                if (res.headers.get('Content-Type').includes('application/json')) {
+                    let json = await res.json();
+                    await kelvin.sendMessage(m.chat, { 
+                        text: JSON.stringify(json, null, 2) 
+                    }, { quoted: m });
+                } else {
+                    let resText = await res.text();
+                    await kelvin.sendMessage(m.chat, { 
+                        text: resText 
+                    }, { quoted: m });
+                }
+
+                if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+            } catch (error) {
+                reply(`Error fetching URL: ${error.message}`);
+            }
+        }
+    },
+    {
+        command: ['filtervcf', 'cleanvcf'],
+        operate: async ({ reply, m, kelvin, text }) => {
+            const quoted = m.quoted ? m.quoted : null;
+            const mime = quoted?.mimetype || "";
+            const normalizePhoneNumber = (phone) => {
+                if (!phone || typeof phone !== 'string') return null;
+                return phone.replace(/\D/g, '');
+            };
+
+            if (!quoted || !(mime === "text/vcard" || mime === "text/x-vcard")) {
+                return kelvin.sendMessage(m.chat, { 
+                    text: "❌ *Error:* Reply to a `.vcf` file with `.filtervcf` or `.cleanvcf`!" 
+                }, { quoted: m });
+            }
+
+            try {
+                const media = await quoted.download();
+                const vcfContent = media.toString('utf8');
+                
+                await kelvin.sendMessage(m.chat, { 
+                    text: "🔍 Filtering VCF - checking WhatsApp numbers, this may take a while..." 
+                }, { quoted: m });
+
+                const vCards = vcfContent.split('END:VCARD')
+                    .map(card => card.trim())
+                    .filter(card => card.length > 0);
+
+                const validContacts = [];
+                const invalidContacts = [];
+                let processed = 0;
+
+                for (const card of vCards) {
+                    try {
+                        const telMatch = card.match(/TEL[^:]*:([^\n]+)/);
+                        if (!telMatch) continue;
+                        
+                        const phoneRaw = telMatch[1].trim();
+                        const phoneNumber = normalizePhoneNumber(phoneRaw);
+                        if (!phoneNumber) continue;
+
+                        const jid = `${phoneNumber}@s.whatsapp.net`;
+                        const result = await kelvin.onWhatsApp(jid);
+                        
+                        if (result.length > 0 && result[0].exists) {
+                            validContacts.push(card);
+                        } else {
+                            invalidContacts.push(phoneNumber);
+                        }
+                    } catch (error) {
+                        console.error('Error processing contact:', error);
+                    }
+                }
+
+                const filteredVcf = validContacts.join('\nEND:VCARD\n') + (validContacts.length > 0 ? '\nEND:VCARD' : '');
+                
+                const resultMessage = `✅ *VCF Filtering Complete*\n\n` +
+                    `• Total contacts: ${vCards.length}\n` +
+                    `• Valid WhatsApp contacts: ${validContacts.length}\n` +
+                    `• Non-WhatsApp numbers removed: ${invalidContacts.length}\n\n` +
+                    `Sending filtered VCF file...`;
+
+                await kelvin.sendMessage(m.chat, { text: resultMessage }, { quoted: m });
+
+                await kelvin.sendMessage(m.chat, { 
+                    document: Buffer.from(filteredVcf), 
+                    mimetype: "text/x-vcard", 
+                    fileName: "filtered_contacts.vcf" 
+                });
+
+            } catch (error) {
+                await kelvin.sendMessage(m.chat, { 
+                    text: `❌ *Error:* ${error.message}` 
+                }, { quoted: m });
+            }
+        }
+    },
+    {
+        command: ['removebg', 'nobg', 'rmbg'],
+        operate: async ({ reply, m, kelvin, text, prefix, fetch, getBuffer }) => {
+            if (!text && !(m.quoted && (m.quoted.mtype === 'imageMessage' || m.quoted.mtype === 'stickerMessage'))) {
+                return reply(`Usage: ${prefix}removebg <image_url> or reply to an image with ${prefix}removebg`);
+            }
+            
+            try {
+                await kelvin.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
+                
+                let imageUrl = text ? text.trim() : '';
+                
+                // Handle quoted image
+                if (m.quoted && (m.quoted.mtype === 'imageMessage' || m.quoted.mtype === 'stickerMessage')) {
+                    try {
+                        const media = await m.quoted.download();
+                        // Convert to base64 and upload to Telegra.ph
+                        const base64Image = media.toString('base64');
+                        const telegraphResponse = await fetch('https://telegra.ph/upload', {
+                            method: 'POST',
+                            body: JSON.stringify({ data: base64Image }),
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        
+                        const telegraphData = await telegraphResponse.json();
+                        if (telegraphData[0] && telegraphData[0].src) {
+                            imageUrl = 'https://telegra.ph' + telegraphData[0].src;
+                        } else {
+                            throw new Error('Telegra.ph upload failed');
+                        }
+                    } catch (uploadError) {
+                        console.error('Upload error:', uploadError);
+                        return reply('❌ Failed to upload image. Please provide a direct image URL instead.');
+                    }
+                }
+                
+                // Validate URL
+                if (!imageUrl.startsWith('http')) {
+                    return reply('❌ Please provide a valid image URL');
+                }
+                
+                const apiUrl = `https://api.giftedtech.co.ke/api/tools/removebg?apikey=gifted&url=${encodeURIComponent(imageUrl)}`;
+                
+                console.log('Processing image:', imageUrl);
+                
+                const response = await fetch(apiUrl);
+                const apiData = await response.json();
+                
+                if (!apiData.success || !apiData.result?.image_url) {
+                    return reply('❌ Background removal failed. Make sure the image URL is accessible.');
+                }
+
+                const result = apiData.result;
+                const imageBuffer = await getBuffer(result.image_url);
+                
+                await kelvin.sendMessage(m.chat, {
+                    image: imageBuffer,
+                    caption: `✅ *Background Removed*\n\n📁 Size: ${result.size || 'N/A'}\n👤 By: ${m.pushname || 'User'}`,
+                    mentions: [m.sender]
+                }, { quoted: m });
+
+                await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
+                
+            } catch (error) {
+                console.error('RemoveBG Error:', error);
+                await kelvin.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
+                reply(`❌ Error: ${error.message}`);
+            }
+        }
+    },
+    {
+        command: ['styletext', 'fancytext', 'stylish'],
+        operate: async ({ reply, text }) => {
+            if (!text) return reply('*Enter a text!*');
+            
+            try {
+                let anu = await styletext(text);
+                let teks = `*Styles for "${text}"*\n\n`;
+                
+                for (let i of anu) {
+                    teks += `▢ *${i.name}* : ${i.result}\n\n`;
+                }
+                
+                reply(teks);
+            } catch (error) {
+                console.error(error);
+                reply('*An error occurred while fetching fancy text styles.*');
+            }
+        }
+},
+{
+    command: ['sswebtab', 'sstab'],
+    operate: async ({ reply, m, kelvin, text }) => {
+        const q = text.trim();
+        if (!q) return reply(`Please provide a URL to screenshot!`);
+        
+        const apiURL = `https://api.tioo.eu.org/sstab?url=${q}`;
+        
+        try {
+            await kelvin.sendMessage(m.chat, { 
+                image: { url: apiURL },
+                caption: `Screenshot of: ${q}`
+            }, { quoted: m });
+        } catch (error) {
+            console.error('Error generating screenshot:', error);
+            reply("An error occurred while taking the screenshot.");
+        }
+    }
+},
+{
+    command: ['ss2', 'ssmobile'],
+    operate: async ({ reply, m, kelvin, text }) => {
+        const q = text.trim();
+        if (!q) return reply(`Please provide a URL to screenshot!`);
+        
+        const apiURL = `${global.mess?.siputzx || 'https://api.siputzx.xyz'}/api/tools/ssweb?url=${q}&theme=light&device=mobile`;
+        
+        try {
+            await kelvin.sendMessage(m.chat, { 
+                image: { url: apiURL },
+                caption: `Mobile Screenshot of: ${q}`
+            }, { quoted: m });
+        } catch (error) {
+            console.error('Error generating screenshot:', error);
+            reply("An error occurred while generating the mobile screenshot.");
+        }
+    }
+},
+{
+    command: ['ss', 'screenshot'],
+    operate: async ({ reply, m, kelvin, args, text }) => {
+        try {
+            const url = text.trim();
+            if (!url) return reply("❌ Please provide a URL\nExample: .ss https://google.com");
+            if (!url.startsWith("http")) return reply("❌ URL must start with http:// or https://");
+
+            // Send initial loading message
+            const loadingMsg = await kelvin.sendMessage(m.chat, {
+                text: "🔄 Starting screenshot capture...\n✦ Please wait..."
+            }, { quoted: m });
+
+            try {
+                // Send the screenshot
+                await kelvin.sendMessage(m.chat, {
+                    image: { url: `https://image.thum.io/get/fullpage/${url}` },
+                    caption: `- 🖼️ *Screenshot Generated*\n\n` +
+                            `📸 *URL:* ${url}\n` +
+                            `> ᴘᴏᴡᴇʀᴇᴅ ʙʏ ${global.botname || 'Jexploit'} 💪 💜`
+                }, { quoted: m });
+
+                // Update loading message to success
+                await kelvin.relayMessage(m.chat, {
+                    protocolMessage: {
+                        key: loadingMsg.key,
+                        type: 14,
+                        editedMessage: {
+                            conversation: "✅ Screenshot successfully captured and sent!"
+                        }
+                    }
+                }, {});
+
+            } catch (captureError) {
+                // Update loading message to error
+                await kelvin.relayMessage(m.chat, {
+                    protocolMessage: {
+                        key: loadingMsg.key,
+                        type: 14,
+                        editedMessage: {
+                            conversation: "❌ Failed to capture screenshot\n✦ Please try again later"
+                        }
+                    }
+                }, {});
+                throw captureError;
+            }
+
+        } catch (error) {
+            console.error("Screenshot error:", error);
+            reply("❌ Failed to capture screenshot\n✦ Please try again later or try a different URL");
+        }
+    }
+},
+{
+    command: ['sswebpc', 'sspc', 'ssdesktop'],
+    operate: async ({ reply, m, kelvin, text }) => {
+        const q = text.trim();
+        if (!q) return reply(`Please provide a URL to screenshot!`);
+        
+        const apiURL = `${global.mess?.siputzx || 'https://api.siputzx.xyz'}/api/tools/ssweb?url=${q}&theme=light&device=tablet`;
+        
+        try {
+            await kelvin.sendMessage(m.chat, { 
+                image: { url: apiURL },
+                caption: `💻 Desktop Screenshot of: ${q}`
+            }, { quoted: m });
+        } catch (error) {
+            console.error('Error generating screenshot:', error);
+            reply("An error occurred while taking the desktop screenshot.");
+        }
+    }
+},
+{
+        command: ['take', 'copysticker', 'stealsticker'],
+        operate: async ({ kelvin, m, reply, args, text }) => {
+            await takeCommand(kelvin, m.chat, m, args);
+        }
+},
+{
+    command: ['obfuscate'],
+    operate: async ({ reply, m, kelvin }) => {
+        // Directory creation code
+        const tmpDir = './tmp';
+        if (!fs.existsSync(tmpDir)) {
+            fs.mkdirSync(tmpDir, { recursive: true });
+        }
+        
+        const quoted = m.quoted ? m.quoted : null;
+        const mime = quoted?.mimetype || "";
+
+        if (!quoted || mime !== "application/javascript") {
+            return kelvin.sendMessage(m.chat, { 
+                text: "❌ *Error:* Reply to a `.js` file with `.obfuscate`!" 
+            }, { quoted: m });
+        }
+        
+        try {
+            const media = await quoted.download();
+            const tempFile = `./tmp/original-${Date.now()}.js`;
+            await fs.promises.writeFile(tempFile, media);
+
+            kelvin.sendMessage(m.chat, { 
+                text: "🔒 Obfuscation started..." 
+            }, { quoted: m });
+
+            const obfuscatedFile = await obfuscateJS(tempFile);
+
+            await kelvin.sendMessage(m.chat, { 
+                text: "✅ Obfuscation complete! Sending file..." 
+            }, { quoted: m }); 
+            
+            await kelvin.sendMessage(m.chat, { 
+                document: fs.readFileSync(obfuscatedFile), 
+                mimetype: "text/javascript", 
+                fileName: "obfuscated.js" 
+            });
+
+            await fs.promises.unlink(tempFile);
+            await fs.promises.unlink(obfuscatedFile);
+            
+        } catch (error) {
+            kelvin.sendMessage(m.chat, { 
+                text: `❌ *Error:* ${error.message}` 
+            }, { quoted: m });
+        }
+    }
+},
+{
+    command: ['obfuscate2', 'obfus', 'encrypt'],
+    operate: async ({ reply, m, kelvin, text, prefix }) => {
+        if (!text) return reply(`*Usage:* ${prefix}obfuscate <code>\n*Example:* ${prefix}obfuscate console.log("Hello World")`);
+        
+        try {
+            // Send loading reaction
+            await kelvin.sendMessage(m.chat, {
+                react: {
+                    text: "⏳",
+                    key: m.key
+                }
+            });
+
+            // Encode the code for the URL
+            const encodedCode = encodeURIComponent(text);
+            
+            // API endpoint
+            const apiUrl = `https://api.giftedtech.co.ke/api/tools/encryptv2?apikey=gifted&code=${encodedCode}`;
+            
+            console.log("Obfuscate: Making API request to:", apiUrl);
+            
+            // Fetch the obfuscated code
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+            
+            console.log("Obfuscate: API Response:", JSON.stringify(data, null, 2));
+            
+            let obfuscatedCode = '';
+            
+            // Handle different response formats
+            if (data && typeof data === 'object') {
+                if (data.result && typeof data.result === 'string') {
+                    obfuscatedCode = data.result;
+                } else if (data.encrypted && typeof data.encrypted === 'string') {
+                    obfuscatedCode = data.encrypted;
+                } else if (data.code && typeof data.code === 'string') {
+                    obfuscatedCode = data.code;
+                } else if (data.data && typeof data.data === 'string') {
+                    obfuscatedCode = data.data;
+                } else if (data.message && typeof data.message === 'string') {
+                    obfuscatedCode = data.message;
+                } else {
+                    // If we get an object but can't find the string, try to stringify it
+                    obfuscatedCode = JSON.stringify(data, null, 2);
+                    console.warn("Obfuscate: Unexpected response format, using JSON stringify");
+                }
+            } else if (typeof data === 'string') {
+                obfuscatedCode = data;
+            } else {
+                throw new Error('Unexpected response format from API');
+            }
+            
+            // Validate that we actually got obfuscated code
+            if (!obfuscatedCode || obfuscatedCode.trim() === '') {
+                throw new Error('API returned empty result');
+            }
+            
+            // Success reaction
+            await kelvin.sendMessage(m.chat, {
+                react: {
+                    text: "✅",
+                    key: m.key
+                }
+            });
+            
+            // Truncate long code for display
+            const displayOriginal = text.length > 500 ? text.substring(0, 500) + '...' : text;
+            const displayObfuscated = obfuscatedCode.length > 1500 ? obfuscatedCode.substring(0, 1500) + '...' : obfuscatedCode;
+            
+            // Send the obfuscated code
+            await kelvin.sendMessage(m.chat, {
+                text: `*🔒 OBFUSCATED CODE*\n\n*Original Code:*\n\`\`\`javascript\n${displayOriginal}\n\`\`\`\n\n*Obfuscated Code:*\n\`\`\`javascript\n${displayObfuscated}\n\`\`\`\n\n*📝 Note:* Code has been obfuscated successfully!`,
+                contextInfo: {
+                    mentionedJid: [m.sender],
+                    externalAdReply: {
+                        title: "🔒 Code Obfuscator",
+                        body: "Powered by GiftedTech API",
+                        thumbnail: global.peler || null,
+                        sourceUrl: 'https://api.giftedtech.co.ke'
+                    }
+                }
+            }, { quoted: m });
+            
+        } catch (error) {
+            console.error('Obfuscate Error:', error);
+            
+            // Error reaction
+            await kelvin.sendMessage(m.chat, {
+                react: {
+                    text: "❌",
+                    key: m.key
+                }
+            });
+            
+            reply(`❌ *Failed to obfuscate code!*\nError: ${error.message}\n\nPlease try again with different code or try later.`);
+        }
+    }
+},
+{
+        command: ['smartphone', 'gsmarena'],
+        operate: async ({ reply, text, fetch, mess }) => {
+            if (!text) return reply("*Please provide a query to search for smartphones.*");
+
+            try {
+                const apiUrl = `${global.mess.siputzx}/api/s/gsmarena?query=${encodeURIComponent(text)}`;
+                const response = await fetch(apiUrl);
+                const result = await response.json();
+
+                if (!result.status || !result.data || result.data.length === 0) {
+                    return reply("*No results found. Please try another query.*");
+                }
+
+                const limitedResults = result.data.slice(0, 10);
+                let responseMessage = `*📱 Top 10 Smartphone Results for "${text}":*\n\n`;
+
+                for (let item of limitedResults) {
+                    responseMessage += `📱 *Name:* ${item.name}\n`;
+                    responseMessage += `📝 *Description:* ${item.description}\n`;
+                    responseMessage += `🌐 [View Image](${item.thumbnail})\n\n`;
+                }
+
+                reply(responseMessage);
+            } catch (error) {
+                console.error('Error fetching results from GSMArena API:', error);
+                reply("❌ An error occurred while fetching results from GSMArena.");
+            }
+        }
+    },
+    {
+    command: ['cekidch', 'idch'],
+    operate: async ({ kelvin, m, reply, text }) => {
+        if (!text) return reply("*Please provide a WhatsApp channel link*");
+        if (!text.includes("https://whatsapp.com/channel/")) return reply("*Invalid channel link*");
+        
+        try {
+            let result = text.split('https://whatsapp.com/channel/')[1];
+            let res = await kelvin.newsletterMetadata("invite", result);
+            
+            let teks = `
+*ID:* ${res.id}
+*Name:* ${res.name}
+*Total followers:* ${res.subscribers}
+*Status:* ${res.state}
+*Verified:* ${res.verification == "VERIFIED" ? "✅ Verified" : "❌ Not Verified"}
+`;
+            
+            return reply(teks);
+            
+        } catch (error) {
+            console.error('Error fetching channel info:', error);
+            return reply("*Failed to fetch channel information. Please check the link and try again.*");
+        }
+    }
+}
+
+]
