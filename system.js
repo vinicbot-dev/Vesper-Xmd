@@ -75,6 +75,27 @@ const { handleAutoRecording } = require('./start/kelvinCmds/autorecord');
 const { handleAutoTyping } = require('./start/kelvinCmds/autotyping');
 const { handleAIChatbot } = require('./start/kelvinCmds/chatbot');
 
+
+// Menu Images - KelvinTech Style
+let kelvinkid1, kelvinkid2, kelvinkid3, kelvinkid4, kelvinkid5;
+
+try {
+    // Create directory if it doesn't exist
+    const imagesDir = "./start/lib/Media/Images";
+    if (!fs.existsSync(imagesDir)) {
+        fs.mkdirSync(imagesDir, { recursive: true });
+        console.log("📁 Created Media/Images directory");
+    }
+    
+    // Load images
+    kelvinkid1 = fs.readFileSync("./start/lib/Media/Images/kelvin1.jpg");
+    kelvinkid2 = fs.readFileSync("./start/lib/Media/Images/kelvin2.jpg");
+    kelvinkid3 = fs.readFileSync("./start/lib/Media/Images/kelvin3.jpg");
+    kelvinkid4 = fs.readFileSync("./start/lib/Media/Images/kelvin4.jpg");
+    kelvinkid5 = fs.readFileSync("./start/lib/Media/Images/kelvin5.jpg");
+} catch (err) {
+    console.log("Menu images not found - use .setmenuimage to add them");
+}
 //Shazam
 const acr = new acrcloud({
     host: 'identify-eu-west-1.acrcloud.com',
@@ -630,22 +651,36 @@ const loadMenuPlugins = (directory) => {
     const endTime = performance.now();
     const latensie = endTime - startTime;
     
-    
-    const ownername = "Your Name";
+    const ownername = getSetting(botNumber, 'ownername', 'Owner');
     const prefixz = prefix;  
     const modeStatus = "online";
-    const versions = "v2.0.0"; 
+    const versions = "v1.0.0"; 
     
-    // Load plugins - adjust the path according to your structure
+    // Load plugins
     const pluginsDir = path.join(__dirname, 'KelvinPlugins'); 
     const plugins = loadMenuPlugins(pluginsDir);
     
     // Generate menu
     const menulist = generateMenu(plugins, ownername, prefixz, modeStatus, versions, latensie, readmore);
     
-    // Send the menu
-    await m.reply(menulist);
-   break 
+    // Get random menu image
+    const menuImages = [kelvinkid1, kelvinkid2, kelvinkid3, kelvinkid4, kelvinkid5];
+    const kelvinkids = menuImages[Math.floor(Math.random() * menuImages.length)];
+    
+    // Send menu
+    if (kelvinkids) {
+        await kelvin.sendMessage(m.chat, {
+            image: kelvinkids,
+            caption: menulist,
+        }, { quoted: m });
+    } else {
+        // Fallback
+        await kelvin.sendMessage(m.chat, {
+            image: { url: "https://i.ibb.co/2W0H9Jq/avatar-contact.png" },
+            caption: menulist,
+        }, { quoted: m });
+    }
+    break;
 }
                 
                 case 'reloadplugins': {
