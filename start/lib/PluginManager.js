@@ -35,7 +35,7 @@ class PluginManager {
                         continue;
                     }
                     
-                    console.log(`📦 Loading ${pluginArray.length} plugins from ${category}...`);
+                    
                     
                     for (const plugin of pluginArray) {
                         if (!plugin.command || !Array.isArray(plugin.command) || plugin.command.length === 0) {
