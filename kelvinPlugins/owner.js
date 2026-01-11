@@ -57,25 +57,68 @@ module.exports = [
             }
         }
     },
-    {
-        command: ['private'],
-        operate: async ({ kelvin, m, reply, botNumber, getSetting, Access, mess }) => {
-            if (!Access) return reply(global.mess.owner);
+{
+    command: ['mode', 'public', 'private'],
+    operate: async ({ kelvin, m, reply, prefix, args, getSetting, updateSetting, Access, botNumber }) => {
+        if (!Access) return reply(global.mess.owner);
+        
+        const subcommand = args[0]?.toLowerCase();
+        
+        if (!subcommand) {
+            const currentMode = kelvin.public ? 'Public 🌍' : 'Private 🔒';
+            const savedMode = getSetting(botNumber, 'mode', 'public');
             
-            kelvin.public = false;
-            reply(`*${getSetting(botNumber, 'botname', 'Vesper-Xmd')} successfully changed to private mode*.`);
+            return reply(`*Bot Mode Settings*
+
+Current: *${currentMode}*
+Saved: ${savedMode}
+
+Usage:
+• ${prefix}mode public - Set bot to PUBLIC mode
+• ${prefix}mode private - Set bot to PRIVATE mode
+• ${prefix}mode status - Check current mode
+
+📌 Changes persist after bot restart`);
         }
-    },
-    
-    {
-        command: ['public'],
-        operate: async ({ kelvin, m, reply, botNumber, getSetting, Access, mess }) => {
-            if (!Access) return reply(global.mess.owner);
+        
+        switch(subcommand) {
+            case 'public': {
+                kelvin.public = true;
+                await updateSetting(botNumber, 'mode', 'public');
+                
+                reply(`Bot set to public mode successfully ✅.`);
+                break;
+            }
             
-            kelvin.public = true;
-            reply(`*${getSetting(botNumber, 'botname', 'Vesper-Xmd')} successfully changed to public mode*.`);
+            case 'private': {
+                kelvin.public = false;
+                await updateSetting(botNumber, 'mode', 'private');
+                
+                reply(`Bot set to private mode successfully✅.`);
+                break;
+            }
+            
+            case 'status': {
+                const currentMode = kelvin.public ? 'Public 🌍' : 'Private 🔒';
+                const savedMode = getSetting(botNumber, 'mode', 'public');
+                
+                reply(`*Bot Mode Status*
+
+• Current Mode: *${currentMode}*
+• Saved Setting: ${savedMode}
+• Effective: ${kelvin.public ? '✅ PUBLIC' : '🔒 PRIVATE'}
+
+Use ${prefix}mode public/private to change`);
+                break;
+            }
+            
+            default: {
+                reply(` Invalid option. Use ${prefix}mode to see options`);
+                break;
+            }
         }
-    },   
+    }
+},
     {
         command: ['toviewonce', 'tovo', 'tovv', 'vv'],
         operate: async ({ kelvin, m, reply, quoted, mime, Access, mess }) => {
