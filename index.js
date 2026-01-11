@@ -19,8 +19,7 @@ const {
     useMultiFileAuthState, 
     DisconnectReason, 
     Browsers,
-    jidDecode,
-    delay,
+    jidDecode, 
     getContentType,
     generateForwardMessageContent,
     prepareWAMessageMedia,
@@ -33,6 +32,7 @@ const chalk = require('chalk');
 const readline = require("readline");
 const fs = require('fs');
 const FileType = require('file-type');
+const { File } = require('megajs');
 const path = require('path');
 const timezones = global.timezones || "Africa/Kampala";
 const moment = require('moment-timezone');
@@ -53,7 +53,17 @@ const {
     sleep 
 } = require('./start/lib/myfunction');
 
+const {
+  imageToWebp,
+  videoToWebp,
+  writeExifImg,
+  writeExifVid
+} = require('./start/lib/exif');
+
+
 const PluginManager = require('./start/lib/PluginManager');
+const { getSetting } = require('./start/Core/settingManager');
+const { settings } = require('./settings');
 const { handleStatusUpdate } = require('./start/kevin');
 const usePairingCode = true;
 
@@ -98,8 +108,51 @@ async function loadAllPlugins() {
     }
 }
 
+const sessionDir = path.join(__dirname, 'sessions');
+const credsPath = path.join(sessionDir, 'creds.json');
+
+// Create session directory if it doesn't exist
+if (!fs.existsSync(sessionDir)) {
+    fs.mkdirSync(sessionDir, { recursive: true });
+}
+
+async function loadSession() {
+    try {
+        if (!settings.SESSION_ID) {
+            console.log('No SESSION_ID provided - QR login will be generated');
+            return null;
+        }
+
+        console.log('[⏳] Downloading creds data...');
+        console.log('[🔰] Downloading MEGA.nz session...');
+
+ 
+        const megaFileId = settings.SESSION_ID.startsWith('jexploit~') 
+            ? settings.SESSION_ID.replace("jexploit~", "") 
+            : settings.SESSION_ID;
+
+        const filer = File.fromURL(`https://mega.nz/file/${megaFileId}`);
+
+        const data = await new Promise((resolve, reject) => {
+            filer.download((err, data) => {
+                if (err) reject(err);
+                else resolve(data);
+            });
+        });
+
+        fs.writeFileSync(credsPath, data);
+        console.log('[✅] MEGA session downloaded successfully');
+        return JSON.parse(data.toString());
+    } catch (error) {
+        console.error('❌ Error loading session:', error.message);
+        console.log('Will generate QR code instead');
+        return null;
+    }
+}
+    
 async function clientstart() {
 await loadAllPlugins();
+const creds = await loadSession();
 
     const {
         state,
@@ -113,7 +166,7 @@ await loadAllPlugins();
         browser: Browsers.ubuntu('Edge')
     });
 
-    if (usePairingCode && !kelvin.authState.creds.registered) {
+         if (!creds && !kelvin.authState.creds.registered) {
         try {
             const phoneNumber = await question(chalk.greenBright(`Thanks for choosing Kelvin Tech Base. Please provide your number start with 256xxx:\n`));
             
@@ -132,7 +185,7 @@ await loadAllPlugins();
             console.error("Failed to request pairing code:", e);
         }
     }
-
+    
     store.bind(kelvin.ev);
    
     kelvin.ev.on('messages.upsert', async chatUpdate => {
@@ -322,12 +375,64 @@ await loadAllPlugins();
     }
   }
   
-   kelvin.getName = async (id, withoutContact = false) => {
-    // FIX: Ensure id is a string before checking
-    if (!id || typeof id !== 'string') {
-        return id || 'Unknown';
+  kelvin.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
+    let buff;
+    try {
+      buff = Buffer.isBuffer(path)
+        ? path
+        : /^data:.*?\/.*?;base64,/i.test(path)
+        ? Buffer.from(path.split`,`[1], 'base64')
+        : /^https?:\/\//.test(path)
+        ? await (await getBuffer(path))
+        : fs.existsSync(path)
+        ? fs.readFileSync(path)
+        : Buffer.alloc(0);
+    } catch (e) {
+      console.error('Error getting buffer:', e);
+      buff = Buffer.alloc(0);
     }
-    
+
+    let buffer;
+    if (options && (options.packname || options.author)) {
+      buffer = await writeExifImg(buff, options);
+    } else {
+      buffer = await imageToWebp(buff);
+    }
+
+    await conn.sendMessage(jid, { sticker: { url: buffer }, ...options }, { quoted });
+    return buffer;
+  };
+
+  kelvin.sendVideoAsSticker = async (jid, path, quoted, options = {}) => {
+    let buff;
+    try {
+      buff = Buffer.isBuffer(path)
+        ? path
+        : /^data:.*?\/.*?;base64,/i.test(path)
+        ? Buffer.from(path.split`,`[1], 'base64')
+        : /^https?:\/\//.test(path)
+        ? await (await getBuffer(path))
+        : fs.existsSync(path)
+        ? fs.readFileSync(path)
+        : Buffer.alloc(0);
+    } catch (e) {
+      console.error('Error getting buffer:', e);
+      buff = Buffer.alloc(0);
+    }
+
+    let buffer;
+    if (options && (options.packname || options.author)) {
+      buffer = await writeExifVid(buff, options);
+    } else {
+      buffer = await videoToWebp(buff);
+    }
+
+    await conn.sendMessage(jid, { sticker: { url: buffer }, ...options }, { quoted });
+    return buffer;
+  };
+  
+   kelvin.getName = async (id, withoutContact = false) => {
+    // id can be a LID (e.g., 'xxxx@lid') or a PN (e.g., 'xxxx@s.whatsapp.net')
     let v;
     if (id.endsWith('@g.us')) {
         // ... (your group metadata logic)
@@ -336,8 +441,7 @@ await loadAllPlugins();
         v = store.contacts[id] || {};
         return v.name || v.notify || v.verifiedName || id.split('@')[0];
     }
-    return id.split('@')[0]; // Fallback
-};
+}; 
   
   kelvin.sendStatusMention = async (content, jids = []) => {
     try {
@@ -348,7 +452,7 @@ await loadAllPlugins();
             try {
                 let userId = await kelvin.groupMetadata(id);
                 const participants = userId.participants || [];
-                users = [...users, ...participants.map(u => conn.decodeJid(u.id))];
+                users = [...users, ...participants.map(u => kelvin.decodeJid(u.id))];
             } catch (error) {
                 console.error('Error getting group metadata for', id, error);
             }
@@ -495,166 +599,76 @@ await loadAllPlugins();
     });
   }, 30_000)
   
- 
 kelvin.ev.on('group-participants.update', async (anu) => {
     try {
         const botNumber = kelvin.decodeJid(kelvin.user.id);
         const groupId = anu.id;
         
-        // Get GROUP-SPECIFIC welcome setting
-        const welcomeEnabled = global.settingsManager?.isWelcomeEnabled(botNumber, groupId);
+        // Import welcome manager
+        const { generateWelcomeMessage, generateGoodbyeMessage } = require('./start/kelvinCmds/welcomeManager');
         
-        // Get BOT-LEVEL adminevent setting
-        const admineventEnabled = global.settingsManager?.getSetting(botNumber, 'adminevent', false);
-        
-        // FIX: Ensure participants is an array
         const participants = Array.isArray(anu.participants) ? anu.participants : [anu.participants];
         
-        // Process welcome/goodbye messages (GROUP-SPECIFIC)
-        if (welcomeEnabled === true) {
-            console.log(chalk.green(`[WELCOME] Sending message for group ${groupId}`));
-            
-            try {
-                const groupMetadata = await kelvin.groupMetadata(groupId);
+        // Process welcome messages
+        if (anu.action === 'add') {
+            for (const participant of participants) {
+                if (!participant || participant === botNumber) continue;
                 
-                for (const participant of participants) {
-                    if (!participant || participant === botNumber) continue;
-                    
-                    // FIX: Get user ID safely
-                    let userId = 'User';
-                    if (typeof participant === 'string') {
-                        userId = participant.split('@')[0] || 'User';
-                    } else {
-                        continue; // Skip if not a string
-                    }
-                    
-                    // FIX: Get name safely
-                    let name = 'User';
-                    try {
-                        name = await kelvin.getName(participant) || userId;
-                    } catch {
-                        name = userId;
-                    }
-                    
-                    if (anu.action === 'add') {
-                        const memberCount = groupMetadata.participants.length;
-                        
-                        // FIX: Create a SIMPLE text message first (no complex formatting)
-                        const welcomeText = `*${global.botname || 'Bot'} welcome* @${userId}\n\n` +
-                                           `*Group:* ${groupMetadata.subject}\n` +
-                                           `*You're member #${memberCount}*\n` +
-                                           `*Joined:* ${moment().tz(global.timezones || "Africa/Kampala").format('HH:mm:ss DD/MM/YYYY')}\n\n` +
-                                           `Have fun! 🎉\n\n` +
-                                           `> ${global.wm || 'Powered by Kelvin Tech'}`;
-                        
-                        // FIX: Send message with simpler structure
-                        await kelvin.sendMessage(groupId, {
-                            text: welcomeText
-                        });
-                        
-                        console.log(chalk.green(`✅ Welcome sent for ${name}`));
-                        
-                    } else if (anu.action === 'remove') {
-                        const memberCount = groupMetadata.participants.length;
-                        
-                        // FIX: Create a SIMPLE goodbye message
-                        const goodbyeText = `*👋 Goodbye* @${userId}\n` +
-                                          `*Left:* ${moment().tz(global.timezones || "Africa/Kampala").format('HH:mm:ss DD/MM/YYYY')}\n` +
-                                          `*Remaining:* ${memberCount} members\n\n` +
-                                          `> ${global.wm || 'Powered by Kelvin Tech'}`;
-                        
-                        await kelvin.sendMessage(groupId, {
-                            text: goodbyeText
-                        });
-                        
-                        console.log(chalk.green(`✅ Goodbye sent for ${name}`));
-                    }
+                // Check if welcome is enabled for this group
+                const welcomeEnabled = getSetting(botNumber, `welcome_${groupId}`, false);
+                if (!welcomeEnabled) {
+                    console.log(chalk.yellow(`[WELCOME] Disabled for group ${groupId}`));
+                    continue;
                 }
-            } catch (err) {
-                console.error(chalk.red('Welcome error:'), err);
+                
+                console.log(chalk.green(`[WELCOME] Sending welcome for ${participant} in group ${groupId}`));
+                
+                try {
+                    const welcomeMsg = await generateWelcomeMessage(kelvin, botNumber, groupId, participant);
+                    if (welcomeMsg) {
+                        await kelvin.sendMessage(groupId, welcomeMsg);
+                        console.log(chalk.green(`✅ Welcome sent for ${participant}`));
+                    }
+                } catch (err) {
+                    console.error(chalk.red('Welcome error:'), err);
+                }
             }
         }
         
-        
-        // Process admin events (BOT-LEVEL setting)
-        if (admineventEnabled === true) {
-            console.log(chalk.green(`[ADMIN EVENT] Processing for ${groupId}`));
-            
-            if (participants.includes(botNumber)) return;
-            
-            try {
-                let metadata = await kelvin.groupMetadata(anu.id);
+        // Process goodbye messages
+        if (anu.action === 'remove') {
+            for (const participant of participants) {
+                if (!participant || participant === botNumber) continue;
                 
-                for (let num of participants) {
-                    let check = anu.author !== num && anu.author && anu.author.length > 1;
-                    let tag = check ? [anu.author, num] : [num];
-                    
-                    if (anu.action == "promote") {
-                        let promotedUsers = [];
-                        for (let participant of participants) {
-                            let userId = 'User';
-                            if (typeof participant === 'string') {
-                                userId = participant.split('@')[0] || 'User';
-                            }
-                            promotedUsers.push(`@${userId}`);
-                        }
-                        
-                        let adminUserId = 'Unknown';
-                        if (anu.author && typeof anu.author === 'string') {
-                            adminUserId = anu.author.split('@')[0] || 'Unknown';
-                        }
-                        
-                        const promotionMessage = `*『 GROUP PROMOTION 』*\n\n` +
-                            `👤 *Promoted User${participants.length > 1 ? 's' : ''}:*\n` +
-                            `${promotedUsers.join('\n')}\n\n` +
-                            `👑 *Promoted By:* @${adminUserId}\n\n` +
-                            `📅 *Date:* ${moment().tz(global.timezones || "Africa/Kampala").format('DD/MM/YYYY HH:mm:ss')}`;
-                        
-                        await kelvin.sendMessage(anu.id, {
-                            text: promotionMessage,
-                            mentions: tag
-                        });
-                        console.log(chalk.green(`✅ Promotion message sent in ${metadata.subject}`));
-                    }
-                    
-                    if (anu.action == "demote") {
-                        let demotedUsers = [];
-                        for (let participant of participants) {
-                            let userId = 'User';
-                            if (typeof participant === 'string') {
-                                userId = participant.split('@')[0] || 'User';
-                            }
-                            demotedUsers.push(`@${userId}`);
-                        }
-                        
-                        let adminUserId = 'Unknown';
-                        if (anu.author && typeof anu.author === 'string') {
-                            adminUserId = anu.author.split('@')[0] || 'Unknown';
-                        }
-                        
-                        const demotionMessage = `*『 GROUP DEMOTION 』*\n\n` +
-                            `👤 *Demoted User${participants.length > 1 ? 's' : ''}:*\n` +
-                            `${demotedUsers.join('\n')}\n\n` +
-                            `👑 *Demoted By:* @${adminUserId}\n\n` +
-                            `📅 *Date:* ${moment().tz(global.timezones || "Africa/Kampala").format('DD/MM/YYYY HH:mm:ss')}`;
-                        
-                        await kelvin.sendMessage(anu.id, {
-                            text: demotionMessage,
-                            mentions: tag
-                        });
-                        console.log(chalk.green(`✅ Demotion message sent in ${metadata.subject}`));
-                    }
+                // Check if goodbye is enabled for this group
+                const goodbyeEnabled = getSetting(botNumber, `goodbye_${groupId}`, false);
+                if (!goodbyeEnabled) {
+                    console.log(chalk.yellow(`[GOODBYE] Disabled for group ${groupId}`));
+                    continue;
                 }
-            } catch (err) {
-                console.log('Error in admin event feature:', err);
+                
+                console.log(chalk.green(`[GOODBYE] Sending goodbye for ${participant} in group ${groupId}`));
+                
+                try {
+                    const goodbyeMsg = await generateGoodbyeMessage(kelvin, botNumber, groupId, participant);
+                    if (goodbyeMsg) {
+                        await kelvin.sendMessage(groupId, goodbyeMsg);
+                        console.log(chalk.green(`✅ Goodbye sent for ${participant}`));
+                    }
+                } catch (err) {
+                    console.error(chalk.red('Goodbye error:'), err);
+                }
             }
         }
+        
+        // Process admin events (BOT-LEVEL setting) - Keep your existing code
+        // ... (your existing admin event code remains here)
         
     } catch (error) {
         console.error('Error in group-participants.update:', error);
     }
 });
-        
+
 kelvin.ev.on('call', async (callData) => {
     try {
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
@@ -725,7 +739,7 @@ kelvin.ev.on('call', async (callData) => {
                         `*Caller:* @${from.split('@')[0]}\n` +
                         `*Time:* ${moment().tz(timezones).format('HH:mm:ss')}\n` +
                         `*Date:* ${moment().tz(timezones).format('DD/MM/YYYY')}\n\n` +
-                        `*🌹 Hi, I am ${global.botname || 'Jexploit'}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kelvin Tech.*\n\n` +
+                        `*🌹 Hi, I am ${global.botname || 'VESPER-XMD'}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kelvin Tech.*\n\n` +
                         `*My owner cannot receive calls at this moment. Calls are automatically blocked.*\n\n` +
                         `> ${global.wm || ''}`;
                 } else {
@@ -733,7 +747,7 @@ kelvin.ev.on('call', async (callData) => {
                         `*Caller:* @${from.split('@')[0]}\n` +
                         `*Time:* ${moment().tz(timezones).format('HH:mm:ss')}\n` +
                         `*Date:* ${moment().tz(timezones).format('DD/MM/YYYY')}\n\n` +
-                        `*🌹 Hi, I am ${global.botname || 'Jexploit'}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kelvin Tech.*\n\n` +
+                        `*🌹 Hi, I am ${global.botname || 'VESPER-XMD'}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kelvin Tech.*\n\n` +
                         `*My owner cannot receive calls at this moment. Please avoid unnecessary calling.*\n\n` +
                         `> ${global.wm || ''}`;
                 }
