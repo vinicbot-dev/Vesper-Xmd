@@ -2,6 +2,8 @@ const { smsg, getBuffer } = require('../start/lib/myfunction');
 const { toAudio } = require('../start/lib/converter');
 const { handleMediaUpload } = require('../start/lib/catbox');
 const fs = require('fs');
+const fetch = require("node-fetch")
+const cheerio = require('cheerio')
 const path = require('path');
 const { exec } = require('child_process');
 
@@ -9,6 +11,38 @@ function getRandom(ext) {
     return `${Math.floor(Math.random() * 10000)}${ext}`;
 }
 
+// function that converts to audio and video====
+async function webp2mp4(source) {
+  let form = new FormData();
+  let isUrl = typeof source === 'string' && /https?:\/\//.test(source);
+  
+  form.append('new-image-url', isUrl ? source : '');
+  form.append('new-image', isUrl ? '' : source, 'image.webp');
+  
+  let res = await fetch('https://ezgif.com/webp-to-mp4', {
+    method: 'POST',
+    body: form
+  });
+  
+  let html = await res.text();
+  let $ = cheerio.load(html);
+  let form2 = new FormData();
+  let obj = {};
+  
+  $('form input[name]').each((_, el) => {
+    obj[$(el).attr('name')] = $(el).val();
+    form2.append($(el).attr('name'), $(el).val());
+  });
+  
+  let res2 = await fetch('https://ezgif.com/webp-to-mp4/' + obj.file, {
+    method: 'POST',
+    body: form2
+  });
+  
+  let html2 = await res2.text();
+  let $2 = cheerio.load(html2);
+  return new URL($2('div#output > p.outfile > video > source').attr('src'), res2.url).toString();
+}
 
 module.exports = [
     {
