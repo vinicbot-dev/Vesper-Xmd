@@ -110,9 +110,9 @@ module.exports = [
 },
 {
     command: ['kickinactive', 'removeinactive'],
-    operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, getActiveUsers, getInactiveUsers, from, prefix }) => {
+    operate: async ({ kelvin, m, reply, isGroup, isAdmin, getActiveUsers, getInactiveUsers, from, prefix }) => {
         if (!isGroup) return reply('*This command can only be used in groups.*');
-        if (!isGroupAdmins) return reply('*You are not a group admin*');
+        if (!isAdmin) return reply(global.mess.notadmin);
 
         try {
             const metadata = await kelvin.groupMetadata(from);
@@ -171,9 +171,9 @@ module.exports = [
 },
 {
     command: ['kickall', 'removeall'],
-    operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, from, prefix }) => {
+    operate: async ({ kelvin, m, reply, isGroup, isAdmin, from, prefix }) => {
         if (!isGroup) return reply('*This command can only be used in groups.*');
-        if (!isGroupAdmins) return reply('*You are not a group admin*');
+        if (!isAdmin) return reply(global.mess.notadmin);
 
         try {
             const metadata = await kelvin.groupMetadata(from);
@@ -280,9 +280,9 @@ module.exports = [
 },
 {
         command: ['tagall'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, participants, text }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, participants, text }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
 
             let me = m.sender;
             let q = text.split(' ').slice(1).join(' ').trim();
@@ -306,9 +306,9 @@ module.exports = [
     },
     {
         command: ['mute', 'close'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin }) => {
             if (!isGroup) return reply('❌ This command can only be used in groups.');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply('*You are not a group admin*');
             
             kelvin.groupSettingUpdate(m.chat, "announcement");
             reply("Group closed by admin. Only admins can send messages.");
@@ -316,9 +316,9 @@ module.exports = [
     },
     {
         command: ['delgrouppp'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, from }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, from }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
             
             await kelvin.removeProfilePicture(from);
             reply("Group profile picture has been successfully removed.");
@@ -326,9 +326,9 @@ module.exports = [
     },
     {
         command: ['setdesc'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, text }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, text }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
             
             if (!text) return reply("*Please enter a text*");
             
@@ -376,9 +376,9 @@ module.exports = [
     },
     {
         command: ['approve'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, getSetting, botNumber }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, getSetting, botNumber }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
 
             const responseList = await kelvin.groupRequestParticipantsList(m.chat);
 
@@ -801,10 +801,10 @@ module.exports = [
     },
     {
         command: ['lockgcsettings', 'lockgc'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, from }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, from }) => {
             try {
                 if (!isGroup) return reply("❌ This command can only be used in groups");
-                if (!isGroupAdmins) return reply('❌ You need to be an admin to use this command.');
+                if (!isAdmin) return reply(global.mess.notadmin);
                 await kelvin.groupSettingUpdate(from, 'locked');
                 reply("🔒 Group settings are now locked (admins only)", {
                     contextInfo: {
@@ -821,10 +821,10 @@ module.exports = [
     },
     {
         command: ['unlockgcsettings', 'unlockgc'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, from }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, from }) => {
             try {
                 if (!isGroup) return reply("❌ This command can only be used in groups");
-                if (!isGroupAdmins) return reply('*You are not a group admin*');
+                if (!isAdmin) return reply(global.mess.notadmin);
                 await kelvin.groupSettingUpdate(from, 'unlocked');
                 reply("🔓 Group settings are now unlocked (all participants)", {
                     contextInfo: {
@@ -841,10 +841,10 @@ module.exports = [
     },
     {
         command: ['adminapproval'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, from }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, from }) => {
             try {
                 if (!isGroup) return reply("❌ This command can only be used in groups");
-                if (!isGroupAdmins) return reply('*You are not a group admin*');
+                if (!isAdmin) return reply(global.mess.notadmin);
                 const groupMetadata = await kelvin.groupMetadata(from);
                 
                 await kelvin.groupSettingUpdate(from, groupMetadata.announce ? 'not_announcement' : 'announcement');
@@ -865,9 +865,9 @@ module.exports = [
     },
     {
         command: ['closetime'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, args }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, args }) => {
             if (!isGroup) return reply('❌ This command can only be used in groups.');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
             
             if (!args[0] || !args[1]) {
                 return reply("*Usage:*\n.closetime [duration] [unit]\n\n*Select unit:*\nseconds\nminutes\nhours\ndays\n\n*Example:*\n10 seconds");
@@ -903,9 +903,9 @@ module.exports = [
     },
     {
         command: ['opentime'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, args }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, args }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
 
             const duration = args[0];
             if (!args[1] || typeof args[1] !== 'string') return reply("*Select unit:*\nseconds\nminutes\nhours\ndays\n\n*Example:*\n10 seconds");
@@ -938,9 +938,9 @@ module.exports = [
     },
     {
         command: ['totalmembers'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, groupMetadata, participants }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, groupMetadata, participants }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
 
             await kelvin.sendMessage(
                 m.chat,
@@ -953,9 +953,9 @@ module.exports = [
     },
     {
         command: ['mediatag'],
-        operate: async ({ kelvin, m, reply, prefix, isGroup, isGroupAdmins, quoted, participants }) => {
+        operate: async ({ kelvin, m, reply, prefix, isGroup, isAdmin, quoted, participants }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
             if (!quoted) return reply(`Reply to any media with caption ${prefix}mediatag`);
 
             kelvin.sendMessage(m.chat, {
@@ -990,9 +990,10 @@ module.exports = [
     },
     {
         command: ['antilink'],
-        operate: async ({ kelvin, m, reply, prefix, args, isGroup, isGroupAdmins, getSetting, updateSetting, botNumber }) => {
+        operate: async ({ kelvin, m, reply, prefix, args, isGroup, isAdmin, isBotAdmin, getSetting, updateSetting, botNumber }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
+            if (!isBotAdmin) return reply (global.mess.botadmin)
             
             const subcommand = args[0]?.toLowerCase();
             const action = args[1]?.toLowerCase();
@@ -1040,9 +1041,9 @@ Current Mode: ${getSetting(botNumber, 'antilinkaction', 'delete')}`);
     },
     {
         command: ['antitag'],
-        operate: async ({ kelvin, m, reply, prefix, args, isGroup, isGroupAdmins, getSetting, updateSetting, botNumber }) => {
+        operate: async ({ kelvin, m, reply, prefix, args, isGroup, isAdmin, getSetting, updateSetting, botNumber }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
             
             const subcommand = args[0]?.toLowerCase();
             const action = args[1]?.toLowerCase();
@@ -1090,10 +1091,10 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     },
     {
         command: ['tagall2'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, participants, from }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, participants, from }) => {
             try {
                 if (!isGroup) return reply("❌ This command can only be used in groups");
-                if (!isGroupAdmins) return reply('❌ You need to be an admin to use this command.');
+                if (!isAdmin) return reply(global.mess.notadmin);
 
                 let message = "📢 *Attention Everyone!* \n\n";
                 const mentions = participants.map(p => p.id);
@@ -1120,7 +1121,7 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     {
         command: ['link', 'linkgc'],
         operate: async ({ kelvin, m, reply, Access, isGroup, global }) => {
-            if (!Access) return reply('*You are not my owner* 😜!');
+            if (!Access) return reply(global.mess.owner);
             if (!isGroup) return reply('*This command can only be used in groups.*');
             
             try {
@@ -1146,18 +1147,18 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     },
     {
         command: ['unmute', 'open'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply('*You are not a group admin*');
             kelvin.groupSettingUpdate(m.chat, "not_announcement");
             reply("Group opened by admin. Members can now send messages.");
         }
     },
     {
         command: ['add'],
-        operate: async ({ kelvin, m, reply, prefix, isGroup, isGroupAdmins, text, quoted }) => {
+        operate: async ({ kelvin, m, reply, prefix, isGroup, isAdmin, text, quoted }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
             if (!text) return reply(`*Please provide phone number with no country code.*\nExample: ${prefix}add 256755585369`);
 
             let bws = quoted
@@ -1169,9 +1170,9 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     },
     {
         command: ['kick'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, text, mentionedJid, quoted }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, text, mentionedJid, quoted }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
 
             let bck = mentionedJid[0]
                 ? mentionedJid[0]
@@ -1184,10 +1185,10 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     },
     {
         command: ['kick2'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, mentionedJid, quoted, from }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, mentionedJid, quoted, from }) => {
             try {
                 if (!isGroup) return reply('*This command can only be used in groups.*');
-                if (!isGroupAdmins) return reply('*You are not a group admin*');
+                if (!isAdmin) return reply(global.mess.notadmin);
             
                 const userId = mentionedJid?.[0] || quoted?.sender;
                 if (!userId) return reply("ℹ️ Please mention or quote the user to kick");
@@ -1248,9 +1249,9 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     },
     {
         command: ['resetlinkgc'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins, from }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin, from }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
 
             kelvin.groupRevokeInvite(from);
             reply("*group link reseted by admin*");
@@ -1258,9 +1259,9 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     },
     {
         command: ['userjid', 'userid'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
             
             const groupMetadata = m.isGroup
                 ? await kelvin.groupMetadata(m.chat).catch((e) => {})
@@ -1277,9 +1278,9 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     },
     {
         command: ['disp90days'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
 
             await kelvin.groupToggleEphemeral(m.chat, 90*24*3600);
             reply('Dissapearing messages successfully turned on for 90 days!');
@@ -1287,9 +1288,9 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     },
     {
         command: ['dispoff'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
 
             await kelvin.groupToggleEphemeral(m.chat, 0);
             reply('Dissapearing messages successfully turned off!');
@@ -1297,9 +1298,9 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     },
     {
         command: ['disp24hours'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isAdmin }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isAdmin) return reply(global.mess.notadmin);
 
             await kelvin.groupToggleEphemeral(m.chat, 1*24*3600);
             reply('Dissapearing messages successfully turned on for 24hrs!');
