@@ -9,13 +9,13 @@
 const fs = require('fs');
 
 global.owner = ["256742932677"];  
-global.modeStatus = "Public";
+global.status = true; // true = public, false = private
 global.versions = "1.4.0";
 
 // ========= Setting WM ========= //
-global.packname = 'Jexploit';
+global.packname = 'Vesper';
 global.author = 'Bot';
-global.wm = '©Jexploit is awesome 🔥';
+global.wm = '© Vesper-Xmd is awesome 🔥';
 
 // === For only developer ============
 global.api = "https://xploaderapi-f5e63b.platform.cypherx.space";
@@ -33,12 +33,12 @@ global.limitCount = 10;
 
 global.mess = {
   group: "This not group!*",
-  notadmin: "You need to be an admin to use this command!",
+  notadmin: "This command is only preserved for group admins!",
   owner: "This command is only preserved for bot owner and sudo!",
-  done: "*Operation succeeded*",
-  notext: "*Please provide the necessary text*",
+  done: "Mission complete ✅",
+  notext: "Please provide the necessary text",
   premium: "*First become a premium user*",
-  botadmin: "*Jexploit needs to be admin*",
+  botadmin: "Please bot needs admin privileges to use this command!",
   limited: "*Limit reached*",
   helpersList: [
     { name: "Malvin king", number: "+263776388689", country: "Zimbabwe", flag: "🇿🇼" },
