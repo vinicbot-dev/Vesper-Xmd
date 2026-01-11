@@ -22,7 +22,7 @@ module.exports = [
 
 {
         command: ['p', 'ping'],
-        operate: async ({ m, kelvin, getSetting }) => {
+        operate: async ({ m, kelvin, botNumber, getSetting }) => {
             const startTime = performance.now();
 
             try {
@@ -35,7 +35,7 @@ module.exports = [
                 const latency = `${(endTime - startTime).toFixed(2)} ms`;
                 
                 await kelvin.sendMessage(m.chat, {
-                    text: `*🏓 ${getSetting ? getSetting('botname', 'JEXPLOIT') : 'JEXPLOIT'} Speed:* ${latency}`,
+                    text: `*🏓 ${getSetting(botNumber, 'botname', 'VESPER-XMD')} Speed:* ${latency}`,
                     edit: sentMessage.key, 
                     contextInfo: { quotedMessage: m.message }
                 });
@@ -56,8 +56,8 @@ module.exports = [
             
             // Array of image URLs
             const imageUrls = [
-                "https://files.catbox.moe/1a4dbr.jpg",
-                "https://files.catbox.moe/9sazwf.jpg"
+                "https://files.catbox.moe/qhgj50.jpg",
+                "https://files.catbox.moe/0pab6g.jpg"
             ];
             
             // Array of audio URLs
@@ -80,7 +80,7 @@ module.exports = [
                 m.chat, 
                 { 
                     image: { url: randomImageUrl },
-                    caption: `*🌹Hi. I am 👑 ${getSetting(botNumber, 'botname', 'JEXPLOIT')}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kevin tech. Don't worry, I'm still Alive☺🚀*\n\n*⏰ Uptime: ${botUptime}*`
+                    caption: `*🌹Hi. I am 👑 ${getSetting(botNumber, 'botname', 'VESPER-XMD')}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kevin tech. Don't worry, I'm still Alive☺🚀*\n\n*⏰ Uptime: ${botUptime}*`
                 },
                 { quoted: m }
             );
@@ -132,7 +132,7 @@ Start server Enjoy 😉
                 `.trim();
 
                 await kelvin.sendMessage(from, {
-                    image: { url: 'https://files.catbox.moe/9sazwf.jpg' },
+                    image: { url: 'https://files.catbox.moe/0pab6g.jpg' },
                     caption: message,
                     contextInfo: {
                         mentionedJid: [m.sender],
@@ -140,7 +140,7 @@ Start server Enjoy 😉
                         isForwarded: true,
                         forwardedNewsletterMessageInfo: {
                             newsletterJid: '120363401548261516@newsletter',
-                            newsletterName: '🪀『JEXPLOIT』🪀',
+                            newsletterName: '🪀『VESPER-XMD』🪀',
                             serverMessageId: 143
                         }
                     }
@@ -171,7 +171,7 @@ Start server Enjoy 😉
                 const uptimeFormatted = runtime(uptime); // Using your existing runtime function
                 
                 // Get bot name from settings
-                const botname = getSetting(botNumber, 'botname', 'JEXPLOIT');
+                const botname = getSetting(botNumber, 'botname', 'VESPER-XMD');
                 
                 // Get version from global or use default
                 const version = global.versions || '1.4.0';
@@ -201,7 +201,7 @@ Start server Enjoy 😉
         {
         command: ['botinfo', 'info', 'about'],
         operate: async ({ kelvin, m, reply, botNumber }) => {
-            const botname = getSetting(botNumber, 'botname', 'Jexploit');
+            const botname = getSetting(botNumber, 'botname', 'Vesper-Xmd');
             const ownername = "Kelvin Tech";
             
             const botInfo = `
@@ -214,7 +214,7 @@ Start server Enjoy 😉
 │ • Runtime  : ${runtime(process.uptime())}
 ╰─────────────`;
 
-            const imageUrl = "https://files.catbox.moe/1a4dbr.jpg";
+            const imageUrl = "https://files.catbox.moe/0pab6g.jpg";
             
             // Array of audio URLs
             const audioUrls = [
@@ -233,7 +233,7 @@ Start server Enjoy 😉
                 m.chat, 
                 { 
                     image: { url: imageUrl },
-                    caption: `*🌹Hi. I am 👑 ${getSetting(botNumber, 'botname', 'Jexploit')}, a friendly WhatsApp bot.*${botInfo}`
+                    caption: `*🌹Hi. I am 👑 ${getSetting(botNumber, 'botname', 'VESPER-XMD')}, a friendly WhatsApp bot.*${botInfo}`
                 },
                 { quoted: m }
             );
@@ -322,7 +322,7 @@ https://jexploitsession.zone.id/
                     await kelvin.sendMessage(
                         m.chat,
                         {
-                            image: { url: 'https://files.catbox.moe/9sazwf.jpg' }, // Your bot image
+                            image: { url: 'https://files.catbox.moe/0pab6g.jpg' }, // Your bot image
                             caption: txt
                         },
                         { quoted: m }
@@ -335,7 +335,7 @@ https://jexploitsession.zone.id/
 
             } catch (error) {
                 console.error('Error in github command:', error);
-                await reply('❌ Error fetching repository information.\n\n🔗 Manual link: https://github.com/Kevintech-hub/Jexploit-Bot');
+                await reply('❌ Error fetching repository information.\n\n🔗 Manual link: https://github.com/Kevintech-hub/javelin-Bot');
             }
         }
     },
@@ -345,14 +345,14 @@ https://jexploitsession.zone.id/
             try {
                 // GitHub repository details
                 const repoOwner = "Kevintech-hub";
-                const repoName = "Jexploit-Bot";
+                const repoName = "javelin-Bot";
                 const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}`;
                 
                 // Fetch repository data with error handling
                 const { data } = await axios.get(apiUrl, {
                     timeout: 5000, // 5 second timeout
                     headers: {
-                        'User-Agent': 'Jexploit-Bot' // GitHub requires user-agent
+                        'User-Agent': 'javelin Bot' // GitHub requires user-agent
                     }
                 }).catch(err => {
                     console.error('GitHub API Error:', err);
@@ -382,7 +382,7 @@ https://github.com/${repoOwner}/${repoName}
 @${m.sender.split("@")[0]}👋, Don't forget to star and fork my repository!`;
 
                 // Get thumbnail buffer
-                const thumbnailBuffer = await getBuffer('https://files.catbox.moe/uy3kq9.jpg');
+                const thumbnailBuffer = await getBuffer('https://files.catbox.moe/0pab6g.jpg');
                 
                 // Send the response with thumbnail
                 await kelvin.sendMessage(
@@ -392,7 +392,7 @@ https://github.com/${repoOwner}/${repoName}
                         contextInfo: {
                             mentionedJid: [m.sender],
                             externalAdReply: {
-                                title: "Jexploit Repository",
+                                title: "Javelin Repository",
                                 body: `⭐ Star the repo to support development!`,
                                 thumbnail: thumbnailBuffer,
                                 mediaType: 1,
@@ -410,7 +410,7 @@ https://github.com/${repoOwner}/${repoName}
                 const fallbackInfo = `
 *BOT REPOSITORY*
 
-*Name:* Jexploit
+*Name:* Vesper-Xmd
 *GitHub Link:* 
 https://github.com/Kevintech-hub/Vinic-Xmd-
 
@@ -428,38 +428,7 @@ https://github.com/Kevintech-hub/Vinic-Xmd-
                 );
             }
         }
-},
-{
-    command: ['p', 'ping'],
-    operate: async ({ kelvin, m, reply, botNumber }) => {
-        const startTime = performance.now();
-
-        try {
-            const sentMessage = await kelvin.sendMessage(m.chat, {
-                text: "🔸Pong!",
-                contextInfo: { quotedMessage: m.message }
-            });
-            
-            const endTime = performance.now();
-            const latency = `${(endTime - startTime).toFixed(2)} ms`;
-            
-            // Get botname from global with fallback
-            const botname = global.botname || 'JEXPLOIT';
-            
-            await kelvin.sendMessage(m.chat, {
-                text: `*🏓 ${botname} Speed:* ${latency}`,
-                edit: sentMessage.key, 
-                contextInfo: { quotedMessage: m.message }
-            });
-
-        } catch (error) {
-            console.error('Error sending ping message:', error);
-            await kelvin.sendMessage(m.chat, {
-                text: 'An error occurred while trying to ping.',
-                contextInfo: { quotedMessage: m.message }
-            });
-        }
-    }
 }
+
 
 ];
