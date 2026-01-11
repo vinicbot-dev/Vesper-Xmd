@@ -5,7 +5,6 @@ const PDFDocument = require('pdfkit')
 const fs = require('fs');
 const fetch = require("node-fetch")
 const { exec } = require('child_process');
-const timezones = global.timezones || "Africa/Kampala"; // Default to Uganda timezone
 const {styletext, remind, Wikimedia, wallpaper} = require('../start/lib/scraper')
 const { takeCommand } = require('../start/kelvinCmds/commands');
 const { obfuscateJS } = require("../start/lib/encapsulation");
@@ -13,7 +12,7 @@ const { obfuscateJS } = require("../start/lib/encapsulation");
 module.exports = [
     {
         command: ['time'],
-        operate: async ({ kelvin, m, reply, text, prefix, global }) => {
+        operate: async ({ kelvin, m, reply, text, timezones, prefix, global }) => {
             try {
                 let countryName = text.trim();
                 
@@ -944,6 +943,74 @@ module.exports = [
         } catch (error) {
             console.error('Error fetching channel info:', error);
             return reply("*Failed to fetch channel information. Please check the link and try again.*");
+        }
+    }
+},
+{
+        command: ['npm'],
+        operate: async ({ kelvin, m, reply, args, text, botNumber, getSetting }) => {
+            try {
+                // Check if a package name is provided
+                if (!args.length) {
+                    return reply("Please provide the name of the npm package you want to search for. Example: .npm express");
+                }
+
+                const packageName = args.join(" ");
+                const apiUrl = `https://registry.npmjs.org/${encodeURIComponent(packageName)}`;
+
+                // Fetch package details from npm registry
+                const response = await axios.get(apiUrl);
+                if (response.status !== 200) {
+                    throw new Error("Package not found or an error occurred.");
+                }
+
+                const packageData = response.data;
+                const latestVersion = packageData["dist-tags"].latest;
+                const description = packageData.description || "No description available.";
+                const npmUrl = `https://www.npmjs.com/package/${packageName}`;
+                const license = packageData.license || "Unknown";
+                const repository = packageData.repository ? packageData.repository.url : "Not available";
+
+                // Create the response message
+                const message = `
+*${getSetting(botNumber, 'botname', 'Jexploit')} npm search*
+
+*👀 NPM PACKAGE:* ${packageName}
+*📄 DESCRIPTION:* ${description}
+*⏸️ LAST VERSION:* ${latestVersion}
+*🪪 LICENSE:* ${license}
+*🪩 REPOSITORY:* ${repository}
+*🔗 NPM URL:* ${npmUrl}
+`;
+
+                // Send the message
+                await kelvin.sendMessage(m.chat, { text: message }, { quoted: m });
+
+            } catch (error) {
+                console.error("Error:", error);
+                reply("An error occurred: " + error.message);
+            }
+        }
+},
+{
+    command: ['gpass', 'password', 'genpass'],
+    operate: async ({ kelvin, m, reply, text }) => {
+        let length = text ? parseInt(text) : 12;
+        if (isNaN(length) || length < 6 || length > 50) {
+            return reply("Please provide a valid length between 6 and 50. Example: .gpass 16");
+        }
+        
+        let chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+        let pass = "";
+        for (let i = 0; i < length; i++) {
+            pass += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        
+        try {
+            kelvin.sendMessage(m.chat, { text: pass }, { quoted: m });
+        } catch (error) {
+            console.error('Error generating password:', error);
+            reply('An error occurred while generating the password.');
         }
     }
 }
