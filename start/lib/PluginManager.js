@@ -78,7 +78,7 @@ class PluginManager {
             }
         }
         
-        console.log(`✅ Loaded ${totalPlugins} plugins in ${this.categories.size} categories`);
+        
         return totalPlugins;
     }
     
