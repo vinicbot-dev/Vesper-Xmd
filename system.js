@@ -343,6 +343,23 @@ try {
     console.error('Error loading prefix from settings:', error);
     prefix = "."; // Fallback to default
 }
+// Load alwaysonline from settings manager
+try {
+    const alwaysonlineSetting = getSetting(botNumber, 'alwaysonline');
+    // Handle different possible values (boolean, string 'true'/'false', or undefined)
+    if (alwaysonlineSetting === undefined) {
+        global.alwaysonline = false; // Default value
+    } else if (typeof alwaysonlineSetting === 'boolean') {
+        global.alwaysonline = alwaysonlineSetting;
+    } else if (typeof alwaysonlineSetting === 'string') {
+        global.alwaysonline = alwaysonlineSetting.toLowerCase() === 'true';
+    } else {
+        global.alwaysonline = false; // Fallback
+    }
+} catch (error) {
+    console.error('Error loading alwaysonline from settings:', error);
+    global.alwaysonline = false; // Default fallback
+}
 const isCmd = body && typeof body === 'string' && body.startsWith(prefix);
 const trimmedBody = isCmd ? body.slice(prefix.length).trimStart() : "";
 const command = isCmd && trimmedBody ? trimmedBody.split(/\s+/).shift().toLowerCase() : "";
@@ -357,17 +374,21 @@ const text = args.join(" ");
     const isGroup = from.endsWith("@g.us");
     const contributor = JSON.parse(fs.readFileSync('./start/lib/database/owner.json'));
     
-    function checkAccess(sender) {
-    // Normalize the sender number
+
+function checkAccess(sender) {
     const normalizedSender = sender.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
     
-    // Get sudo users from database.json
+    if (kelvin.public === true) {
+        return true;
+    }
+    
+    // Bot is in private mode, check authorization
     const sudoUsers = getSudo(botNumber) || [];
     const authorizedNumbers = [
         botNumber,
         devKelvin,
         ...(global.owner || []),
-        ...sudoUsers // Get from database.json instead of global.sudo
+        ...sudoUsers
     ].map(num => num.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
     
     // Check if sender is in authorized list
@@ -382,16 +403,28 @@ const Access = checkAccess(m.sender);
     const qmsg = (quoted.msg || quoted);
     const isMedia = /image|video|sticker|audio/.test(mime);
 
-    const groupMetadata = isGroup ? await kelvin.groupMetadata(m.chat).catch((e) => {}) : "";
-    const groupOwner = isGroup ? groupMetadata.owner : "";
-    const groupName = m.isGroup ? groupMetadata.subject : "";
-    const participants = isGroup ? await groupMetadata.participants : "";
-    const groupAdmins = isGroup ? await participants.filter((v) => v.admin !== null).map((v) => v.id) : "";
-    const groupMembers = isGroup ? groupMetadata.participants : "";
-    const isGroupAdmins = isGroup ? groupAdmins.includes(m.sender) : false;
-    const isBotGroupAdmins = isGroup ? groupAdmins.includes(botNumber) : false;
-    const isBotAdmins = isGroup ? groupAdmins.includes(botNumber) : false;
-    const isAdmins = isGroup ? groupAdmins.includes(m.sender) : false;
+    let groupMetadata = null
+if (isGroup) {
+  try {
+    groupMetadata = await kelvin.groupMetadata(m.chat)
+  } catch (e) {
+    console.log("Failed to get group metadata")
+  }
+}
+
+const groupName = isGroup && groupMetadata ? groupMetadata.subject : ""
+const participants = isGroup && groupMetadata ? groupMetadata.participants : []
+
+const groupAdmins = participants
+  .filter(p => p.admin)
+  .map(p => p.id)
+
+const groupMembers = participants
+
+const groupOwner = groupMetadata?.owner || groupAdmins[0] || null
+
+const isAdmin = isGroup ? groupAdmins.includes(m.sender) : false
+const isBotAdmin = isGroup ? groupAdmins.includes(botNumber) : false
     
 if (m.message && !m.message.protocolMessage) {
         handleMessageStore(m);
@@ -458,7 +491,27 @@ if (m.isGroup && m.message && !m.key.fromMe) {
         }
     }
 }
-
+// Apply alwaysonline setting
+if (global.alwaysonline === true || global.alwaysonline === 'true') {
+    if (m.message && !m.key.fromMe) {
+        try {
+            await kelvin.sendPresenceUpdate("available", from);
+            await delay(1000); // 1-second delay
+        } catch (error) {
+            // Silently handle error - don't spam console
+        }
+    }
+} else {
+    // Default behavior - send unavailable presence
+    if (m.message && !m.key.fromMe) {
+        try {
+            await kelvin.sendPresenceUpdate("unavailable", from);
+            await delay(1000); // 1-second delay
+        } catch (error) {
+            // Silently handle error
+        }
+    }
+}
     await handleAIChatbot(m, kelvin, body, from, isGroup, botNumber, isCmd, prefix);
     
     const time = moment.tz("Asia/Makassar").format("HH:mm:ss");
@@ -470,7 +523,7 @@ if (m.isGroup && m.message && !m.key.fromMe) {
     const datez = moment(Date.now()).tz(timezones).format("DD/MM/YYYY");
 
     if (m.message) {
-      lolcatjs.fromString(`┏━━━━━━━━━━━━━『  KELVIN BOT  』━━━━━━━━━━━━━─`);
+      lolcatjs.fromString(`┏━━━━━━━━━━━━━『  VESPER-XMD  』━━━━━━━━━━━━━─`);
       lolcatjs.fromString(`»  Sent Time: ${dayz}, ${timez}`);
       lolcatjs.fromString(`»  Date: ${datez}`);
       lolcatjs.fromString(`»  Message Type: ${m.mtype || 'N/A'}`);
@@ -520,15 +573,13 @@ const context = {
     isCreator: Access,
     isGroup,
     groupName,
+    isAdmin,
     groupMetadata,
     groupOwner,
     participants,
     groupAdmins,
-    isAdmins,
-    isGroupAdmins,
-    isBotAdmins,
+    isBotAdmin,
     isAdminKelvin,
-    isBotGroupAdmins,
     quoted,
     saveStatusMessage,
     fetchMp3DownloadUrl,
@@ -544,10 +595,12 @@ const context = {
     getBuffer,
     getDevice,
     formatSize,
+    timezones,
     isUrl,
     runtime,
     match: command,
     mess: global.mess,
+    global: global,
     mentionedJid: m.mentionedJid || [],
     pluginManager: global.pluginManager
 };
@@ -751,10 +804,7 @@ const loadMenuPlugins = (directory) => {
                         });
                     }
                     
-                    // If not found at all
-                    if (isCmd) {
-                        reply(`❌ Command "${command}" not found. Use ${prefix}menu to see available commands.`);
-                    }
+               
                 }
             }
         } else if (!result.success) {
