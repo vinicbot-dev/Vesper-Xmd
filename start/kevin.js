@@ -274,7 +274,7 @@ async function handleAntiEdit(m, kelvin) {
         
         // Check if anti-edit is enabled and we have an edited message
         if (!antieditSetting || antieditSetting === 'off' || !m.message?.protocolMessage?.editedMessage) {
-            return;  // <-- This returns if anti-edit is off
+            return;  
         }
 
         let messageId = m.message.protocolMessage.key.id;
@@ -393,12 +393,21 @@ function detectUrls(message) {
     return matches ? matches : [];
 }
 
-async function handleLinkViolation(message, kelvin) {
+async function handleLinkViolation(kelvin, message, isSenderAdmin, botNumber) {
     try {
-        const botNumber = await kelvin.decodeJid(kelvin.user.id);
+        if (!message || !message.key || !message.key.remoteJid) {
+            return;
+        }
+        
         const chatId = message.key.remoteJid;
         const sender = message.key.participant || message.key.remoteJid;
         const messageId = message.key.id;
+
+        // Skip if sender is admin
+        if (isSenderAdmin) {
+            console.log(`✅ Admin ${sender} allowed to send link`);
+            return;
+        }
 
         // Get anti-link settings
         const isEnabled = global.settingsManager?.getSetting(botNumber, 'antilinkdelete', true);
@@ -406,22 +415,9 @@ async function handleLinkViolation(message, kelvin) {
         
         if (!isEnabled) return;
 
-        // Get group metadata to check admin status
-        const groupMetadata = await kelvin.groupMetadata(chatId).catch(() => null);
-        if (!groupMetadata) return;
-
-        
-        const botParticipant = groupMetadata.participants.find(p => p.id === botNumber);
-        if (!botParticipant || !['admin', 'superadmin'].includes(botParticipant.admin)) {
-            console.log('❌ Bot is not admin, cannot delete messages');
-            return; // Bot needs to be admin to delete messages
-        }
-
-        // Check if sender is admin (allow admins to post links)
-        const participant = groupMetadata.participants.find(p => p.id === sender);
-        if (participant && (participant.admin === 'admin' || participant.admin === 'superadmin')) {
-            return; // Allow admins to post links
-        }
+        // Detect URLs in the message
+        const urls = detectUrls(message.message);
+        if (urls.length === 0) return;
 
         try {
             await kelvin.sendMessage(chatId, {
@@ -440,11 +436,9 @@ async function handleLinkViolation(message, kelvin) {
             return;
         }
 
-        // Rest of your code remains the same...
         // Handle based on mode
         switch(mode) {
             case 'warn': {
-                // Initialize warnings
                 if (!global.linkWarnings) global.linkWarnings = new Map();
                 const userWarnings = global.linkWarnings.get(sender) || { count: 0, lastWarning: 0 };
                 
@@ -452,13 +446,13 @@ async function handleLinkViolation(message, kelvin) {
                 userWarnings.lastWarning = Date.now();
                 global.linkWarnings.set(sender, userWarnings);
                 
-                let responseMessage = `⚠️ @${sender.split('@')[0]}, only admins can send links!\nWarning: *${userWarnings.count}/3*`;
+                let responseMessage = `⚠️ @${sender.split('@')[0]}, links are not allowed!\nWarning: *${userWarnings.count}/3*`;
                 
                 // Auto-kick after 3 warnings
                 if (userWarnings.count >= 3) {
                     try {
                         await kelvin.groupParticipantsUpdate(chatId, [sender], "remove");
-                        responseMessage = `🚫 @${sender.split('@')[0]} *has been removed for repeatedly posting links*.`;
+                        responseMessage = `🚫 @${sender.split('@')[0]} *has been removed for posting links*.`;
                         global.linkWarnings.delete(sender);
                     } catch (kickError) {
                         responseMessage = `⚠️ @${sender.split('@')[0]}, links are not allowed! (Failed to remove)`;
@@ -475,7 +469,7 @@ async function handleLinkViolation(message, kelvin) {
             
             case 'kick': {
                 try {
-                    await kwlvin.groupParticipantsUpdate(chatId, [sender], "remove");
+                    await kelvin.groupParticipantsUpdate(chatId, [sender], "remove");
                     await delay(1000);
                     await kelvin.sendMessage(chatId, {
                         text: `🚫 @${sender.split('@')[0]} *has been removed for posting links*.`,
@@ -503,13 +497,12 @@ async function handleLinkViolation(message, kelvin) {
     }
 }
 
-async function checkAndHandleLinks(message, kelvin) {
+async function checkAndHandleLinks(kelvin, message, isSenderAdmin, botNumber) {
     try {
         // Only check group messages
         if (!message.key.remoteJid.endsWith('@g.us')) return;
         
         // Ignore messages from the bot itself
-        const botNumber = await kelvin.decodeJid(kelvin.user.id);
         const sender = message.key.participant || message.key.remoteJid;
         if (sender === botNumber) return;
         
@@ -519,21 +512,28 @@ async function checkAndHandleLinks(message, kelvin) {
         const urls = detectUrls(message.message);
         if (urls.length === 0) return;
         
-        // Now check anti-link settings
-        await handleLinkViolation(message, kelvin);
+        // Now check anti-link settings, passing isSenderAdmin
+        await handleLinkViolation(kelvin, message, isSenderAdmin, botNumber);
         
     } catch (error) {
         // Silently handle errors
     }
 }
 
-async function handleAntiTag(m, kelvin) {
+//<================================================>//
+
+async function handleAntiTag(kelvin, m, isSenderAdmin, botNumber) {
     try {
         if (!m.isGroup) return;
         
-        const botNumber = await kelvin.decodeJid(kelvin.user.id);
         const chatId = m.chat;
         const sender = m.sender;
+        
+        // Skip if sender is admin
+        if (isSenderAdmin) {
+            console.log(`✅ Admin ${sender} allowed to tag members`);
+            return;
+        }
         
         // Get anti-tag settings
         const isEnabled = global.settingsManager?.getSetting(botNumber, 'antitag', false);
@@ -541,16 +541,10 @@ async function handleAntiTag(m, kelvin) {
         
         if (!isEnabled) return;
         
-        // Get group metadata
-        const groupMetadata = await kelvin.groupMetadata(chatId);
-        const groupAdmins = groupMetadata.participants.filter(p => p.admin).map(p => p.id);
-        const isBotAdmin = groupAdmins.includes(botNumber);
-        const isSenderAdmin = groupAdmins.includes(sender);
-        
         // Check if user tagged someone
         const mentionedUsers = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
         
-        if (mentionedUsers.length > 0 && !isSenderAdmin && isBotAdmin) {
+        if (mentionedUsers.length > 0) {
             // Delete the message
             try {
                 await kelvin.sendMessage(chatId, { delete: m.key });
