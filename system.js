@@ -74,6 +74,7 @@ const { handleAutoRead } = require('./start/kelvinCmds/autoread');
 const { handleAutoRecording } = require('./start/kelvinCmds/autorecord');
 const { handleAutoTyping } = require('./start/kelvinCmds/autotyping');
 const { handleAIChatbot } = require('./start/kelvinCmds/chatbot');
+const { isAdmin } = require('./start/lib/isAdmin');
 
 
 // Menu Images - KelvinTech Style
@@ -88,11 +89,11 @@ try {
     }
     
     // Load images
-    kelvinkid1 = fs.readFileSync("./start/lib/Media/Images/kelvin1.jpg");
-    kelvinkid2 = fs.readFileSync("./start/lib/Media/Images/kelvin2.jpg");
-    kelvinkid3 = fs.readFileSync("./start/lib/Media/Images/kelvin3.jpg");
-    kelvinkid4 = fs.readFileSync("./start/lib/Media/Images/kelvin4.jpg");
-    kelvinkid5 = fs.readFileSync("./start/lib/Media/Images/kelvin5.jpg");
+    kelvinkid1 = fs.readFileSync("./start/lib/Media/Images/Vesper1.jpg");
+    kelvinkid2 = fs.readFileSync("./start/lib/Media/Images/Vesper2.jpg");
+    kelvinkid3 = fs.readFileSync("./start/lib/Media/Images/Vesper3.jpg");
+    kelvinkid4 = fs.readFileSync("./start/lib/Media/Images/Vesper4.jpg");
+    kelvinkid5 = fs.readFileSync("./start/lib/Media/Images/Vesper5.jpg");
 } catch (err) {
     console.log("Menu images not found - use .setmenuimage to add them");
 }
@@ -282,37 +283,6 @@ function getInactiveUsers(groupJid, allParticipants) {
 }
 
 
-async function isAdminKelvin(kelvin, chatId, senderId) {
-        try {
-            const groupMetadata = await kelvin.groupMetadata(chatId);
-            
-            const botId = kelvin.user.id.split(':')[0] + '@s.whatsapp.net';
-            
-            const participant = groupMetadata.participants.find(p => 
-                p.id === senderId || 
-                p.id === senderId.replace('@s.whatsapp.net', '@lid') ||
-                p.id === senderId.replace('@lid', '@s.whatsapp.net')
-            );
-            
-            const bot = groupMetadata.participants.find(p => 
-                p.id === botId || 
-                p.id === botId.replace('@s.whatsapp.net', '@lid')
-            );
-            
-            const isBotAdmin = bot && (bot.admin === 'admin' || bot.admin === 'superadmin');
-            const isSenderAdmin = participant && (participant.admin === 'admin' || participant.admin === 'superadmin');
-
-            if (!bot) {
-                return { isSenderAdmin, isBotAdmin: true };
-            }
-
-            return { isSenderAdmin, isBotAdmin };
-        } catch (error) {
-            console.error('Error in isAdmin:', error);
-            return { isSenderAdmin: false, isBotAdmin: false };
-        }
-    }
-
 
 module.exports = client = async (kelvin, m, chatUpdate, store) => {
   try {
@@ -371,6 +341,8 @@ const text = args.join(" ");
     const budy = (typeof m.text === 'string' ? m.text : '');
     
     const from = m.key.remoteJid;
+    const senderId = m.key.participant || from; // gets the actual sender JID
+// database 
     const isGroup = from.endsWith("@g.us");
     const contributor = JSON.parse(fs.readFileSync('./start/lib/database/owner.json'));
     
@@ -403,6 +375,54 @@ const Access = checkAccess(m.sender);
     const qmsg = (quoted.msg || quoted);
     const isMedia = /image|video|sticker|audio/.test(mime);
 
+  async function isAdminKelvin(kelvin, chatId, senderId) {
+        try {
+            const groupMetadata = await kelvin.groupMetadata(chatId);
+            
+            const botId = kelvin.user.id.split(':')[0] + '@s.whatsapp.net';
+            
+            const participant = groupMetadata.participants.find(p => 
+                p.id === senderId || 
+                p.id === senderId.replace('@s.whatsapp.net', '@lid') ||
+                p.id === senderId.replace('@lid', '@s.whatsapp.net')
+            );
+            
+            const bot = groupMetadata.participants.find(p => 
+                p.id === botId || 
+                p.id === botId.replace('@s.whatsapp.net', '@lid')
+            );
+            
+            const isBotAdmin = bot && (bot.admin === 'admin' || bot.admin === 'superadmin');
+            const isSenderAdmin = participant && (participant.admin === 'admin' || participant.admin === 'superadmin');
+
+            if (!bot) {
+                return { isSenderAdmin, isBotAdmin: true };
+            }
+
+            return { isSenderAdmin, isBotAdmin };
+        } catch (error) {
+            console.error('Error in isAdmin:', error);
+            return { isSenderAdmin: false, isBotAdmin: false };
+        }
+}
+// calculate amdim status 
+let isSenderAdmin = false;
+let isBotAdmin = false;
+
+if (isGroup && m.sender) {
+    try {
+        // Call isAdminKelvin to get actual boolean values
+        const adminResult = await isAdminKelvin(kelvin, from, senderId);
+        isSenderAdmin = adminResult.isSenderAdmin;
+        isBotAdmin = adminResult.isBotAdmin;
+        
+    } catch (error) {
+        console.error('Error checking admin status:', error);
+        isSenderAdmin = false;
+        isBotAdmin = false;
+    }
+}
+// ============================================
     let groupMetadata = null
 if (isGroup) {
   try {
@@ -413,19 +433,8 @@ if (isGroup) {
 }
 
 const groupName = isGroup && groupMetadata ? groupMetadata.subject : ""
-const participants = isGroup && groupMetadata ? groupMetadata.participants : []
 
-const groupAdmins = participants
-  .filter(p => p.admin)
-  .map(p => p.id)
 
-const groupMembers = participants
-
-const groupOwner = groupMetadata?.owner || groupAdmins[0] || null
-
-const isAdmin = isGroup ? groupAdmins.includes(m.sender) : false
-const isBotAdmin = isGroup ? groupAdmins.includes(botNumber) : false
-    
 if (m.message && !m.message.protocolMessage) {
         handleMessageStore(m);
     }
@@ -461,9 +470,11 @@ if (m.message && !m.message.protocolMessage) {
 } 
 
    if (m.isGroup && body && !m.key.fromMe) {
-    await checkAndHandleLinks(m, kelvin);
-} 
-
+    await checkAndHandleLinks(kelvin, {
+        key: m.key,
+        message: m.message
+    }, isSenderAdmin, botNumber); 
+}
 
 if (m.isGroup && m.message && !m.key.fromMe) {
     // Check if message has mentions
@@ -573,13 +584,8 @@ const context = {
     isCreator: Access,
     isGroup,
     groupName,
-    isAdmin,
-    groupMetadata,
-    groupOwner,
-    participants,
-    groupAdmins,
     isBotAdmin,
-    isAdminKelvin,
+    isSenderAdmin,
     quoted,
     saveStatusMessage,
     fetchMp3DownloadUrl,
@@ -629,7 +635,7 @@ const generateMenu = (plugins, ownername, prefixz, modeStatus, versions, latensi
     for (const category in plugins) {
         plugins[category].forEach(plugin => {
             if (plugin.command && plugin.command.length > 0) {
-                uniqueCommands.add(plugin.command[0]); // Add only the main command
+                uniqueCommands.add(plugin.command[0]); 
             }
         });
     }
@@ -696,7 +702,6 @@ const loadMenuPlugins = (directory) => {
         const result = await global.pluginManager.executeCommand(context, command);
         
         if (!result.found) {
-            // Command not found in plugins, use old switch case as fallback
             switch (command) {
                 case 'menu': {
     const startTime = performance.now();
@@ -704,7 +709,7 @@ const loadMenuPlugins = (directory) => {
     const endTime = performance.now();
     const latensie = endTime - startTime;
     
-    const ownername = getSetting(botNumber, 'ownername', 'Owner');
+    const ownername = getSetting(botNumber, 'ownername', 'Not set');
     const prefixz = prefix;  
     const modeStatus = "online";
     const versions = "v1.0.0"; 
@@ -737,19 +742,19 @@ const loadMenuPlugins = (directory) => {
 }
                 
                 case 'reloadplugins': {
-                    if (!Access) return reply('❌ Owner only command!');
+                    if (!Access) return reply('Owner only command!');
                     try {
                         const pluginsDir = path.join(__dirname, 'KelvinPlugins');
                         const count = global.pluginManager.reloadPlugins(pluginsDir);
                         reply(`✅ Reloaded ${count} plugins successfully!`);
                     } catch (error) {
-                        reply(`❌ Failed to reload plugins: ${error.message}`);
+                        reply(` Failed to reload plugins: ${error.message}`);
                     }
                     break;
                 }
                 
                 case 'plugins': {
-                    if (!Access) return reply('❌ Owner only command!');
+                    if (!Access) return reply('Owner only command!');
                     const plugins = global.pluginManager.getAllPlugins();
                     let pluginList = '*LOADED PLUGINS*\n\n';
                     
@@ -809,7 +814,7 @@ const loadMenuPlugins = (directory) => {
             }
         } else if (!result.success) {
             // Command found but errored
-            reply(`❌ Error executing ${command}: ${result.error}`);
+            reply(`Error executing ${command}: ${result.error}`);
         }
     }
     
