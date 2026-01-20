@@ -65,7 +65,7 @@ module.exports = [
 
             } catch (error) {
                 console.error('Error in time command:', error);
-                reply('❌ *Unable to fetch time information.*\nPlease try a different country name or try again later.');
+                reply('*Unable to fetch time information.*\nPlease try a different country name or try again later.');
             }
         }
     },
@@ -96,7 +96,7 @@ module.exports = [
                 // Validate expression for safety
                 const safeRegex = /^[0-9+\-*/().\s\^%πesincoqrtanlgabMh\s]+$/i;
                 if (!safeRegex.test(expr)) {
-                    return reply('❌ *Invalid characters in expression.*\nOnly numbers, basic operators, and math functions are allowed.');
+                    return reply('*Invalid characters in expression.*\nOnly numbers, basic operators, and math functions are allowed.');
                 }
 
                 let result;
@@ -166,7 +166,7 @@ module.exports = [
                         
                     } catch (evalError) {
                         console.error('Calculation error:', evalError);
-                        return reply('❌ *Could not calculate the expression.*\nPlease check your syntax and try again.');
+                        return reply('*Could not calculate the expression.*\nPlease check your syntax and try again.');
                     }
                 }
 
@@ -192,7 +192,7 @@ module.exports = [
 
             } catch (error) {
                 console.error('Error in calculate command:', error);
-                reply('❌ *An error occurred during calculation.*\nPlease try a different expression.');
+                reply('*An error occurred during calculation.*\nPlease try a different expression.');
             }
         }
     },
@@ -352,13 +352,13 @@ module.exports = [
                     }
                 }
 
-                const apiUrl = `${global.mess?.siputzx || 'https://api.siputzx.xyz'}/api/tools/vcc-generator?type=${cardType}&count=${count}`;
+                const apiUrl = `${global.siputzx}/api/s/gsmarena?query=${encodeURIComponent(text)}`;
 
                 const response = await fetch(apiUrl);
                 const result = await response.json();
 
                 if (!result.status || !result.data || result.data.length === 0) {
-                    return reply("❌ *Unable to generate VCCs.*\nThe service might be temporarily unavailable.");
+                    return reply("*Unable to generate VCCs.*\nThe service might be temporarily unavailable.");
                 }
 
                 let responseMessage = `🎴 *Generated ${cardType} Virtual Credit Cards*\n`;
@@ -651,7 +651,7 @@ module.exports = [
         const q = text.trim();
         if (!q) return reply(`Please provide a URL to screenshot!`);
         
-        const apiURL = `${global.mess?.siputzx || 'https://api.siputzx.xyz'}/api/tools/ssweb?url=${q}&theme=light&device=mobile`;
+        const apiURL = `${global?.siputzx || 'https://api.siputzx.xyz'}/api/tools/ssweb?url=${q}&theme=light&device=mobile`;
         
         try {
             await kelvin.sendMessage(m.chat, { 
@@ -683,7 +683,7 @@ module.exports = [
                     image: { url: `https://image.thum.io/get/fullpage/${url}` },
                     caption: `- 🖼️ *Screenshot Generated*\n\n` +
                             `📸 *URL:* ${url}\n` +
-                            `> ᴘᴏᴡᴇʀᴇᴅ ʙʏ ${global.botname || 'Jexploit'} 💪 💜`
+                            `> ᴘᴏᴡᴇʀᴇᴅ ʙʏ ${global.botname || 'Vesper-Xmd'} 💪 💜`
                 }, { quoted: m });
 
                 // Update loading message to success
@@ -723,7 +723,7 @@ module.exports = [
         const q = text.trim();
         if (!q) return reply(`Please provide a URL to screenshot!`);
         
-        const apiURL = `${global.mess?.siputzx || 'https://api.siputzx.xyz'}/api/tools/ssweb?url=${q}&theme=light&device=tablet`;
+        const apiURL = `${global?.siputzx || 'https://api.siputzx.xyz'}/api/tools/ssweb?url=${q}&theme=light&device=tablet`;
         
         try {
             await kelvin.sendMessage(m.chat, { 
@@ -892,11 +892,11 @@ module.exports = [
 },
 {
         command: ['smartphone', 'gsmarena'],
-        operate: async ({ reply, text, fetch, mess }) => {
+        operate: async ({ reply, text, mess }) => {
             if (!text) return reply("*Please provide a query to search for smartphones.*");
 
             try {
-                const apiUrl = `${global.mess.siputzx}/api/s/gsmarena?query=${encodeURIComponent(text)}`;
+                const apiUrl = `${global.siputzx}/api/s/gsmarena?query=${encodeURIComponent(text)}`;
                 const response = await fetch(apiUrl);
                 const result = await response.json();
 
@@ -943,6 +943,116 @@ module.exports = [
         } catch (error) {
             console.error('Error fetching channel info:', error);
             return reply("*Failed to fetch channel information. Please check the link and try again.*");
+        }
+    }
+},
+    {
+    command: ['channelinfo'],
+    operate: async ({ kelvin, m, reply, text }) => {
+        try {
+            if (!text) return reply('Please provide Whatsapp Channel link');
+
+            const match = text.match(/whatsapp\.com\/channel\/([\w-]+)/);
+            if (!match) return reply('❌ Invalid WhatsApp channel link!');
+
+            const inviteId = match[1];
+            const sender = m.sender;
+            const from = m.chat;
+            
+            let channelId = null;
+            let externalInfo = null;
+
+            // METHOD 1: Get Channel ID using direct Baileys API (for the ID)
+            try {
+                const metadata = await kelvin.newsletterMetadata("invite", inviteId);
+                if (metadata?.id) {
+                    channelId = metadata.id;
+                    console.log('✅ Got Channel ID from direct API:', channelId);
+                }
+            } catch (error) {
+                console.log('❌ Direct API failed for ID');
+            }
+
+            // METHOD 2: Get detailed info from external API (for name, followers, description)
+            try {
+                const { data } = await axios.get(`https://api.nexoracle.com/stalking/whatsapp-channel?apikey=e276311658d835109c&url=${encodeURIComponent(text)}`, {
+                    timeout: 15000
+                });
+                if (data?.result) {
+                    externalInfo = data.result;
+                    console.log('✅ Got details from external API');
+                }
+            } catch (error) {
+                console.log('❌ External API failed for details');
+            }
+
+            // If we have both, combine them
+            if (channelId && externalInfo) {
+                const { title, followers, description, image } = externalInfo;
+                
+                const infoText = `📡 *WhatsApp Channel Information*\n\n` +
+                                `🔖 *Channel ID:* ${channelId}\n` +
+                                `📛 *Name:* ${title || 'No name'}\n` +
+                                `👥 *Followers:* ${followers || 'Not available'}\n` +
+                                `📝 *Description:* ${description || 'No description'}\n` +
+                                `🔗 *Invite ID:* ${inviteId}\n\n` +
+                                `👤 *Requested by:* @${sender.split('@')[0]}\n` +
+                                `> ${global.wm || ''}`;
+
+                if (image) {
+                    await kelvin.sendMessage(from, {
+                        image: { url: image },
+                        caption: infoText,
+                        mentions: [sender]
+                    }, { quoted: m });
+                } else {
+                    await reply(infoText);
+                }
+            }
+            // If only direct API worked (we have ID but no details)
+            else if (channelId) {
+                const infoText = `📡 *WhatsApp Channel Information*\n\n` +
+                                `🔖 *Channel ID:* ${channelId}\n` +
+                                `📛 *Name:* No name\n` +
+                                `👥 *Followers:* Not available\n` +
+                                `📝 *Description:* No description\n` +
+                                `🔗 *Invite ID:* ${inviteId}\n\n` +
+                                `👤 *Requested by:* @${sender.split('@')[0]}\n` +
+                                `> ${global.wm || ''}`;
+                
+                await reply(infoText);
+            }
+            // If only external API worked (we have details but no ID)
+            else if (externalInfo) {
+                const { title, followers, description, image, newsletterJid } = externalInfo;
+                
+                const infoText = `📡 *WhatsApp Channel Information*\n\n` +
+                                `🔖 *Channel ID:* ${newsletterJid || 'Not available'}\n` +
+                                `📛 *Name:* ${title || 'No name'}\n` +
+                                `👥 *Followers:* ${followers || 'Not available'}\n` +
+                                `📝 *Description:* ${description || 'No description'}\n` +
+                                `🔗 *Invite ID:* ${inviteId}\n\n` +
+                                `👤 *Requested by:* @${sender.split('@')[0]}\n` +
+                                `> ${global.wm || ''}`;
+
+                if (image) {
+                    await kelvin.sendMessage(from, {
+                        image: { url: image },
+                        caption: infoText,
+                        mentions: [sender]
+                    }, { quoted: m });
+                } else {
+                    await reply(infoText);
+                }
+            }
+            // If both failed
+            else {
+                await reply('❌ Failed to fetch channel information from both sources. The channel may be private or the link is invalid.');
+            }
+
+        } catch (error) {
+            console.error('Newsletter command error:', error);
+            await reply('❌ An unexpected error occurred while fetching channel information.');
         }
     }
 },
