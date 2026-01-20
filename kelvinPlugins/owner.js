@@ -4,7 +4,7 @@ const path = require('path');
 const moment = require('moment-timezone');
 const { exec } = require('child_process');
 const util = require('util');
-const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+const { downloadContentFromMessage,getContentType } = require('@whiskeysockets/baileys');
 const { generateSettingsText } = require('../start/kelvinCmds/owner');
 
 function sleep(ms) {
@@ -148,7 +148,7 @@ Use ${prefix}mode public/private to change`);
 
     } catch (error) {
         console.error('Error processing vv command:', error);
-        reply('❌ An error occurred while processing your request.');
+        reply('An error occurred while processing your request.');
     }
     
   }
@@ -176,7 +176,7 @@ Use ${prefix}mode public/private to change`);
             reply(`✅ Successfully blocked @${userId.split('@')[0]}`);
         } catch (error) {
             console.error('Error blocking user:', error);
-            reply(`❌ Failed to block user: ${error.message}`);
+            reply(`Failed to block user: ${error.message}`);
         }
     }
 },
@@ -271,12 +271,12 @@ Use ${prefix}mode public/private to change`);
             reply("✅ Successfully deleted profile picture");
         } catch (error) {
             console.error('Error removing profile picture:', error);
-            reply("❌ Failed to delete profile picture");
+            reply("Failed to delete profile picture");
         }
     }
 },
 {
-    command: ['creategc', 'creategroup'],
+    command: ['creategroup', 'creategc'],
     operate: async ({ kelvin, m, reply, args, prefix, command, Access }) => {
           if (!Access) return reply(global.mess.owner);
         
@@ -341,7 +341,7 @@ https://chat.whatsapp.com/${inviteCode}`;
                 mentions: [m.sender]
             });
             
-            // Add a small delay before actual restart
+    
             await sleep(1000);
             
             // Close the connection gracefully if available
@@ -388,7 +388,7 @@ https://chat.whatsapp.com/${inviteCode}`;
             const groupList = Object.keys(groups);
             
             if (groupList.length === 0) {
-                return reply("❌ No groups found. The bot is not in any groups.");
+                return reply("No groups found. The bot is not in any groups.");
             }
             
             let groupInfo = `📊 *TOTAL GROUPS:* ${groupList.length}\n\n`;
@@ -417,7 +417,7 @@ https://chat.whatsapp.com/${inviteCode}`;
             
         } catch (error) {
             console.error(error);
-            reply("❌ Failed to fetch groups: " + error.message);
+            reply("Failed to fetch groups: " + error.message);
         }
     }
 },
@@ -521,7 +521,7 @@ ${bugReportMsg}
         if (!validOptions.includes(args[0])) return reply("Invalid option");
 
         await kelvin.updateOnlinePrivacy(text);
-        await reply('Done');
+        await reply(global.mess.done);
     }
 },
 {
@@ -534,7 +534,7 @@ ${bugReportMsg}
         if (!validOptions.includes(args[0])) return reply("Invalid option");
 
         await kelvin.updateReadReceiptsPrivacy(text);
-        await reply('Done');
+        await reply(global.mess.done);
     }
 },
 {
@@ -579,13 +579,13 @@ ${bugReportMsg}
                 ],
             });
             fs.unlinkSync(medis);
-            reply('Done');
+            reply(global.mess.done);
         } else {
             await kelvin.updateProfilePicture(botNumber, {
                 url: medis,
             });
             fs.unlinkSync(medis);
-            reply('Done');
+            reply(global.mess.done);
         }
     }
 },
@@ -599,7 +599,7 @@ ${bugReportMsg}
         const option = args[0].toLowerCase();
 
         if (!validOptions.includes(option)) {
-            return reply(`❌ *Invalid option!*\n\nValid options: ${validOptions.join(', ')}\nExample: ${prefix}readprivacy all`);
+            return reply(`*Invalid option!*\n\nValid options: ${validOptions.join(', ')}\nExample: ${prefix}readprivacy all`);
         }
 
         try {
@@ -617,7 +617,7 @@ ${bugReportMsg}
             reply(`✅ *Read receipts privacy set to:* ${option.toUpperCase()}\n\n*What this means:*\n${getReadReceiptDescription(option)}`);
         } catch (error) {
             console.error('Error setting read receipts privacy:', error);
-            reply('❌ *Failed to update read receipts settings.* Please try again.');
+            reply('*Failed to update read receipts settings.* Please try again.');
         }
     }
 },
@@ -642,11 +642,11 @@ ${bugReportMsg}
         
         const newPrefix = args[0];
         if (!newPrefix || newPrefix.length < 1 || newPrefix.length > 3) {
-            return reply(`❌ Usage: ${prefix}setprefix <new_prefix>\nExample: ${prefix}setprefix !\nNote: Prefix must be 1-3 characters`);
+            return reply(`Usage: ${prefix}setprefix <new_prefix>\nExample: ${prefix}setprefix !\nNote: Prefix must be 1-3 characters`);
         }
         
         if (newPrefix.includes(' ')) {
-            return reply('❌ Prefix cannot contain spaces');
+            return reply('Prefix cannot contain spaces');
         }
         
         // Get current prefix before update
@@ -661,7 +661,7 @@ ${bugReportMsg}
             
             reply(`✅ Prefix updated to ${newPrefix}`);
         } else {
-            reply('❌ Failed to update prefix');
+            reply('Failed to update prefix');
         }
     }
 },
@@ -828,6 +828,51 @@ ${bugReportMsg}
         
         reply(settingsText);
     }
+},
+{
+        command: ['tostatus'],
+        operate: async ({ kelvin, m, reply, Access, mess }) => {
+        try {
+    if (!Access) return reply(global.mess.owner);
+
+    const quoted = m.quoted || m.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+    if (!quoted || !quoted.message) {
+      return reply("⚠️ Please reply to an image, video, or audio message to post to status.");
+    }
+
+    const msg = quoted.message || quoted;
+    const type = getContentType(msg);
+    const mediaMsg = msg[type];
+
+    if (!["imageMessage", "videoMessage", "audioMessage"].includes(type)) {
+      return reply("*Unsupported media. Reply to image, video, or audio only.*");
+    }
+
+    // Download content
+    const stream = await downloadContentFromMessage(mediaMsg, type.replace("Message", "").toLowerCase());
+    let buffer = Buffer.from([]);
+    for await (const chunk of stream) buffer = Buffer.concat([buffer, chunk]);
+
+    // Caption fallback
+    const caption = mediaMsg?.caption || '';
+
+    // Compose message
+    const content =
+      type === "imageMessage"
+        ? { image: buffer, caption }
+        : type === "videoMessage"
+        ? { video: buffer, caption }
+        : { audio: buffer, mimetype: "audio/mp4", ptt: mediaMsg?.ptt || false };
+
+    // Send to status
+    await conn.sendMessage("status@broadcast", content);
+    reply("✅ *Status posted successfully!*");
+
+  } catch (e) {
+    console.error("Error in .post command:", e);
+    reply(`Error posting status:\n${e.message}`);
+  }
+ }
 }
             
 
