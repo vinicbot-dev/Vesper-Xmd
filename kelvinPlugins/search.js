@@ -14,7 +14,7 @@ async function tiktokSearch(query) {
         const data = await response.json();
         
         if (!data.status || !data.result || data.result.length === 0) {
-            return "❌ No TikTok videos found for your search.";
+            return "No TikTok videos found for your search.";
         }
         
         const videos = data.result.slice(0, 5); // Limit to 5 results
@@ -134,7 +134,7 @@ module.exports = [
                 
             } catch (error) {
                 console.error('PlayStore plugin error:', error);
-                reply('❌ An error occurred while searching PlayStore.');
+                reply('An error occurred while searching PlayStore.');
             }
         }
     },
@@ -181,7 +181,7 @@ module.exports = [
                 
             } catch (error) {
                 console.error('Error in chord command:', error);
-                reply('❌ Error fetching chord. Please try again later.');
+                reply('Error fetching chord. Please try again later.');
             }
         }
     },
@@ -219,5 +219,217 @@ module.exports = [
             const result = await tiktokSearch(query);
             await kelvin.sendMessage(m.chat, { text: result }, { quoted: m });
         }
+    },
+        {
+        command: ['define'],
+        operate: async ({ kelvin, mek, m, reply, text, q }) => {
+        try {
+        if (!q) return reply("Please provide a word to define.\n\n📌 *Usage:* .define [word]");
+
+        const word = q.trim();
+        const url = `https://api.dictionaryapi.dev/api/v2/entries/en/${word}`;
+
+        const response = await axios.get(url);
+        const definitionData = response.data[0];
+
+        const definition = definitionData.meanings[0].definitions[0].definition;
+        const example = definitionData.meanings[0].definitions[0].example || '❌ No example available';
+        const synonyms = definitionData.meanings[0].definitions[0].synonyms.join(', ') || '❌ No synonyms available';
+        const phonetics = definitionData.phonetics[0]?.text || '🔇 No phonetics available';
+        const audio = definitionData.phonetics[0]?.audio || null;
+
+        const wordInfo = `
+📖 *Word*: *${definitionData.word}*  
+🗣️ *Pronunciation*: _${phonetics}_  
+📚 *Definition*: ${definition}  
+✍️ *Example*: ${example}  
+📝 *Synonyms*: ${synonyms}  
+
+> ${global.wm}`;
+
+        if (audio) {
+            await kelvin.sendMessage(from, { audio: { url: audio }, mimetype: 'audio/mpeg' }, { quoted: mek });
+        }
+
+        return reply(wordInfo);
+    } catch (e) {
+        console.error("❌ Error:", e);
+        if (e.response && e.response.status === 404) {
+            return reply("🚫 *Word not found.* Please check the spelling and try again.");
+        }
+        return reply("⚠️ An error occurred while fetching the definition. Please try again later.");
     }
+  }
+},
+{
+        command: ['news'],
+        operate: async ({ kelvin, mek, m, from, reply, text, q }) => {
+        try {
+        const apiKey="0f2c43ab11324578a7b1709651736382";
+        const response = await axios.get(`https://newsapi.org/v2/top-headlines?country=us&apiKey=${apiKey}`);
+        const articles = response.data.articles;
+
+        if (!articles.length) return reply("No news articles found.");
+
+        // Send each article as a separate message with image and title
+        for (let i = 0; i < Math.min(articles.length, 5); i++) {
+            const article = articles[i];
+            let message = `
+📰 *${article.title}*
+⚠️ _${article.description}_
+🔗 _${article.url}_
+
+> ${global.wm}
+            `;
+
+            console.log('Article URL:', article.urlToImage); 
+
+            if (article.urlToImage) {
+                // Send image with caption
+                await kelvin.sendMessage(from, { image: { url: article.urlToImage }, caption: message });
+            } else {
+                
+                await kelvin.sendMessage(from, { text: message });
+            }
+        };
+    } catch (e) {
+        console.error("Error fetching news:", e);
+        reply("Could not fetch news. Please try again later.");
+    }
+  }
+},
+{
+        command: ['searchrepo', 'srepo'],
+        operate: async ({ kelvin, mek, m, arg, store, reply, text, q }) => {
+        try {
+    const repoName = args.join(" ");
+    if (!repoName) {
+      return reply("Please provide a GitHub repository in the format 📌 `owner/repo`.");
+    }
+
+    const apiUrl = `https://api.github.com/repos/${repoName}`;
+    const { data } = await axios.get(apiUrl);
+
+    let responseMsg = `📁 *GitHub Repository Info* 📁\n\n`;
+    responseMsg += `*Name*: ${data.name}\n`;
+    responseMsg += `*URL*: ${data.html_url}\n`;
+    responseMsg += `*Description*: ${data.description || "No description"}\n`;
+    responseMsg += `*Stars*: ${data.stargazers_count}\n`;
+    responseMsg += `*Forks*: ${data.forks_count}\n`;
+    responseMsg += `*Owner*: ${data.owner.login}\n`;
+    responseMsg += `*Created At*: ${new Date(data.created_at).toLocaleDateString()}\n`;
+    responseMsg += `\n> ${global.wm}`;
+
+    await kelvin.sendMessage(from, { text: responseMsg }, { quoted: m });
+  } catch (error) {
+    console.error("GitHub API Error:", error);
+    reply(`❌ Error fetching repository data: ${error.response?.data?.message || error.message}`);
+  }
+ }
+},
+{
+        command: ['ytstalk'],
+        operate: async ({ kelvin, mek, m, arg, reply, from, text, q }) => {
+        try {
+    const username = args.join(" ");
+    if (!username) {
+      return reply("Please provide a YouTube username. Example: `.ytstalk KelvinTech-hub`");
+    }
+
+    // Fetch YouTube channel information from the API
+    const response = await axios.get(`https://api.siputzx.my.id/api/stalk/youtube?username=${encodeURIComponent(username)}`);
+    const { status, data } = response.data;
+
+    if (!status || !data) {
+      return reply("No information found for the specified YouTube channel. Please try again.");
+    }
+
+    const {
+      channel: {
+        username: ytUsername,
+        subscriberCount,
+        videoCount,
+        avatarUrl,
+        channelUrl,
+        description,
+      },
+      latest_videos,
+    } = data;
+
+    // Format the YouTube channel information message
+    const ytMessage = `
+📺 *YouTube Channel*: ${ytUsername}
+👥 *Subscribers*: ${subscriberCount}
+🎥 *Total Videos*: ${videoCount}
+📝 *Description*: ${description || "N/A"}
+🔗 *Channel URL*: ${channelUrl}
+
+🎬 *Latest Videos*:
+${latest_videos.slice(0, 3).map((video, index) => `
+${index + 1}. *${video.title}*
+   ▶️ *Views*: ${video.viewCount}
+   ⏱️ *Duration*: ${video.duration}
+   📅 *Published*: ${video.publishedTime}
+   🔗 *Video URL*: ${video.videoUrl}
+`).join("\n")}
+    `;
+
+
+    await kelvin.sendMessage(from, {
+      image: { url: avatarUrl }, 
+      caption: ytMessage, 
+    });
+  } catch (error) {
+    console.error("Error fetching YouTube channel information:", error);
+    reply("❌ Unable to fetch YouTube channel information. Please try again later.");
+  }
+ }
+},
+{
+        command: ['twitterstalk', 'xstalk'],
+        operate: async ({ kelvin, mek, m, q, reply, from, text }) => {
+        try {
+    if (!q) {
+      return reply("Please provide a valid Twitter/X username.");
+    }
+
+    await kelvin.sendMessage(from, {
+      react: { text: "⏳", key: m.key }
+    });
+
+    const apiUrl = `https://delirius-apiofc.vercel.app/tools/xstalk?username=${encodeURIComponent(q)}`;
+    const { data } = await axios.get(apiUrl);
+
+    if (!data || !data.status || !data.data) {
+      return reply("⚠️ Failed to fetch Twitter/X user details. Ensure the username is correct.");
+    }
+
+    const user = data.data;
+    const verifiedBadge = user.verified ? "✅" : "❌";
+
+    const caption = `╭━━━〔 *TWITTER/X STALKER* 〕━━━⊷\n`
+      + `┃👤 *Name:* ${user.name}\n`
+      + `┃🔹 *Username:* @${user.username}\n`
+      + `┃✔️ *Verified:* ${verifiedBadge}\n`
+      + `┃👥 *Followers:* ${user.followers_count}\n`
+      + `┃👤 *Following:* ${user.following_count}\n`
+      + `┃📝 *Tweets:* ${user.tweets_count}\n`
+      + `┃📅 *Joined:* ${user.created}\n`
+      + `┃🔗 *Profile:* [Click Here](${user.url})\n`
+      + `╰━━━⪼\n\n`
+      + `🔹 > ${global.wm}`;
+
+    await kelvin.sendMessage(from, {
+      image: { url: user.avatar },
+      caption: caption
+    }, { quoted: m });
+
+  } catch (error) {
+    console.error("Error:", error);
+    reply("❌ An error occurred while processing your request. Please try again.");
+  }
+ }
+}
+        
+
 ];
