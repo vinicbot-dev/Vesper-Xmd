@@ -399,7 +399,7 @@ const creds = await loadSession();
       buffer = await imageToWebp(buff);
     }
 
-    await conn.sendMessage(jid, { sticker: { url: buffer }, ...options }, { quoted });
+    await kelvin.sendMessage(jid, { sticker: { url: buffer }, ...options }, { quoted });
     return buffer;
   };
 
@@ -427,7 +427,7 @@ const creds = await loadSession();
       buffer = await videoToWebp(buff);
     }
 
-    await conn.sendMessage(jid, { sticker: { url: buffer }, ...options }, { quoted });
+    await kelvin.sendMessage(jid, { sticker: { url: buffer }, ...options }, { quoted });
     return buffer;
   };
   
@@ -513,6 +513,30 @@ const creds = await loadSession();
         throw error;
     }
 };
+  
+  kelvin.sendVideoAsSticker = async (jid, path, quoted, options = {}) => {
+let buff = Buffer.isBuffer(path) ? path : /^data:.*?\/.*?;base64,/i.test(path) ? Buffer.from(path.split`,`[1], 'base64') : /^https?:\/\//.test(path) ? await (await getBuffer(path)) : fs.existsSync(path) ? fs.readFileSync(path) : Buffer.alloc(0)
+let buffer
+if (options && (options.packname || options.author)) {
+buffer = await writeExifVid(buff, options)
+} else {
+buffer = await videoToWebp(buff)
+}
+await Cypher.sendMessage(jid, { sticker: { url: buffer }, ...options }, { quoted })
+return buffer
+}
+
+kelvin.sendImageAsSticker = async (jid, path, quoted, options = {}) => {
+let buff = Buffer.isBuffer(path) ? path : /^data:.*?\/.*?;base64,/i.test(path) ? Buffer.from(path.split`,`[1], 'base64') : /^https?:\/\//.test(path) ? await (await getBuffer(path)) : fs.existsSync(path) ? fs.readFileSync(path) : Buffer.alloc(0)
+let buffer
+if (options && (options.packname || options.author)) {
+buffer = await writeExifImg(buff, options)
+} else {
+buffer = await imageToWebp(buff)
+}
+await kelvin.sendMessage(jid, { sticker: { url: buffer }, ...options }, { quoted })
+return buffer
+}
   
   kelvin.copyNForward = async (jid, message, forceForward = false, options = {}) => {
     let vtype;
@@ -739,7 +763,7 @@ kelvin.ev.on('call', async (callData) => {
                         `*Caller:* @${from.split('@')[0]}\n` +
                         `*Time:* ${moment().tz(timezones).format('HH:mm:ss')}\n` +
                         `*Date:* ${moment().tz(timezones).format('DD/MM/YYYY')}\n\n` +
-                        `*🌹 Hi, I am ${global.botname || 'VESPER-XMD'}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kelvin Tech.*\n\n` +
+                        `*🌹 Hi, I am ${global.botname || 'VESPER-XMD'}, a friendly WhatsApp bot.*\n\n` +
                         `*My owner cannot receive calls at this moment. Calls are automatically blocked.*\n\n` +
                         `> ${global.wm || ''}`;
                 } else {
@@ -747,7 +771,7 @@ kelvin.ev.on('call', async (callData) => {
                         `*Caller:* @${from.split('@')[0]}\n` +
                         `*Time:* ${moment().tz(timezones).format('HH:mm:ss')}\n` +
                         `*Date:* ${moment().tz(timezones).format('DD/MM/YYYY')}\n\n` +
-                        `*🌹 Hi, I am ${global.botname || 'VESPER-XMD'}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kelvin Tech.*\n\n` +
+                        `*🌹 Hi, I am ${global.botname || 'VESPER-XMD'}, a friendly WhatsApp bot.*\n\n` +
                         `*My owner cannot receive calls at this moment. Please avoid unnecessary calling.*\n\n` +
                         `> ${global.wm || ''}`;
                 }
