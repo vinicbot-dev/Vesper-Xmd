@@ -1,4 +1,13 @@
 const axios = require('axios');
+const {
+veniceAICommand,
+mistralAICommand,
+perplexityAICommand,
+bardAICommand,
+gpt4NanoAICommand,
+keithAICommand,
+claudeAICommand
+} = require('../start/KelvinCmds/ai');
 
 module.exports = [
     // Generate AI Image
@@ -28,7 +37,7 @@ module.exports = [
                 const response = await fetch(`https://api.siputzx.my.id/api/ai/gpt3?prompt=${encodeURIComponent(query)}`);
                 const data = await response.json();
                 
-                reply(data.status ? `🤖 ${data.data}` : '❌ AI failed to respond');
+                reply(data.status ? `🤖 ${data.data}` : 'AI failed to respond');
             } catch (error) {
                 reply('❌ Error: AI service down');
             }
@@ -164,7 +173,7 @@ module.exports = [
 
     // Blackbox AI
     {
-        command: ['bb', 'blackbox'],
+        command: ['blackbox', 'bb'],
         operate: async ({ kelvin, m, reply, text, q }) => {
             const query = text || q;
             if (!query) return reply('*Please ask me something*');
@@ -250,5 +259,90 @@ module.exports = [
                 reply('❌ Mistral AI service error');
             }
         }
+    },
+    {
+        command: ['think'],
+        operate: async ({ kelvin, mek, m, reply, text, q }) => {
+           try {
+        if (!q) {
+            return reply('Please provide a complex question for deep thinking mode.\n\nExample: .think analyze the ethical implications of artificial intelligence in healthcare');
+        }
+
+        await reply('_🧠 Microsoft Copilot is thinking deeply... This may take a moment._');
+
+        const response = await axios.get(`https://malvin-api.vercel.app/ai/copilot-think?text=${encodeURIComponent(q)}`);
+        
+        if (response.data && response.data.result) {
+            const answer = response.data.result;
+            
+            await kelvin.sendMessage(from, {
+                text: `🧠 *Microsoft Copilot - Deep Thinking:*\n\n${answer}\n\n💭 *Deep analysis completed*\n👤 *Requested by:* @${sender.split('@')[0]}`,
+                mentions: [sender],
+                contextInfo: {
+                    mentionedJid: [sender],
+                    quotedMessage: mek.message
+                }
+            }, {
+                quoted: m
+            });
+        } else {
+            throw new Error('Invalid response from Copilot Deep Thinking API');
+        }
+
+    } catch (error) {
+        console.error('Error in think command:', error);
+        
+        if (error.code === 'ECONNABORTED') {
+            await reply('❌ Request timeout. Deep thinking is taking longer than expected. Please try again.');
+        } else if (error.response?.status === 429) {
+            await reply('❌ Rate limit exceeded. Please wait before another deep thinking request.');
+        } else {
+            await reply('❌ Failed to get deep thinking response. Please try again later.');
+        }
     }
+ }
+},
+    {
+        command: ['venice', 'vai'],
+        operate: async ({ kelvin, m, reply, args, text }) => {
+            await veniceAICommand(kelvin, m.chat, text, m);
+        }
+    },
+    {
+        command: ['mistral'],
+        operate: async ({ kelvin, m, reply, args, text }) => {
+            await mistralAICommand(kelvin, m.chat, text, m);
+        }
+    },
+    {
+        command: ['perplexity'],
+        operate: async ({ kelvin, m, reply, args, text }) => {
+            await perplexityAICommand(kelvin, m.chat, text, m);
+        }
+    },
+    {
+        command: ['bard'],
+        operate: async ({ kelvin, m, reply, args, text }) => {
+            await bardAICommand(kelvin, m.chat, text, m);
+        }
+    },
+    {
+        command: ['gpt4nano', 'gpt41nano'],
+        operate: async ({ kelvin, m, reply, args, text }) => {
+            await gpt4NanoAICommand(kelvin, m.chat, text, m);
+        }
+    },
+    {
+        command: ['kelvinai'],
+        operate: async ({ kelvin, m, reply, args, text }) => {
+            await keithAICommand(kelvin, m.chat, text, m);
+        }
+    },
+    {
+        command: ['claude'],
+        operate: async ({ kelvin, m, reply, args, text }) => {
+            await claudeAICommand(kelvin, m.chat, text, m);
+        }
+    }
+    
 ];
