@@ -74,7 +74,6 @@ const { handleAutoRead } = require('./start/kelvinCmds/autoread');
 const { handleAutoRecording } = require('./start/kelvinCmds/autorecord');
 const { handleAutoTyping } = require('./start/kelvinCmds/autotyping');
 const { handleAIChatbot } = require('./start/kelvinCmds/chatbot');
-const { isAdmin } = require('./start/lib/isAdmin');
 
 
 // Menu Images - KelvinTech Style
