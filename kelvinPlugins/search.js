@@ -4,7 +4,6 @@ const yts = require('yt-search');
 const fetch = require("node-fetch");
 const axios = require('axios');
 const { playstoreSearch } = require('../start/kelvinCmds/playstore.js'); 
-const { lyricsCommand } = require('../start/kelvinCmds/lyrics');
 
 async function tiktokSearch(query) {
     try {
@@ -138,21 +137,84 @@ module.exports = [
             }
         }
     },
-    {
-        command: ['lyrics', 'lyric'],
-        operate: async ({ reply, m, kelvin, text }) => {
-            try {
-                if (!text) {
-                    return reply('🎵 *Lyrics Command*\n\nUsage: `.lyrics <song name>`\nExample: `.lyrics shape of you`');
-                }
-                
-                await lyricsCommand(kelvin, m.chat, text, m);
-            } catch (error) {
-                console.error('Error in lyrics command:', error);
-                reply('❌ Error fetching lyrics. Please try again.');
-            }
+{
+    command: ['lyrics', 'lyric'],
+    operate: async ({ kelvin, m, reply, text, prefix }) => {
+        if (!text) {
+            return reply(`🎵 *Lyrics Finder*\n\nUsage: ${prefix}lyrics <song name>\n\nExamples:\n• ${prefix}lyrics shape of you\n• ${prefix}lyrics Sekkle down by bunnie Gunter\n• ${prefix}lyrics Blinding Lights The Weeknd`);
         }
-    },
+
+        try {
+            await reply(`🔍 Searching lyrics for: *"${text}"*...`);
+
+            const apiUrl = `https://api.popcat.xyz/v2/lyrics?song=${encodeURIComponent(text)}`;
+            const res = await fetch(apiUrl);
+            
+            if (!res.ok) throw new Error(`API status: ${res.status}`);
+            
+            const data = await res.json();
+
+            // Check for errors
+            if (data.error || data.message?.toLowerCase().includes('not found')) {
+                return reply(`❌ No lyrics found for *"${text}"*\n\nTry:\n• Add artist name\n• Check spelling\n• Use exact title`);
+            }
+
+            let lyrics = data.lyrics;
+            
+            // If lyrics is an object, try to extract text
+            if (lyrics && typeof lyrics === 'object') {
+                // Try common properties
+                lyrics = lyrics.text || lyrics.lyrics || JSON.stringify(lyrics);
+            }
+            
+            // If still not a string or empty
+            if (!lyrics || typeof lyrics !== 'string') {
+                return reply(`Lyrics format error for *"${text}"*\nThe API returned unexpected data.`);
+            }
+
+            const artist = data.artist || 'Unknown';
+            const title = data.title || text;
+            const image = data.image;
+
+            // Format message (max 4000 chars for WhatsApp)
+            let message = `🎵 *${title}*\n🎤 *Artist:* ${artist}\n\n📖 *Lyrics:*\n\n${lyrics}`;
+            
+            if (message.length > 3500) {
+                message = message.substring(0, 3500) + '\n\n📜 *Lyrics truncated - song too long*';
+            }
+            
+            message += `${global.wm}`;
+
+            // Send image first if available
+            if (image) {
+                try {
+                    await kelvin.sendMessage(m.chat, {
+                        image: { url: image },
+                        caption: `🎵 *${title}*\n🎤 *Artist:* ${artist}`
+                    }, { quoted: m });
+                    
+                    // Small delay
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                } catch (e) {
+                    console.log('Image failed:', e.message);
+                }
+            }
+
+            // Send lyrics
+            await kelvin.sendMessage(m.chat, { text: message }, { quoted: m });
+
+        } catch (error) {
+            console.error('Lyrics error:', error);
+            
+            let errMsg = `❌ Error: ${error.message}`;
+            if (error.message.includes('timeout')) errMsg = '⏰ Request timed out';
+            if (error.message.includes('network')) errMsg = '🌐 Network error';
+            if (error.message.includes('status: 5')) errMsg = '🔧 Service unavailable';
+            
+            reply(`${errMsg}\n\nTry again in a few moments!`);
+        }
+    }
+},
     {
         command: ['chord', 'cr'],
         operate: async ({ reply, m, text }) => {
