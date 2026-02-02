@@ -172,75 +172,15 @@ module.exports = [
 {
     command: ['kickall', 'removeall'],
     operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, from, prefix }) => {
-        if (!isGroup) return reply(global.mess.notgroup);
+        if (!m.isGroup) return reply(mess.notgroup);
         if (!isSenderAdmin) return reply(global.mess.notadmin);
-
-        try {
-            const metadata = await kelvin.groupMetadata(from);
-            const allParticipants = metadata.participants.map(p => p.id);
-            const groupAdmins = metadata.participants.filter(p => p.admin).map(p => p.id);
-            
-            const usersToKick = allParticipants.filter(user => !groupAdmins.includes(user));
-
-            if (!usersToKick.length) {
-                return reply('*✅ No members to kick!*\n\nOnly admins are in this group.');
-            }
-
-            let message = `🚨 *KICKING ALL MEMBERS - ${metadata.subject || 'This Group'}*\n\n`;
-            message += `_All non-admin members will be removed in 25 seconds:_\n\n`;
-            message += usersToKick.map((user, i) => `🔹 ${i + 1}. @${user.split('@')[0]}`).join('\n');
-            message += `\n\n📊 *Total to kick:* ${usersToKick.length}`;
-            message += `\n*Admins protected:* ${groupAdmins.length}`;
-            message += `\n*Time:* 25 seconds`;
-            message += `\n*Cancel:* Use *${prefix}cancelkick* to stop`;
-
-            await kelvin.sendMessage(m.chat, { 
-                text: message, 
-                mentions: usersToKick 
-            }, { quoted: m });
-
-            if (!global.kickQueue) global.kickQueue = new Map();
-            global.kickQueue.set(m.chat, { 
-                type: 'all', 
-                users: usersToKick,
-                timestamp: Date.now()
-            });
-
-            setTimeout(async () => {
-                if (!global.kickQueue.has(m.chat)) return;
-                
-                const queueData = global.kickQueue.get(m.chat);
-                if (queueData.type === 'all') {
-                    let successCount = 0;
-                    let failCount = 0;
-                    
-                    for (let user of usersToKick) {
-                        try {
-                            await kelvin.groupParticipantsUpdate(m.chat, [user], "remove");
-                            successCount++;
-                            await new Promise(resolve => setTimeout(resolve, 1000));
-                        } catch (userError) {
-                            console.error(`Failed to kick ${user}:`, userError);
-                            failCount++;
-                        }
-                    }
-                    
-                    let resultMessage = `✅ *Kick All Operation Completed!*\n\n`;
-                    resultMessage += `✓ Successfully kicked: ${successCount}\n`;
-                    if (failCount > 0) {
-                        resultMessage += `✗ Failed to kick: ${failCount}\n`;
-                    }
-                    resultMessage += ` Admins remaining: ${groupAdmins.length}`;
-                    
-                    reply(resultMessage);
-                    global.kickQueue.delete(m.chat);
-                }
-            }, 25000);
-
-        } catch (error) {
-            console.error('Error in kickall command:', error);
-            reply('*Error processing kick all command!*');
-        }
+        let bck = m.mentionedJid[0]
+            ? m.mentionedJid[0]
+            : m.quoted
+            ? m.quoted.sender
+            : text.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
+        await kelvin.groupParticipantsUpdate(m.chat, [bck], "remove");
+        reply(global.mess.done);
     }
 },
 {
@@ -300,9 +240,9 @@ module.exports = [
             if (!isGroup) return reply(global.mess.notgroup);
             if (!isSenderAdmin) return reply(global.mess.notadmin);
 
-            let me = m.sender;
+            let kev = m.sender;
             let q = text.split(' ').slice(1).join(' ').trim();
-            let teks = `*TAGGED BY:* @${me.split("@")[0]}\n\n*MESSAGE:* ${q || "No message"}\n\n`;
+            let teks = `*TAGGED BY:* @${kev.split("@")[0]}\n\n*MESSAGE:* ${q || "No message"}\n\n`;
             
             for (let mem of participants) {
                 teks += `@${mem.id.split("@")[0]}\n`;
@@ -324,7 +264,8 @@ module.exports = [
         command: ['mute', 'close'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, isBotAdmin }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmi) return reply(global.mess.notadmin);
+            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!isBotAdmin) return reply(global.mess.botnotadmin);
             
             kelvin.groupSettingUpdate(m.chat, "announcement");
             reply("Group closed by admin. Only admins can send messages.");
@@ -446,9 +387,9 @@ module.exports = [
     },
     {
         command: ['disapproveall'],
-        operate: async ({ kelvin, m, reply, isGroup, isGroupAdmins }) => {
+        operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isGroupAdmins) return reply('*You are not a group admin*');
+            if (!isSenderAdmin) return reply(global.mess.notadmin);
             
             const groupId = m.chat;
             
@@ -656,7 +597,7 @@ module.exports = [
     },
     {
         command: ['getgrouppp'],
-        operate: async ({ kelvin, m, reply, isGroup }) => {
+        operate: async ({ kelvin, quoted, m, reply, isGroup }) => {
             if (!isGroup) return reply(global.mess.notgroup);
 
             try {
@@ -683,55 +624,20 @@ module.exports = [
     {
         command: ['listonline'],
         operate: async ({ kelvin, m, reply, isGroup, args, store, botNumber }) => {
-            if (!isGroup) return reply(global.mess.notgroup);
-            
-            try {
-                let id = args[0] && /\d+\-\d+@g.us/.test(args[0]) ? args[0] : m.chat;
-                
-                let presences = store.presences && store.presences[id] ? store.presences[id] : null;
-                
-                if (!presences || Object.keys(presences).length === 0) {
-                    return reply('*No online members detected in this group.*');
-                }
+    if (!m.isGroup) return reply(mess.notgroup);
+    
+    let id = args && /\d+\-\d+@g.us/.test(args[0]) ? args[0] : m.chat;
+    let presences = store.presences[id];
+    
+    if (!presences) {
+      return reply('*No online members detected in this group.*');
+    }
 
-                let onlineMembers = [];
-                try {
-                    onlineMembers = [...Object.keys(presences), botNumber];
-                } catch (e) {
-                    console.error('Error getting online members:', e);
-                    return reply('*Error detecting online members.*');
-                }
-
-                const validOnlineMembers = onlineMembers.filter(member => 
-                    member && typeof member === 'string' && member.includes('@')
-                );
-
-                if (validOnlineMembers.length === 0) {
-                    return reply('*No online members detected in this group.*');
-                }
-
-                let liston = 1;
-                const onlineListText = '*ONLINE MEMBERS IN THIS GROUP*\n\n' + 
-                    validOnlineMembers.map(v => {
-                        const username = v.replace(/@.+/, '');
-                        return `${liston++}. @${username}`;
-                    }).join('\n');
-
-                await kelvin.sendMessage(
-                    m.chat,
-                    {
-                        text: onlineListText,
-                        mentions: validOnlineMembers
-                    },
-                    { quoted: m }
-                );
-                
-            } catch (error) {
-                console.error('Error in listonline command:', error);
-                reply('*An error occurred while checking online members.*');
-            }
-        }
-    },
+    let online = [...Object.keys(presences), botNumber];
+    let liston = 1;
+    kelvin.sendText(m.chat, '*ONLINE MEMBERS IN THIS GROUP*\n\n' + online.map(v => `${liston++} . @` + v.replace(/@.+/, '')).join`\n`, m, { mentions: online });
+  }
+},
     {
         command: ['editinfo'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, args, prefix }) => {
@@ -812,7 +718,7 @@ module.exports = [
 
             } catch (error) {
                 console.error("UnlockGS Error:", error);
-                reply("❌ Failed to unlock group settings");
+                reply("Failed to unlock group settings");
             }
         }
     },
@@ -1174,17 +1080,19 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     {
         command: ['add'],
         operate: async ({ kelvin, m, reply, prefix, isGroup, isSenderAdmin, text, quoted }) => {
-            if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
-            if (!text) return reply(`*Please provide phone number with no country code.*\nExample: ${prefix}add 256755585369`);
+              if (!m.isGroup) return reply(global.mess.notgroup);
+        if (!isSenderAdmin) return reply(mess.notadmin);
+         if (!text) return reply(`*Please provide phone number with no country code.*\nExample: ${prefix + command} 256755585369`);
 
-            let bws = quoted
-                ? quoted.sender
-                : text.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
-            await kelvin.groupParticipantsUpdate(m.chat, [bws], "add");
-            reply('Done');
-        }
-    },
+
+        
+        let bws = m.quoted
+            ? m.quoted.sender
+            : text.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
+        await kelvin.groupParticipantsUpdate(m.chat, [bws], "add");
+        reply(global.mess.done);
+    }
+},
     {
         command: ['kick'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, text, mentionedJid, quoted }) => {
@@ -1197,7 +1105,7 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
                 ? quoted.sender
                 : text.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
             await kelvin.groupParticipantsUpdate(m.chat, [bck], "remove");
-            reply('Done');
+            reply(global.mess.done);
         }
     },
     {
@@ -1227,7 +1135,7 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     },
     {
         command: ['groupinfo'],
-        operate: async ({ kelvin, m, reply, isGroup, from }) => {
+        operate: async ({ kelvin, m, reply, isGroup, groupMetadata, from }) => {
             try {
                 if (!isGroup) return reply(global.mess.notgroup);
 
@@ -1274,6 +1182,74 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
             reply("*group link reseted by admin*");
         }
     },
+   
+{
+    command: ['antidemote'],
+    operate: async ({ m, reply, prefix, args, Access, botNumber, kelvin }) => {
+        if (!m.isGroup) return reply(global.notgroup);
+        if (!Access) return reply(mess.owner);
+        
+        const action = args[0]?.toLowerCase();
+        
+        
+        if (!action || !['on', 'off'].includes(action)) {
+            const isEnabled = global.settingsManager?.getSetting(botNumber, 'antidemote', true);
+            return reply(`*Anti-Demote:* ${isEnabled ? '✅ ON' : '❌ OFF'}\n${prefix}antidemote on/off`);
+        }
+        
+        if (action === 'on') {
+            await global.settingsManager?.updateSetting(botNumber, 'antidemote', true);
+            reply(`✅ *Antidemote successfully enabled*`);
+        } else {
+            await global.settingsManager?.updateSetting(botNumber, 'antidemote', false);
+            reply(`✅ *Antidemote successfully disabled*`);
+        }
+    }
+},
+{
+    command: ['antipromote'],
+    operate: async ({ m, reply, prefix, args, Access, botNumber, kelvin }) => {
+        if (!m.isGroup) return reply(global.notgroup);
+        if (!Access) return reply(mess.owner);
+        
+        const action = args[0]?.toLowerCase();
+        
+        if (!action || !['on', 'off'].includes(action)) {
+            const isEnabled = global.settingsManager?.getSetting(botNumber, 'antipromote', true);
+            return reply(`*Anti-Promote:* ${isEnabled ? '✅ ON' : '❌ OFF'}\n${prefix}antipromote on/off`);
+        }
+        
+        if (action === 'on') {
+            await global.settingsManager?.updateSetting(botNumber, 'antipromote', true);
+            reply(`✅ *Antipromote successfully enabled*`);
+        } else {
+            await global.settingsManager?.updateSetting(botNumber, 'antipromote', false);
+            reply(`✅ *Antipromote successfully disabled*`);
+        }
+    }
+},
+{
+    command: ['antitagadmin'],
+    operate: async ({ m, reply, prefix, args, Access, botNumber, kelvin }) => {
+        if (!m.isGroup) return reply(global.notgroup);
+        if (!Access) return reply(mess.owner);
+        
+        const action = args[0]?.toLowerCase();
+        
+        if (!action || !['on', 'off'].includes(action)) {
+            const isEnabled = global.settingsManager?.getSetting(botNumber, 'antitagadmin', false);
+            return reply(`*Anti-Tag Admin:* ${isEnabled ? '✅ ON' : '❌ OFF'}\n${prefix}antitagadmin on/off`);
+        }
+        
+        if (action === 'on') {
+            await global.settingsManager?.updateSetting(botNumber, 'antitagadmin', true);
+            reply(`✅ *Antitagadmin successfully enabled*`);
+        } else {
+            await global.settingsManager?.updateSetting(botNumber, 'antitagadmin', false);
+            reply(`✅ *Antitagadmin successfully disabled*`);
+        }
+    }
+},
     {
         command: ['userjid', 'userid'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
