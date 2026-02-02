@@ -10,7 +10,7 @@ process.on("uncaughtException", (err) => {
 });
 
 console.clear();
-console.log('Starting...');
+console.log('Starting Vesper-Xmd with much love from Kevin Tech...');
 
 require('./settings');
 
@@ -30,10 +30,13 @@ const {
 const pino = require('pino');
 const chalk = require('chalk');
 const readline = require("readline");
+const express = require('express')
+const app = express();
 const fs = require('fs');
 const FileType = require('file-type');
 const { File } = require('megajs');
 const path = require('path');
+const port = process.env.PORT || 3000;
 const timezones = global.timezones || "Africa/Kampala";
 const moment = require('moment-timezone');
 
@@ -60,10 +63,10 @@ const {
   writeExifVid
 } = require('./start/lib/exif');
 
-
+const settings = require('./settings');
 const PluginManager = require('./start/lib/PluginManager');
+const { color } = require('./start/lib/color')
 const { getSetting } = require('./start/Core/settingManager');
-const { settings } = require('./settings');
 const { handleStatusUpdate } = require('./start/kevin');
 const usePairingCode = true;
 
@@ -111,10 +114,8 @@ async function loadAllPlugins() {
 const sessionDir = path.join(__dirname, 'sessions');
 const credsPath = path.join(sessionDir, 'creds.json');
 
-// Create session directory if it doesn't exist
-if (!fs.existsSync(sessionDir)) {
-    fs.mkdirSync(sessionDir, { recursive: true });
-}
+fs.mkdirSync(sessionPath, { recursive: true });
+        fs.mkdirSync(tmpPath, { recursive: true });
 
 async function loadSession() {
     try {
@@ -126,7 +127,6 @@ async function loadSession() {
         console.log('[⏳] Downloading creds data...');
         console.log('[🔰] Downloading MEGA.nz session...');
 
- 
         const megaFileId = settings.SESSION_ID.startsWith('jexploit~') 
             ? settings.SESSION_ID.replace("jexploit~", "") 
             : settings.SESSION_ID;
@@ -140,25 +140,61 @@ async function loadSession() {
             });
         });
 
+       
+        
         fs.writeFileSync(credsPath, data);
         console.log('[✅] MEGA session downloaded successfully');
         return JSON.parse(data.toString());
     } catch (error) {
-        console.error('❌ Error loading session:', error.message);
+        console.error('Error loading session:', error.message);
         console.log('Will generate QR code instead');
         return null;
     }
 }
+
+function cleanCorruptedSession() {
+    const sessionPath = path.join(__dirname, 'session');
+    const tmpPath = path.join(__dirname, 'tmp');
+    
+    try {
+        // Clean session folder
+        if (fs.existsSync(sessionPath)) {
+            console.log(chalk.yellow('🧹 Cleaning session folder...'));
+            fs.rmSync(sessionPath, { recursive: true, force: true });
+        }
+        
+        // Clean tmp folder
+        if (fs.existsSync(tmpPath)) {
+            console.log(chalk.yellow('🧹 Cleaning tmp folder...'));
+            fs.rmSync(tmpPath, { recursive: true, force: true });
+        }
+              
+        
+        console.log(chalk.green('✅ Session cleanup complete'));
+        return true;
+    } catch (error) {
+        console.error(chalk.red('Session cleanup failed:'), error);
+        return false;
+    }
+}
     
 async function clientstart() {
-await loadAllPlugins();
-const creds = await loadSession();
-
+    await loadAllPlugins();
+    await cleanCorruptedSession();
+    
+    // Try to load session from MEGA
+    let sessionCreds = null;
+    try {
+        sessionCreds = await loadSession();  
+    } catch (e) {
+        console.log('Could not load session, will use QR/phone login');
+    }
+    
     const {
         state,
         saveCreds 
-    } = await useMultiFileAuthState('./session');
-    
+    } = await useMultiFileAuthState('./sessions');
+      
     const kelvin = makeWASocket({
         logger: pino({ level: "silent" }),
         printQRInTerminal: !usePairingCode,
@@ -166,23 +202,30 @@ const creds = await loadSession();
         browser: Browsers.ubuntu('Edge')
     });
 
-         if (!creds && !kelvin.authState.creds.registered) {
-        try {
-            const phoneNumber = await question(chalk.greenBright(`Thanks for choosing Kelvin Tech Base. Please provide your number start with 256xxx:\n`));
-            
-            let code;
-            if (typeof global !== 'undefined' && global.pairingCode) {
-                try {
-                    code = await kelvin.requestPairingCode(phoneNumber.trim(), `${global.pairingCode}`);
-                } catch (err) {
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    if (!sessionCreds && !kelvin.authState.creds.registered) {
+        console.log(chalk.yellow(' Authentication required...'));
+        
+        if (usePairingCode) {
+            try {
+                const phoneNumber = await question(chalk.greenBright(`Thanks for choosing Vesper-Xmd. Please provide your number start with 256xxx:\n`));
+                
+                let code;
+                if (typeof global !== 'undefined' && global.pairingCode) {
+                    try {
+                        code = await kelvin.requestPairingCode(phoneNumber.trim(), `${global.pairingCode}`);
+                    } catch (err) {
+                        code = await kelvin.requestPairingCode(phoneNumber.trim());
+                    }
+                } else {
                     code = await kelvin.requestPairingCode(phoneNumber.trim());
                 }
-            } else {
-                code = await kelvin.requestPairingCode(phoneNumber.trim());
+                console.log(chalk.cyan(`Your pairing code: ${code}`));
+                console.log(chalk.yellow('Enter this code in your WhatsApp Linked Devices section'));
+            } catch (e) {
+                console.error("Failed to request pairing code:", e);
             }
-            console.log(`your pairing code: ${code}`);
-        } catch (e) {
-            console.error("Failed to request pairing code:", e);
         }
     }
     
@@ -200,8 +243,7 @@ const creds = await loadSession();
          return; // Don't process status as regular messages
      }
      
-     // Continue with regular message processing
-     // if (!kelvin.public && !mek.key.fromMe && chatUpdate.type === 'notify') return;
+     if (!kelvin.public && !mek.key.fromMe && chatUpdate.type === 'notify') return;
      
      let m = smsg(kelvin, mek, store);
      
@@ -225,6 +267,9 @@ const creds = await loadSession();
             return decode.user && decode.server && decode.user + '@' + decode.server || jid;
         } else return jid;
     };
+    
+    const botNumber = kelvin.decodeJid(kelvin.user?.id) || 'default';
+    
 
     kelvin.ev.on('contacts.update', update => {
         for (let contact of update) {
@@ -233,7 +278,10 @@ const creds = await loadSession();
         }
     });
 
-    kelvin.public = global.status || true; // Ensure it's always true if not set
+    
+const publicSetting = getSetting(botNumber, 'public', true);
+kelvin.public = publicSetting === true || publicSetting === 'true';
+
 
     kelvin.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
@@ -628,65 +676,181 @@ kelvin.ev.on('group-participants.update', async (anu) => {
         const botNumber = kelvin.decodeJid(kelvin.user.id);
         const groupId = anu.id;
         
-        // Import welcome manager
-        const { generateWelcomeMessage, generateGoodbyeMessage } = require('./start/kelvinCmds/welcomeManager');
+        // Get adminevent setting first (for logging)
+        const admineventEnabled = global.settingsManager?.getSetting(botNumber, 'adminevent', false);
         
-        const participants = Array.isArray(anu.participants) ? anu.participants : [anu.participants];
+        // Check group-specific welcome setting
+        const welcomeEnabled = global.settingsManager?.isWelcomeEnabled(botNumber, groupId);
         
-        // Process welcome messages
-        if (anu.action === 'add') {
-            for (const participant of participants) {
-                if (!participant || participant === botNumber) continue;
+        if (welcomeEnabled === true) {
+            console.log(`[WELCOME] Processing welcome/goodbye for group ${groupId}`);
+            
+            try {
+                const groupMetadata = await kelvin.groupMetadata(groupId);
+                const participants = anu.participants;
                 
-                // Check if welcome is enabled for this group
-                const welcomeEnabled = getSetting(botNumber, `welcome_${groupId}`, false);
-                if (!welcomeEnabled) {
-                    console.log(chalk.yellow(`[WELCOME] Disabled for group ${groupId}`));
-                    continue;
-                }
-                
-                console.log(chalk.green(`[WELCOME] Sending welcome for ${participant} in group ${groupId}`));
-                
-                try {
-                    const welcomeMsg = await generateWelcomeMessage(kelvin, botNumber, groupId, participant);
-                    if (welcomeMsg) {
-                        await kelvin.sendMessage(groupId, welcomeMsg);
-                        console.log(chalk.green(`✅ Welcome sent for ${participant}`));
+                for (const participant of participants) {
+                    
+                    let participantJid;
+                    if (typeof participant === 'string') {
+                        participantJid = participant;
+                    } else if (participant && participant.id) {
+                        // If participant is an object with id property
+                        participantJid = participant.id;
+                    } else {
+                        console.error('[WELCOME] Invalid participant format:', participant);
+                        continue;
                     }
-                } catch (err) {
-                    console.error(chalk.red('Welcome error:'), err);
+                    
+                    // Skip if participant is the bot itself
+                    if (participantJid === botNumber) continue;
+                    
+                    // Extract user ID safely
+                    let userId;
+                    if (participantJid.includes('@')) {
+                        userId = participantJid.split('@')[0];
+                    } else {
+                        userId = participantJid;
+                    }
+                    
+                    let ppUrl;
+                    try {
+                        ppUrl = await kelvin.profilePictureUrl(participantJid, 'image');
+                    } catch {
+                        ppUrl = 'https://i.ibb.co/RBx5SQC/avatar-group-large-v2.png?q=60';
+                    }
+                    
+                    const name = await kelvin.getName(participantJid) || userId;
+                    
+                    if (anu.action === 'add') {
+                        const memberCount = groupMetadata.participants.length;
+                        await kelvin.sendMessage(groupId, {
+                            image: { url: ppUrl },
+                            caption: `
+*${global.botname} welcome* @${userId}  
+
+*𝙶𝚛𝚘𝚞𝚙 𝙽𝚊𝚖𝚎: ${groupMetadata.subject}*
+
+*You're our ${memberCount}th member!*
+
+*Join time: ${moment.tz(timezones).format('HH:mm:ss')}, ${moment.tz(timezones).format('DD/MM/YYYY')}*
+
+𝙲𝚊𝚞𝚜𝚎 𝚌𝚑𝚊𝚘𝚜 𝚒𝚝𝚜 𝚊𝚕𝚠𝚊𝚢𝚜 𝚏𝚞𝚗
+
+> ${global.wm}`,
+                            mentions: [participantJid]
+                        });
+                        console.log(`✅ Welcome message sent for ${name} in ${groupMetadata.subject}`);
+                        
+                    } else if (anu.action === 'remove') {
+                        const memberCount = groupMetadata.participants.length;
+                        await kelvin.sendMessage(groupId, {
+                            image: { url: ppUrl },
+                            caption: `
+*👋 Goodbye* 😪 @${userId}
+
+*Left at: ${moment.tz(timezones).format('HH:mm:ss')}, ${moment.tz(timezones).format('DD/MM/YYYY')}*
+
+*We're now ${memberCount} members*.
+
+> ${global.wm}`,
+                            mentions: [participantJid]
+                        });
+                        console.log(`✅ Goodbye message sent for ${name} in ${groupMetadata.subject}`);
+                    }
                 }
+            } catch (err) {
+                console.error('Error in welcome feature:', err);
             }
+        } else {
+            // Welcome disabled, skip
         }
         
-        // Process goodbye messages
-        if (anu.action === 'remove') {
-            for (const participant of participants) {
-                if (!participant || participant === botNumber) continue;
+        // ADMIN EVENTS SECTION
+        if (admineventEnabled === true) {
+            console.log('[ADMIN EVENT] Processing admin events');
+            
+            // Check if bot is in the participants list (skip if true)
+            const participantJids = participants.map(p => 
+                typeof p === 'string' ? p : (p?.id || '')
+            ).filter(p => p);
+            
+            if (participantJids.includes(botNumber)) return;
+            
+            try {
+                let metadata = await kelvin.groupMetadata(anu.id);
+                let participants = anu.participants;
                 
-                // Check if goodbye is enabled for this group
-                const goodbyeEnabled = getSetting(botNumber, `goodbye_${groupId}`, false);
-                if (!goodbyeEnabled) {
-                    console.log(chalk.yellow(`[GOODBYE] Disabled for group ${groupId}`));
-                    continue;
-                }
-                
-                console.log(chalk.green(`[GOODBYE] Sending goodbye for ${participant} in group ${groupId}`));
-                
-                try {
-                    const goodbyeMsg = await generateGoodbyeMessage(kelvin, botNumber, groupId, participant);
-                    if (goodbyeMsg) {
-                        await kelvin.sendMessage(groupId, goodbyeMsg);
-                        console.log(chalk.green(`✅ Goodbye sent for ${participant}`));
+                for (let participant of participants) {
+                    // Get participant JID safely
+                    let participantJid = typeof participant === 'string' ? participant : participant?.id;
+                    if (!participantJid) continue;
+                    
+                    // Get author JID safely
+                    let authorJid = anu.author;
+                    if (anu.author && typeof anu.author !== 'string' && anu.author.id) {
+                        authorJid = anu.author.id;
                     }
-                } catch (err) {
-                    console.error(chalk.red('Goodbye error:'), err);
+                    
+                    let check = authorJid && authorJid !== participantJid;
+                    let tag = check ? [authorJid, participantJid] : [participantJid];
+                    
+                    // Extract user IDs for mention
+                    let participantUserId = participantJid.includes('@') ? 
+                        participantJid.split('@')[0] : participantJid;
+                    let authorUserId = authorJid && authorJid.includes('@') ? 
+                        authorJid.split('@')[0] : authorJid;
+                    
+                    if (anu.action == "promote") {
+                        let promotedUsers = [];
+                        for (let participant of participants) {
+                            let pJid = typeof participant === 'string' ? participant : participant?.id;
+                            if (!pJid) continue;
+                            let userId = pJid.includes('@') ? pJid.split('@')[0] : pJid;
+                            promotedUsers.push(`@${userId}`);
+                        }
+                        
+                        const promotionMessage = `*『 GROUP PROMOTION 』*\n\n` +
+                            `👤 *Promoted User${participants.length > 1 ? 's' : ''}:*\n` +
+                            `${promotedUsers.join('\n')}\n\n` +
+                            `👑 *Promoted By:* @${authorUserId || 'Unknown'}\n\n` +
+                            `📅 *Date:* ${new Date().toLocaleString()}`;
+                        
+                        await kelvin.sendMessage(anu.id, {
+                            text: promotionMessage,
+                            mentions: tag
+                        });
+                        console.log(`✅ Promotion message sent in ${metadata.subject}`);
+                    }
+                    
+                    if (anu.action == "demote") {
+                        let demotedUsers = [];
+                        for (let participant of participants) {
+                            let pJid = typeof participant === 'string' ? participant : participant?.id;
+                            if (!pJid) continue;
+                            let userId = pJid.includes('@') ? pJid.split('@')[0] : pJid;
+                            demotedUsers.push(`@${userId}`);
+                        }
+                        
+                        const demotionMessage = `*『 GROUP DEMOTION 』*\n\n` +
+                            `👤 *Demoted User${participants.length > 1 ? 's' : ''}:*\n` +
+                            `${demotedUsers.join('\n')}\n\n` +
+                            `👑 *Demoted By:* @${authorUserId || 'Unknown'}\n\n` +
+                            `📅 *Date:* ${new Date().toLocaleString()}`;
+                        
+                        await kelvin.sendMessage(anu.id, {
+                            text: demotionMessage,
+                            mentions: tag
+                        });
+                        console.log(`✅ Demotion message sent in ${metadata.subject}`);
+                    }
                 }
+            } catch (err) {
+                console.log('Error in admin event feature:', err);
             }
+        } else {
+            // Admin events disabled, skip
         }
-        
-        // Process admin events (BOT-LEVEL setting) - Keep your existing code
-        // ... (your existing admin event code remains here)
         
     } catch (error) {
         console.error('Error in group-participants.update:', error);
@@ -828,6 +992,32 @@ kelvin.ev.on('call', async (callData) => {
     kelvin.ev.on('creds.update', saveCreds);
     return kelvin;
 }
+
+
+
+const porDir = path.join(__dirname, 'data');
+const porPath = path.join(porDir, 'VesperXmd.html');
+
+// get runtime
+function getUptime() {
+    return runtime(process.uptime());
+}
+
+app.get("/", (req, res) => {
+    res.sendFile(porPath);
+});
+
+app.get("/uptime", (req, res) => {
+    res.json({ uptime: getUptime() });
+});
+
+app.listen(port, (err) => {
+    if (err) {
+        console.error(color(`Failed to start server on port: ${port}`, 'red'));
+    } else {
+        console.log(color(`[Vesper-Xmd] Running on port: ${port}`, 'white'));
+    }
+});
 
 clientstart();
 
