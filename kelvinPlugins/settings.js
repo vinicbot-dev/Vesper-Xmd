@@ -481,146 +481,81 @@ Bot automatically reacts to status updates when enabled.`);
     }
 },
 {
-        command: ['welcome'],
-        operate: async ({ kelvin, m, reply, prefix, args, Access, isGroup, botNumber }) => {
-            if (!isGroup) return reply('❌ This command only works in groups!');
+    command: ['welcome', 'wel'],
+    operate: async ({ m, reply, prefix, args, Access, botNumber, kelvin, mess }) => {
+        if (!m.isGroup) return reply(mess.group);
+        if (!Access) return reply(mess.owner);
+        
+        const action = args[0]?.toLowerCase();
+        const groupId = m.chat;
+        
+        
+        if (!action || !['on', 'off', 'status'].includes(action)) {
+            const isEnabled = global.settingsManager?.isWelcomeEnabledForGroup(botNumber, groupId);
+            return reply(`👋 *Group Welcome Settings*
             
-            const subcommand = args[0]?.toLowerCase();
-            const groupId = m.chat;
-            
-            if (!subcommand) {
-                return reply(`👋 *Welcome System*
 Usage:
-• ${prefix}welcome on - Enable welcome messages
-• ${prefix}welcome off - Disable welcome messages`);
+• ${prefix}welcome on - Enable welcome/goodbye in this group
+• ${prefix}welcome off - Disable welcome/goodbye in this group
+• ${prefix}welcome status - Show current status
+
+Current Status: ${isEnabled ? '✅ Enabled' : '❌ Disabled'}
+            
+📌 This setting is per-group. Each group can have its own welcome setting.`);
+        }
+        
+        switch(action) {
+            case 'on': {
+                await global.settingsManager?.setGroupSetting(botNumber, groupId, 'welcome', true);
+                reply(`✅ Welcome messages enabled for this group!`);
+                break;
             }
             
-            if (subcommand === 'on' || subcommand === 'off') {
-                       
-                const enabled = subcommand === 'on';
+            case 'off': {
+                await global.settingsManager?.setGroupSetting(botNumber, groupId, 'welcome', false);
+                reply(`✅ Welcome messages disabled for this group!`);
+                break;
+            }
+            
+            case 'status': {
+                const isEnabled = global.settingsManager?.isWelcomeEnabledForGroup(botNumber, groupId);
+                reply(`📊 *Welcome Status for This Group*
                 
-                if (global.settingsManager?.setWelcomeEnabled(botNumber, groupId, enabled)) {
-                    return reply(`✅ Welcome messages ${enabled ? 'enabled' : 'disabled'} for this group!`);
-                } else {
-                    return reply('❌ Failed to update welcome setting.');
-                }
-            } else {
-                return reply(`❌ Invalid option. Use: ${prefix}welcome on/off`);
+• Status: ${isEnabled ? '✅ Enabled' : '❌ Disabled'}
+• Group: ${await kelvin.getName(groupId) || groupId}
+• When enabled: Welcome + Goodbye messages will be sent`);
+                break;
             }
         }
-    },
-    {
-        command: ['adminevent'],
-        operate: async ({ kelvin, m, reply, prefix, args, Access, updateSetting, mess, botNumber }) => {
-            if (!Access) return reply(global.mess.owner);
-            
-            const subcommand = args[0]?.toLowerCase();
-            
-            if (!subcommand) {
-                return reply(`👑 *Admin Event Notifications*
+    }
+},
+{
+    command: ['adminevent'],
+    operate: async ({ kelvin, m, reply, prefix, args, Access, updateSetting, mess, botNumber }) => {
+        if (!Access) return reply(global.mess.owner);
+        
+        const subcommand = args[0]?.toLowerCase();
+        
+        if (!subcommand) {
+            return reply(`👑 *Admin Event Notifications*
 Usage:
 • ${prefix}adminevent on - Enable admin notifications
 • ${prefix}adminevent off - Disable admin notifications`);
-            }
+        }
+        
+        if (subcommand === 'on' || subcommand === 'off') {
+            const enabled = subcommand === 'on';
             
-            if (subcommand === 'on' || subcommand === 'off') {
-                const enabled = subcommand === 'on';
-                
-                
-                if (await updateSetting(botNumber, 'adminevent', enabled)) {
-                    return reply(`✅ Admin event notifications ${enabled ? 'enabled' : 'disabled'}!`);
-                } else {
-                    return reply('❌ Failed to update admin event setting.');
-                }
+            
+            if (await updateSetting(botNumber, 'adminevent', enabled)) {
+                return reply(`✅ Admin event notifications ${enabled ? 'enabled' : 'disabled'}!`);
             } else {
-                return reply(`❌ Invalid option. Use: ${prefix}adminevent on/off`);
+                return reply('❌ Failed to update admin event setting.');
             }
+        } else {
+            return reply(`❌ Invalid option. Use: ${prefix}adminevent on/off`);
         }
-    },
-    {
-        command: ['setmenuimage', 'uploadmenu'],
-        operate: async ({ kelvin, m, reply, Access, mess, quoted, text }) => {
-            if (!Access) return reply(global.mess.owner);
-            
-            if (!quoted || !(quoted.mtype === 'imageMessage')) {
-                return reply('*Please reply to an image with this command!*');
-            }
-            
-            const num = text ? parseInt(text) : null;
-            
-            if (!num || num < 1 || num > 5) {
-                return reply(
-                    '📸 *Which menu image to set?*\n\n' +
-                    'Use: .setmenuimage 1 (reply to image)\n' +
-                    'Or: .setmenuimage 2 (reply to image)\n\n' +
-                    'Available: 1-5 (kelvin1.jpg to kelvin5.jpg)'
-                );
-            }
-            
-            try {
-                // Download the image
-                const media = await quoted.download();
-                
-                // Save to file
-                const imagePath = `../start/lib/Media/Images/kelvin${num}.jpg`;
-                
-                // Ensure directory exists
-                const dir = path.dirname(imagePath);
-                if (!fs.existsSync(dir)) {
-                    fs.mkdirSync(dir, { recursive: true });
-                }
-                
-                fs.writeFileSync(imagePath, media);
-                
-                reply(`✅ Menu image kelvin${num}.jpg updated!`);
-                
-            } catch (error) {
-                console.error(error);
-                reply(`❌ Error: ${error.message}`);
-            }
-        }
-    },
-    {
-        command: ['menuimages', 'viewmenu'],
-        operate: async ({ reply }) => {
-            const imagesDir = '../start/lib/Media/Images';
-            let imageList = '*Menu Images*\n\n';
-            
-            for (let i = 1; i <= 5; i++) {
-                const imagePath = `${imagesDir}/kelvin${i}.jpg`;
-                const exists = fs.existsSync(imagePath);
-                
-                if (exists) {
-                    const stats = fs.statSync(imagePath);
-                    const size = (stats.size / 1024).toFixed(2);
-                    imageList += `✅ kelvin${i}.jpg - ${size} KB\n`;
-                } else {
-                    imageList += `❌ kelvin${i}.jpg - Not set\n`;
-                }
-            }
-            
-            imageList += '\nUse: .setmenuimage 1 (reply to image)';
-            reply(imageList);
-        }
-    },
-    {
-        command: ['resetmenu'],
-        operate: async ({ reply, Access, mess }) => {
-            if (!Access) return reply(global.mess.owner);
-            
-            const imagesDir = '../start/lib/Media/Images';
-            let deletedCount = 0;
-            
-            for (let i = 1; i <= 5; i++) {
-                const imagePath = `${imagesDir}/kelvin${i}.jpg`;
-                if (fs.existsSync(imagePath)) {
-                    fs.unlinkSync(imagePath);
-                    deletedCount++;
-                }
-            }
-            
-            reply(`✅ Deleted ${deletedCount} menu images!`);
-        }
- }
+    }
+}
     
 ];
