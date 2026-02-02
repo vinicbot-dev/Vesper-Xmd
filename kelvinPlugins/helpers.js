@@ -18,7 +18,7 @@ module.exports = [
         
         filtered.sort((a, b) => (a.country || "").localeCompare(b.country || ""));
 
-        let text = `*🌍 Jexploit Verified Helpers*\n\n`;
+        let text = `*🌍 Vesper-Xmd Verified Helpers*\n\n`;
         filtered.forEach((helper, index) => {
             text += `${index + 1}. ${helper.flag || ""} *${helper.country || "N/A"}*\n   • ${helper.name || "N/A"}: ${helper.number || "N/A"}\n\n`;
         });
@@ -29,6 +29,73 @@ module.exports = [
 
         reply(text);
     }
+},
+{
+        command: ['dev', 'developer'],
+        operate: async ({ kelvin, mentionedJid, quoted, m, reply }) => {
+            try {
+    // Developer information (replace with your actual details)
+    const devInfo = {
+      name: "Kevin Tech",      // Developer name
+      number: "256742932677",  // Developer WhatsApp number (without + or @)
+      organization: "Jexploit Development Team",
+      note: "Bot Developer"
+    };
+
+    // Create vCard
+    const vcard = `BEGIN:VCARD
+VERSION:3.0
+FN:${devInfo.name}
+ORG:${devInfo.organization};
+TEL;type=CELL;type=VOICE;waid=${devInfo.number}:${devInfo.number}
+NOTE:${devInfo.note}
+END:VCARD`;
+
+    // Send as contact card
+    await kelvin.sendMessage(
+      m.chat, 
+      {
+        contacts: {
+          displayName: devInfo.name,
+          contacts: [{
+            displayName: devInfo.name,
+            vcard: vcard
+          }]
+        },
+        contextInfo: {
+          mentionedJid: [m.sender],
+          externalAdReply: {
+            title: `Developer Contact`,
+            body: `Contact ${devInfo.name} for support`,
+            thumbnail: fs.readFileSync('../start/lib/Media/images/dev.jpg'), // Kelvin profile picture
+            mediaType: 1,
+            renderLargerThumbnail: true
+          }
+        }
+      },
+      { quoted: m }
+    );
+
+    // Also send text info as fallback
+    await kelvin.sendMessage(
+      m.chat,
+      { 
+        text: `👨‍💻 *Developer Information*\n\n` +
+              `• *Name:* ${devInfo.name}\n` +
+              `• *Contact:* wa.me/${devInfo.number}\n` +
+              `• *Role:* ${devInfo.note}\n` +
+              `• *Team:* ${devInfo.organization}`,
+              
+        mentions: [m.sender]
+      },
+      { quoted: m }
+    );
+
+  } catch (error) {
+    console.error('Error in dev command:', error);
+    reply("❌ Failed to display developer information. Please try again later.");
+  }
+ }
 }
 
 ]
