@@ -4,6 +4,7 @@ const fg = require('api-dylux')
 const path = require('path');
 const yts = require('yt-search');
 const { KelvinVideo } = require('../start/kelvinCmds/video');
+const {  } = require('../start/lib/myfunction');
 const { 
     playCommand, 
     InstagramCommand, 
@@ -21,41 +22,50 @@ async function sleep(ms) {
 module.exports = [
 
 {
-    command: ['song'],
-    operate: async ({ kelvin, m, reply, text, prefix, mess, command }) => {
+    command: ['song', 'mp3'],
+    operate: async ({ kelvin, m, reply, text, prefix, command }) => {
         
-        if (!text) return reply(`*Example*: ${prefix + command} number one by ravany`);
+        if (!text) return reply(`📌 Example: ${prefix + command} shape of you`);
         
         try {
-            await reply("Searching for your song... (this may take a while)");
+            await reply("🔍 Searching...");
             
-            const apiUrl = `https://api.privatezia.biz.id/api/downloader/ytplaymp3?query=${encodeURIComponent(text)}`;
-            const res = await axios.get(apiUrl, { timeout: 60000 });
-            const data = res.data;
+            // Search for the song
+            const searchUrl = `https://meta-api.zone.id/search/youtube?query=${encodeURIComponent(text)}`;
+            const searchRes = await axios.get(searchUrl, { timeout: 30000 });
+            const searchData = searchRes.data;
             
-            if (!data || data.status === false || !data.result) {
-                return reply("Couldn't find that song.");
+            if (!searchData?.result?.[0]?.videoId) {
+                return reply("❌ No results found.");
             }
             
-            const result = data.result;
-            const audioUrl = result.downloadUrl;
+            const videoId = searchData.result[0].videoId;
+            const title = searchData.result[0].title || text;
+            const thumbnail = searchData.result[0].thumbnail || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+            
+            // Get download link - try direct MP3 first
+            const downloadUrl = `https://meta-api.zone.id/downloader/youtube?url=https://youtu.be/${videoId}`;
+            const downloadRes = await axios.get(downloadUrl, { timeout: 30000 });
+            const downloadData = downloadRes.data;
+            
+            let audioUrl = null;
+            
+            // Try different possible locations for audio URL
+            if (downloadData?.result?.audio) {
+                audioUrl = downloadData.result.audio;
+            } else if (downloadData?.result?.url) {
+                audioUrl = downloadData.result.url;
+            } else if (downloadData?.result?.formats?.[0]?.url) {
+                audioUrl = downloadData.result.formats[0].url;
+            }
             
             if (!audioUrl) {
-                return reply("API didn't return any audio link.");
+                return reply("❌ Couldn't get audio download link.");
             }
             
-            const title = result.title || text;
-            const duration = result.duration ? `${result.duration}s` : "Unknown";
-            const thumbnail = result.thumbnail ||
-                (result.videoId ? `https://img.youtube.com/vi/${result.videoId}/hqdefault.jpg` : null) ||
-                "https://i.ibb.co/4pDNDk1/music.jpg";
-            
-            // React with 🎵 emoji
+            // React
             await kelvin.sendMessage(m.chat, {
-                react: {
-                    text: "🎵",
-                    key: m.key
-                }
+                react: { text: "🎵", key: m.key }
             });
             
             // Send song info
@@ -63,30 +73,27 @@ module.exports = [
                 m.chat,
                 {
                     image: { url: thumbnail },
-                    caption: `*Now Playing* — Kelvin AI\n\n` +
-                        `*Title:* ${title}\n` +
-                        `*Duration:* ${duration}\n` +
-                        `*YouTube:* ${result.videoUrl || "Unknown"}\n\n` +
-                        `🎧 Requested by: @${m.sender.split('@')[0]}`,
+                    caption: `🎵 *${title}*\n\n` +
+                        `📥 Downloading...`,
                     mentions: [m.sender]
                 },
                 { quoted: m }
             );
             
-            // Send MP3
+            // Send audio
             await kelvin.sendMessage(
                 m.chat,
                 {
                     audio: { url: audioUrl },
                     mimetype: "audio/mpeg",
-                    fileName: `${title}.mp3`,
+                    fileName: `${title.substring(0, 50)}.mp3`
                 },
                 { quoted: m }
             );
             
         } catch (err) {
-            console.error("play.js error:", err.message);
-            reply(`⚠️ Error fetching song: ${err.message}`);
+            console.error(err);
+            reply(`❌ Error: ${err.message}`);
         }
     }
 },
@@ -308,7 +315,7 @@ module.exports = [
             if (!text) return reply("*Which apk do you want to download?*");
             
             try {
-                const botname = global.botname || 'Jexploit';
+                const botname = global.botname || 'Vesper-Xmd';
                 let apiUrl = await fetchJson(`https://api.bk9.dev/search/apk?q=${text}`);
                 let kelvinData = await fetchJson(`https://api.bk9.dev/download/apk?id=${apiUrl.BK9[0].id}`);
 
@@ -344,7 +351,7 @@ module.exports = [
             if (!text) return reply("*Please provide a Google Drive file URL*");
 
             try {
-                const siputzx = global.mess?.siputzx || 'https://api.siputzx.my.id';
+                const siputzx = global.siputzx || 'https://api.siputzx.my.id';
                 let response = await fetch(`${siputzx}/api/d/gdrive?url=${encodeURIComponent(text)}`);
                 let data = await response.json();
 
@@ -678,19 +685,32 @@ module.exports = [
             }
         }
     },
-            
     {
-        command: ['ytmp4', 'video', 'youtubevideo', 'ytvideo'],
-        operate: async ({ kelvin, m, reply, args }) => {
-            try {
-                const chatId = m.chat;
-                await KelvinVideo(kelvin, chatId, m, args);
-            } catch (error) {
-                console.error('ytmp4 command error:', error);
-                reply('❌ Failed to download video.');
+    command: ['ytmp4', 'ytv'],
+    operate: async ({ kelvin, m, reply, text }) => {
+        if (!text) return reply('.ytmp4 <url>');
+        
+        try {
+            await reply('⏳');
+            
+            const apiUrl = `https://api.nekolabs.my.id/downloader/youtube/play/v1?q=${encodeURIComponent(text)}`;
+            const res = await fetch(apiUrl);
+            const data = await res.json();
+            
+            if (data.success && data.result?.downloadUrl) {
+                await kelvin.sendMessage(m.chat, {
+                    video: { url: data.result.downloadUrl },
+                    caption: global.wm || ''
+                }, { quoted: m });
+            } else {
+                reply('❌');
             }
+            
+        } catch {
+            reply('❌');
         }
     }
+}
     
     
 ];
