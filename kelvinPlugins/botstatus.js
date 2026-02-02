@@ -115,7 +115,7 @@ Once your done creating and verifying the two account, move over to the next ste
 
 *NEXT STEPS*
 Next step is to fork the bot repository. Click the link
-https://github.com/Kevintech-hub/Jexploit-Bot
+https://github.com/Kevintech-hub/Vesper-Xmd
 
 Then download the zip file.
 
@@ -133,7 +133,7 @@ Start server Enjoy 😉
                 `.trim();
 
                 await kelvin.sendMessage(from, {
-                    image: { url: 'https://files.catbox.moe/0pab6g.jpg' },
+                    image: { url: 'https://files.catbox.moe/xd8cvb.jpg' },
                     caption: message,
                     contextInfo: {
                         mentionedJid: [m.sender],
@@ -215,7 +215,7 @@ Start server Enjoy 😉
 │ • Runtime  : ${runtime(process.uptime())}
 ╰─────────────`;
 
-            const imageUrl = "https://files.catbox.moe/0pab6g.jpg";
+            const imageUrl = "https://files.catbox.moe/xd8cvb.jpg";
             
             // Array of audio URLs
             const audioUrls = [
@@ -293,7 +293,7 @@ Start server Enjoy 😉
         operate: async ({ kelvin, m, reply }) => {
             try {
                 // Use your GitHub repository
-                const res = await fetch('https://api.github.com/repos/Kevintech-hub/Jexploit-Bot');
+                const res = await fetch('https://github.com/Kevintech-hub/Vesper-Xmd');
                 const json = await res.json();
 
                 const botName = global.botname || 'Jexploit';
@@ -324,7 +324,7 @@ https://jexploitsession.zone.id/
                     await kelvin.sendMessage(
                         m.chat,
                         {
-                            image: { url: 'https://files.catbox.moe/0pab6g.jpg' }, 
+                            image: { url: 'https://files.catbox.moe/xd8cvb.jpg' }, 
                             caption: txt
                         },
                         { quoted: m }
@@ -414,7 +414,7 @@ https://github.com/${repoOwner}/${repoName}
 
 *Name:* Vesper-Xmd
 *GitHub Link:* 
-https://github.com/Kevintech-hub/Vinic-Xmd-
+https://github.com/Kevintech-hub/Vesper-Xmd
 
 @${m.sender.split("@")[0]}👋, Visit the repository for more info!`;
 
