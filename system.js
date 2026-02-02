@@ -432,6 +432,17 @@ if (isGroup) {
 }
 
 const groupName = isGroup && groupMetadata ? groupMetadata.subject : ""
+const participants = isGroup && groupMetadata ? groupMetadata.participants : []
+
+const groupAdmins = participants
+  .filter(p => p.admin)
+  .map(p => p.id)
+
+const groupMembers = participants
+
+const groupOwner = groupMetadata?.owner || groupAdmins[0] || null
+
+const isAdmin = isGroup ? groupAdmins.includes(m.sender) : false
 
 
 if (m.message && !m.message.protocolMessage) {
@@ -484,7 +495,7 @@ if (m.isGroup && m.message && !m.key.fromMe) {
 } 
 
  if ((m.mtype || '').includes("groupStatusMentionMessage") && m.isGroup) {
-    if (!isGroupAdmins && !Access) {
+    if (!isSenderAdmin && !Access) {
         try {
             
             await kelvin.sendMessage(m.chat, {
@@ -583,6 +594,8 @@ const context = {
     isCreator: Access,
     isGroup,
     groupName,
+    groupMetadata,
+    participants,
     isBotAdmin,
     isSenderAdmin,
     quoted,
