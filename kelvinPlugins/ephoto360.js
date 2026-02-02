@@ -1,4 +1,3 @@
-// KelvinPlugins/ephoto360.js
 module.exports = [
 
     {
@@ -18,7 +17,7 @@ module.exports = [
                     m.chat,
                     { 
                         image: { url: result }, 
-                        caption: `${global.wm}` 
+                        caption: `> ${global.wm}` 
                     },
                     { quoted: m }
                 );
@@ -111,7 +110,7 @@ module.exports = [
                 const result = await ephoto(link, q);
                 await kelvin.sendMessage(
                     m.chat,
-                    { image: { url: result }, caption: `${global.wm}` },
+                    { image: { url: result }, caption: `> ${global.wm}` },
                     { quoted: m }
                 );
             } catch (error) {
@@ -120,8 +119,7 @@ module.exports = [
             }
         }
     },
-    
-    // Deadpool (Note: URL seems to be for green neon, not deadpool)
+  
     {
         command: ['deadpool', 'deadpoolfx'],
         operate: async ({ kelvin, m, reply, args, prefix, ephoto }) => {
@@ -134,7 +132,7 @@ module.exports = [
                 const result = await ephoto(link, q);
                 await kelvin.sendMessage(
                     m.chat,
-                    { image: { url: result }, caption: `${global.wm}` },
+                    { image: { url: result }, caption: `> ${global.wm}` },
                     { quoted: m }
                 );
             } catch (error) {
@@ -157,7 +155,7 @@ module.exports = [
                 const result = await ephoto(link, q);
                 await kelvin.sendMessage(
                     m.chat,
-                    { image: { url: result }, caption: `${global.wm}` },
+                    { image: { url: result }, caption: `> ${global.wm}` },
                     { quoted: m }
                 );
             } catch (error) {
