@@ -140,7 +140,7 @@ module.exports = [
 {
     command: ['lyrics', 'lyric'],
     operate: async ({ kelvin, m, reply, text, prefix }) => {
-        if (!text) {
+       if (!text) {
             return reply(`🎵 *Lyrics Finder*\n\nUsage: ${prefix}lyrics <song name>\n\nExamples:\n• ${prefix}lyrics shape of you\n• ${prefix}lyrics Sekkle down by bunnie Gunter\n• ${prefix}lyrics Blinding Lights The Weeknd`);
         }
 
@@ -148,45 +148,42 @@ module.exports = [
             await reply(`🔍 Searching lyrics for: *"${text}"*...`);
 
             const apiUrl = `https://api.popcat.xyz/v2/lyrics?song=${encodeURIComponent(text)}`;
-            const res = await fetch(apiUrl);
+            const res = await fetch(apiUrl, { timeout: 15000 });
             
             if (!res.ok) throw new Error(`API status: ${res.status}`);
             
             const data = await res.json();
 
-            // Check for errors
-            if (data.error || data.message?.toLowerCase().includes('not found')) {
-                return reply(`❌ No lyrics found for *"${text}"*\n\nTry:\n• Add artist name\n• Check spelling\n• Use exact title`);
+            // Check for error flag
+            if (data.error === true) {
+                return reply(`No lyrics found for *"${text}"*\n\nTry:\n• Add artist name\n• Check spelling\n• Use exact title`);
             }
 
-            let lyrics = data.lyrics;
             
-            // If lyrics is an object, try to extract text
-            if (lyrics && typeof lyrics === 'object') {
-                // Try common properties
-                lyrics = lyrics.text || lyrics.lyrics || JSON.stringify(lyrics);
-            }
-            
-            // If still not a string or empty
-            if (!lyrics || typeof lyrics !== 'string') {
-                return reply(`Lyrics format error for *"${text}"*\nThe API returned unexpected data.`);
+            if (!data.message || typeof data.message !== 'object' || !data.message.lyrics) {
+                return reply(`Lyrics not available for *"${text}"*`);
             }
 
-            const artist = data.artist || 'Unknown';
-            const title = data.title || text;
-            const image = data.image;
+            const lyricsData = data.message;
+            const lyrics = lyricsData.lyrics;
+            const artist = lyricsData.artist || 'Unknown';
+            const title = lyricsData.title || text;
+            const image = lyricsData.image;
+
+            // Clean up lyrics (remove "Contributor" line if present)
+            const cleanLyrics = lyrics.replace(/^\d+\s+Contributor.*?\n/i, '');
 
             // Format message (max 4000 chars for WhatsApp)
-            let message = `🎵 *${title}*\n🎤 *Artist:* ${artist}\n\n📖 *Lyrics:*\n\n${lyrics}`;
+            let message = `🎵 *${title}*\n🎤 *Artist:* ${artist}\n\n📖 *Lyrics:*\n\n${cleanLyrics}`;
             
             if (message.length > 3500) {
-                message = message.substring(0, 3500) + '\n\n📜 *Lyrics truncated - song too long*';
+                message = message.substring(0, 3500) + '\n\n*Lyrics truncated - song too long*';
             }
             
-            message += `${global.wm}`;
+            message += `\n\n${global.wm || ''}`;
 
             // Send image first if available
-            if (image) {
+            if (image && typeof image === 'string' && image.includes('http') && !image.includes('default_cover_image')) {
                 try {
                     await kelvin.sendMessage(m.chat, {
                         image: { url: image },
@@ -206,15 +203,15 @@ module.exports = [
         } catch (error) {
             console.error('Lyrics error:', error);
             
-            let errMsg = `❌ Error: ${error.message}`;
-            if (error.message.includes('timeout')) errMsg = '⏰ Request timed out';
-            if (error.message.includes('network')) errMsg = '🌐 Network error';
-            if (error.message.includes('status: 5')) errMsg = '🔧 Service unavailable';
+            let errMsg = `Error: ${error.message}`;
+            if (error.message.includes('timeout')) errMsg = 'Request timed out';
+            if (error.message.includes('network')) errMsg = 'Network error';
+            if (error.message.includes('status: 5')) errMsg = 'Service unavailable';
             
             reply(`${errMsg}\n\nTry again in a few moments!`);
         }
-    }
-},
+     }
+}, 
     {
         command: ['chord', 'cr'],
         operate: async ({ reply, m, text }) => {
