@@ -5,7 +5,7 @@ const PDFDocument = require('pdfkit')
 const fs = require('fs');
 const fetch = require("node-fetch")
 const { exec } = require('child_process');
-const {styletext, remind, Wikimedia, wallpaper} = require('../start/lib/scraper')
+const {styletext, remini, Wikimedia, wallpaper} = require('../start/lib/scraper')
 const { takeCommand } = require('../start/kelvinCmds/commands');
 const { obfuscateJS } = require("../start/lib/encapsulation");
 
@@ -303,6 +303,59 @@ module.exports = [
             }
         }
     },
+{
+    command: ['translate', 'tr', 'eng', 'english'],
+    operate: async ({ kelvin, m, reply, text, prefix }) => {
+        
+        if (!text) {
+            return reply(`🌍 *Translate to English*\n\nUsage: ${prefix}translate <text>\n\nExamples:\n• ${prefix}translate Hola\n• ${prefix}translate Bonjour\n• ${prefix}translate 你好`);
+        }
+
+        try {
+            // React immediately
+            await kelvin.sendMessage(m.chat, {
+                react: { text: "🌍", key: m.key }
+            });
+
+            const apiUrl = `https://api.popcat.xyz/v2/translate?to=en&text=${encodeURIComponent(text)}`;
+            const res = await fetch(apiUrl, { timeout: 10000 });
+            const data = await res.json();
+
+            // Check for errors
+            if (data.error) {
+                return reply(`❌ Translation failed: ${data.message}`);
+            }
+
+            // FIX: Handle object response
+            let translated = data.translated;
+            
+            // If translated is an object, try to extract the string
+            if (translated && typeof translated === 'object') {
+                // Try common properties
+                translated = translated.text || translated.translated || translated.message || JSON.stringify(translated);
+            }
+            
+            // If we still don't have a string
+            if (!translated || typeof translated !== 'string') {
+                return reply(`❌ Translation failed. API returned unexpected format.`);
+            }
+
+            // Clean and format
+            await kelvin.sendMessage(m.chat, {
+                text: `🌍 *TRANSLATION*\n\n🗣️ *Original:* ${text}\n\n🇺🇸 *English:* ${translated}\n\n✨ *Kelvin AI*`
+            }, { quoted: m });
+
+        } catch (error) {
+            console.error('Translate error:', error);
+            
+            if (error.message.includes('timeout')) {
+                reply('⏰ Translation timeout. Try shorter text.');
+            } else {
+                reply('❌ Translation failed. Try again.');
+            }
+        }
+    }
+},
     {
         command: ['tinylink', 'shorten', 'shorturl', 'tinyurl'],
         operate: async ({ reply, prefix, text, axios }) => {
