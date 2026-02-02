@@ -7,7 +7,7 @@ bardAICommand,
 gpt4NanoAICommand,
 keithAICommand,
 claudeAICommand
-} = require('../start/KelvinCmds/ai');
+} = require('../start/kelvinCmds/ai');
 
 module.exports = [
     // Generate AI Image
