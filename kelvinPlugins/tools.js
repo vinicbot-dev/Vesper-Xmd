@@ -306,14 +306,13 @@ module.exports = [
 {
     command: ['translate', 'tr', 'eng', 'english'],
     operate: async ({ kelvin, m, reply, text, prefix }) => {
-        
-        if (!text) {
+              if (!text) {
             return reply(`🌍 *Translate to English*\n\nUsage: ${prefix}translate <text>\n\nExamples:\n• ${prefix}translate Hola\n• ${prefix}translate Bonjour\n• ${prefix}translate 你好`);
         }
 
         try {
             // React immediately
-            await kelvin.sendMessage(m.chat, {
+            await kelvin*.sendMessage(m.chat, {
                 react: { text: "🌍", key: m.key }
             });
 
@@ -322,27 +321,26 @@ module.exports = [
             const data = await res.json();
 
             // Check for errors
-            if (data.error) {
-                return reply(`❌ Translation failed: ${data.message}`);
+            if (data.error === true) {
+                return reply(`❌ Translation failed: ${data.message || 'Unknown error'}`);
             }
 
-            // FIX: Handle object response
-            let translated = data.translated;
             
-            // If translated is an object, try to extract the string
+            let translated = data.message?.translated;
+            
+            // If translated is still an object, try to extract string
             if (translated && typeof translated === 'object') {
-                // Try common properties
-                translated = translated.text || translated.translated || translated.message || JSON.stringify(translated);
+                translated = translated.text || translated.translated || JSON.stringify(translated);
             }
             
-            // If we still don't have a string
+            // Validate we have a string
             if (!translated || typeof translated !== 'string') {
-                return reply(`❌ Translation failed. API returned unexpected format.`);
+                return reply(`❌ Translation failed. Could not extract translation from response.`);
             }
 
             // Clean and format
             await kelvin.sendMessage(m.chat, {
-                text: `🌍 *TRANSLATION*\n\n🗣️ *Original:* ${text}\n\n🇺🇸 *English:* ${translated}\n\n✨ *Kelvin AI*`
+                text: `*TRANSLATION*\n\n🗣️ *Original:* ${text}\n\n*Translatd:* ${translated}\n\n`
             }, { quoted: m });
 
         } catch (error) {
@@ -355,7 +353,7 @@ module.exports = [
             }
         }
     }
-},
+}, 
     {
         command: ['tinylink', 'shorten', 'shorturl', 'tinyurl'],
         operate: async ({ reply, prefix, text, axios }) => {
