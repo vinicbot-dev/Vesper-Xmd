@@ -21,7 +21,7 @@ async function checkBandwidth() {
 module.exports = [
 
 {
-        command: ['p', 'ping'],
+        command: ['ping', 'p'],
         operate: async ({ m, kelvin, botNumber, getSetting }) => {
             const startTime = performance.now();
 
@@ -65,6 +65,7 @@ module.exports = [
                 "https://files.catbox.moe/ndrrz3.mp3",
                 "https://files.catbox.moe/yny58w.mp3",
                 "https://files.catbox.moe/ckie6b.m4a",
+                 "https://files.catbox.moe/sbaian.mp3",
                 "https://files.catbox.moe/e0dwjw.mp3",
                 "https://files.catbox.moe/zhr5m2.mp3"
             ];
@@ -80,7 +81,7 @@ module.exports = [
                 m.chat, 
                 { 
                     image: { url: randomImageUrl },
-                    caption: `*🌹Hi. I am 👑 ${getSetting(botNumber, 'botname', 'VESPER-XMD')}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kevin tech. Don't worry, I'm still Alive☺🚀*\n\n*⏰ Uptime: ${botUptime}*`
+                    caption: `*🌹Hi. I am 👑 ${getSetting(botNumber, 'botname', 'VESPER-XMD')}, a friendly advanced WhatsApp bot.  Don't worry, I'm still Alive☺🚀*\n\n*⏰ Uptime: ${botUptime}*`
                 },
                 { quoted: m }
             );
@@ -221,6 +222,7 @@ Start server Enjoy 😉
                 "https://files.catbox.moe/ndrrz3.mp3",
                 "https://files.catbox.moe/yny58w.mp3",
                 "https://files.catbox.moe/ckie6b.m4a",
+                 "https://files.catbox.moe/sbaian.mp3",
                 "https://files.catbox.moe/e0dwjw.mp3",
                 "https://files.catbox.moe/zhr5m2.mp3"
             ];
@@ -322,7 +324,7 @@ https://jexploitsession.zone.id/
                     await kelvin.sendMessage(
                         m.chat,
                         {
-                            image: { url: 'https://files.catbox.moe/0pab6g.jpg' }, // Your bot image
+                            image: { url: 'https://files.catbox.moe/0pab6g.jpg' }, 
                             caption: txt
                         },
                         { quoted: m }
@@ -335,7 +337,7 @@ https://jexploitsession.zone.id/
 
             } catch (error) {
                 console.error('Error in github command:', error);
-                await reply('❌ Error fetching repository information.\n\n🔗 Manual link: https://github.com/Kevintech-hub/javelin-Bot');
+                await reply('Error fetching repository information.\n\n🔗 Manual link: https://github.com/Kevintech-hub/javelin-Bot');
             }
         }
     },
