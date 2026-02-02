@@ -9,6 +9,7 @@ const fs = require('fs');
 global.owner = ["Kelvin Tech"];  
 global.status = false; // true = public, false = private
 global.versions = "v1.0.0";
+global.botname = "Vesper-Xmd"; 
 
 // ========= Setting WM ========= //
 global.packname = 'Vesper';
@@ -31,14 +32,16 @@ global.gcount = {
 global.limitCount = 10;
 
 global.mess = {
-  group: "This not group!",
+  group: "This is not group!",
   notadmin: "This command is only preserved for group admins!",
   notgroup: "This command can only be used in groups!",
   owner: "This command is only preserved for bot owner and sudo!",
+  error: "An error occurred while processing the command!",
   done: "Mission complete ✅",
   notext: "Please provide the necessary text",
   premium: "*First become a premium user*",
   botadmin: "Please bot needs admin privileges to use this command!",
+  botnotadmin: "Please first make bot admin to use this command!",
   limited: "*Limit reached*",
   helpersList: [
     { name: "Malvin king", number: "+263776388689", country: "Zimbabwe", flag: "🇿🇼" },
