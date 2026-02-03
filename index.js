@@ -94,7 +94,8 @@ async function loadAllPlugins() {
     try {
         const PluginManager = require('./start/lib/PluginManager');
         const pluginManager = new PluginManager();
-        const pluginsDir = path.join(__dirname, 'KelvinPlugins');
+        
+        const pluginsDir = path.join(process.cwd(), 'KelvinPlugins');
         
         if (!fs.existsSync(pluginsDir)) {
             fs.mkdirSync(pluginsDir, { recursive: true });
