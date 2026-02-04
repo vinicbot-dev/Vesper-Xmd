@@ -77,15 +77,7 @@ const { handleAIChatbot } = require('./start/kelvinCmds/chatbot');
 
 
 // Menu Images - KelvinTech Style
-let kelvinkid1, kelvinkid2, kelvinkid3, kelvinkid4, kelvinkid5;
-
-try {
-    // Create directory if it doesn't exist
-    const imagesDir = "./start/lib/Media/Images";
-    if (!fs.existsSync(imagesDir)) {
-        fs.mkdirSync(imagesDir, { recursive: true });
-        console.log("📁 Created Media/Images directory");
-    }
+let kelvinkid1, kelvinkid2, kelvinkid3, kelvinkid4, kelvinkid5;   
     
     // Load images
     kelvinkid1 = fs.readFileSync("./start/lib/Media/Images/Vesper1.jpg");
@@ -93,9 +85,7 @@ try {
     kelvinkid3 = fs.readFileSync("./start/lib/Media/Images/Vesper3.jpg");
     kelvinkid4 = fs.readFileSync("./start/lib/Media/Images/Vesper4.jpg");
     kelvinkid5 = fs.readFileSync("./start/lib/Media/Images/Vesper5.jpg");
-} catch (err) {
-    console.log("Menu images not found - use .setmenuimage to add them");
-}
+
 //Shazam
 const acr = new acrcloud({
     host: 'identify-eu-west-1.acrcloud.com',
