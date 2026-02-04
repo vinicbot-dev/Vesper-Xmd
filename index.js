@@ -40,6 +40,7 @@ const path = require('path');
 const port = process.env.PORT || 3000;
 const timezones = global.timezones || "Africa/Kampala";
 const moment = require('moment-timezone');
+const msgRetryCounterCache = new NodeCache();
 
 const {
     Boom 
@@ -119,8 +120,6 @@ const credsPath = path.join(sessionDir, 'creds.json');
 if (!fs.existsSync(sessionDir)) {
     fs.mkdirSync(sessionDir, { recursive: true });
 }
-
-
 async function loadSession() {
     try {
         if (!settings.SESSION_ID) {
@@ -172,16 +171,14 @@ async function clientstart() {
         state,
         saveCreds 
     } = await useMultiFileAuthState('./sessions');
-   
-const msgRetryCounterCache = new NodeCache();
-
-const kelvin = makeWASocket({
-    logger: pino({ level: "silent" }),
-    printQRInTerminal: !usePairingCode,
-    auth: state,
-    browser: Browsers.ubuntu('Edge'),
-    msgRetryCounterCache: msgRetryCounterCache
-});
+      
+    const kelvin = makeWASocket({
+        logger: pino({ level: "silent" }),
+        printQRInTerminal: !usePairingCode,
+        auth: state,
+        browser: Browsers.ubuntu('Edge'),
+        msgRetryCounterCache: msgRetryCounterCache
+    });
 
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -551,7 +548,7 @@ buffer = await writeExifVid(buff, options)
 } else {
 buffer = await videoToWebp(buff)
 }
-await Cypher.sendMessage(jid, { sticker: { url: buffer }, ...options }, { quoted })
+await kelvin.sendMessage(jid, { sticker: { url: buffer }, ...options }, { quoted })
 return buffer
 }
 
