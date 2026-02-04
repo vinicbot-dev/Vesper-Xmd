@@ -33,6 +33,7 @@ const readline = require("readline");
 const express = require('express')
 const app = express();
 const fs = require('fs');
+const NodeCache = require('node-cache');
 const FileType = require('file-type');
 const { File } = require('megajs');
 const path = require('path');
@@ -94,19 +95,15 @@ async function loadAllPlugins() {
     try {
         const PluginManager = require('./start/lib/PluginManager');
         const pluginManager = new PluginManager();
-        const pluginsDir =
-            process.env.PLUGINS_DIR ||
-            path.resolve(__dirname, 'KelvinPlugins');
-        process.env.PLUGINS_DIR = pluginsDir;
-
+        const pluginsDir = path.join(__dirname, 'KelvinPlugins');
+        
         if (!fs.existsSync(pluginsDir)) {
             fs.mkdirSync(pluginsDir, { recursive: true });
             console.log(chalk.yellow(`📁 Created plugins directory: ${pluginsDir}`));
         }
-
+        
         const count = pluginManager.loadPlugins(pluginsDir);
         console.log(chalk.green(`✅ Loaded ${count} plugins successfully!`));
-
         global.pluginManager = pluginManager;
         return count;
     } catch (error) {
@@ -118,10 +115,9 @@ async function loadAllPlugins() {
 const sessionDir = path.join(__dirname, 'sessions');
 const credsPath = path.join(sessionDir, 'creds.json');
 
-// Create session directory if it doesn't exist
-if (!fs.existsSync(sessionDir)) {
-    fs.mkdirSync(sessionDir, { recursive: true });
-}
+fs.mkdirSync(sessionPath, { recursive: true });
+        fs.mkdirSync(tmpPath, { recursive: true });
+
 async function loadSession() {
     try {
         if (!settings.SESSION_ID) {
@@ -157,9 +153,35 @@ async function loadSession() {
     }
 }
 
+function cleanCorruptedSession() {
+    const sessionPath = path.join(__dirname, 'session');
+    const tmpPath = path.join(__dirname, 'tmp');
+    
+    try {
+        // Clean session folder
+        if (fs.existsSync(sessionPath)) {
+            console.log(chalk.yellow('🧹 Cleaning session folder...'));
+            fs.rmSync(sessionPath, { recursive: true, force: true });
+        }
+        
+        // Clean tmp folder
+        if (fs.existsSync(tmpPath)) {
+            console.log(chalk.yellow('🧹 Cleaning tmp folder...'));
+            fs.rmSync(tmpPath, { recursive: true, force: true });
+        }
+              
+        
+        console.log(chalk.green('✅ Session cleanup complete'));
+        return true;
+    } catch (error) {
+        console.error(chalk.red('Session cleanup failed:'), error);
+        return false;
+    }
+}
     
 async function clientstart() {
     await loadAllPlugins();
+    await cleanCorruptedSession();
     
     // Try to load session from MEGA
     let sessionCreds = null;
@@ -173,13 +195,16 @@ async function clientstart() {
         state,
         saveCreds 
     } = await useMultiFileAuthState('./sessions');
-      
-    const kelvin = makeWASocket({
-        logger: pino({ level: "silent" }),
-        printQRInTerminal: !usePairingCode,
-        auth: state,
-        browser: Browsers.ubuntu('Edge')
-    });
+   
+const msgRetryCounterCache = new NodeCache();
+
+const kelvin = makeWASocket({
+    logger: pino({ level: "silent" }),
+    printQRInTerminal: !usePairingCode,
+    auth: state,
+    browser: Browsers.ubuntu('Edge'),
+    msgRetryCounterCache: msgRetryCounterCache
+});
 
     await new Promise(resolve => setTimeout(resolve, 500));
 
