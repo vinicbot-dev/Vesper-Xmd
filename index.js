@@ -115,8 +115,7 @@ async function loadAllPlugins() {
 const sessionDir = path.join(__dirname, 'sessions');
 const credsPath = path.join(sessionDir, 'creds.json');
 
-fs.mkdirSync(sessionPath, { recursive: true });
-        fs.mkdirSync(tmpPath, { recursive: true });
+
 
 async function loadSession() {
     try {
@@ -153,35 +152,9 @@ async function loadSession() {
     }
 }
 
-function cleanCorruptedSession() {
-    const sessionPath = path.join(__dirname, 'session');
-    const tmpPath = path.join(__dirname, 'tmp');
-    
-    try {
-        // Clean session folder
-        if (fs.existsSync(sessionPath)) {
-            console.log(chalk.yellow('🧹 Cleaning session folder...'));
-            fs.rmSync(sessionPath, { recursive: true, force: true });
-        }
-        
-        // Clean tmp folder
-        if (fs.existsSync(tmpPath)) {
-            console.log(chalk.yellow('🧹 Cleaning tmp folder...'));
-            fs.rmSync(tmpPath, { recursive: true, force: true });
-        }
-              
-        
-        console.log(chalk.green('✅ Session cleanup complete'));
-        return true;
-    } catch (error) {
-        console.error(chalk.red('Session cleanup failed:'), error);
-        return false;
-    }
-}
     
 async function clientstart() {
     await loadAllPlugins();
-    await cleanCorruptedSession();
     
     // Try to load session from MEGA
     let sessionCreds = null;
