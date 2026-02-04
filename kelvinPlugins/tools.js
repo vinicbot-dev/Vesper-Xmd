@@ -312,7 +312,7 @@ module.exports = [
 
         try {
             // React immediately
-            await kelvin*.sendMessage(m.chat, {
+            await kelvin.sendMessage(m.chat, {
                 react: { text: "🌍", key: m.key }
             });
 
