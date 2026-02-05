@@ -337,7 +337,7 @@ https://jexploitsession.zone.id/
 
             } catch (error) {
                 console.error('Error in github command:', error);
-                await reply('Error fetching repository information.\n\n🔗 Manual link: https://github.com/Kevintech-hub/javelin-Bot');
+                await reply('Error fetching repository information.\n\n🔗 Manual link: https://github.com/Kevintech-hub/Vesper-Xmd');
             }
         }
     },
@@ -347,7 +347,7 @@ https://jexploitsession.zone.id/
             try {
                 // GitHub repository details
                 const repoOwner = "Kevintech-hub";
-                const repoName = "javelin-Bot";
+                const repoName = "Vesper-Xmd";
                 const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}`;
                 
                 // Fetch repository data with error handling
