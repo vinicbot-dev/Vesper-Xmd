@@ -717,7 +717,7 @@ const loadMenuPlugins = (directory) => {
     const versions = "v1.0.0"; 
     
     // Load plugins
-    const pluginsDir = path.join(__dirname, 'KelvinPlugins'); 
+    const pluginsDir = path.join(__dirname, 'kelvinPlugins'); 
     const plugins = loadMenuPlugins(pluginsDir);
     
     // Generate menu
@@ -746,7 +746,7 @@ const loadMenuPlugins = (directory) => {
                 case 'reloadplugins': {
                     if (!Access) return reply('Owner only command!');
                     try {
-                        const pluginsDir = path.join(__dirname, 'KelvinPlugins');
+                        const pluginsDir = path.join(__dirname, 'kelvinPlugins');
                         const count = global.pluginManager.reloadPlugins(pluginsDir);
                         reply(`✅ Reloaded ${count} plugins successfully!`);
                     } catch (error) {
