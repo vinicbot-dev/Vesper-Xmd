@@ -11,6 +11,10 @@ global.status = false; // true = public, false = private
 global.versions = "v1.0.0";
 global.botname = "Vesper-Xmd"; 
 
+// ========= Other Global Settings ========= //
+global.SESSION_ID = process.env.SESSION_ID || '';
+global.postgresqls = process.env.DATABASE_URL || "";
+
 // ========= Setting WM ========= //
 global.packname = 'Vesper';
 global.author = 'Bot';
