@@ -288,61 +288,8 @@ Start server Enjoy 😉
             await kelvin.sendMessage(m.chat, { text: response.trim() }, { quoted: m });
         }
     },
-        {
-        command: ['repo', 'sourcecode'],
-        operate: async ({ kelvin, m, reply }) => {
-            try {
-                // Use your GitHub repository
-                const res = await fetch('https://github.com/Kevintech-hub/Vesper-Xmd');
-                const json = await res.json();
-
-                const botName = global.botname || 'Jexploit';
-                const ownerName = global.ownername || 'Kelvin Tech';
-                
-                const txt = `
-*JEXPLOIT BOT REPOSITORY*
-
-*Repository:* ${json.name}
-*Stars:* ${json.stargazers_count}
-*Forks:* ${json.forks_count}
-*Watchers:* ${json.watchers_count}
-*Size:* ${(json.size / 1024).toFixed(2)} MB
-*Last Updated:* ${moment(json.updated_at).format('DD/MM/YYYY HH:mm:ss')}
-*Description:* ${json.description || 'No description'}
-*Owner:* ${ownerName}
-🔗 *URL:* ${json.html_url}
-
-🔗 *Session Id:* 
-https://jexploitsession.zone.id/
-
-*Please fork and star the repository!*
-*Powered by Kelvin Tech*
-`;
-
-                // Try to send with image first, fallback to text
-                try {
-                    await kelvin.sendMessage(
-                        m.chat,
-                        {
-                            image: { url: 'https://files.catbox.moe/xd8cvb.jpg' }, 
-                            caption: txt
-                        },
-                        { quoted: m }
-                    );
-                } catch (imageError) {
-                    // Fallback to text only if image fails
-                    console.log('Image send failed, using text only:', imageError);
-                    await reply(txt);
-                }
-
-            } catch (error) {
-                console.error('Error in github command:', error);
-                await reply('Error fetching repository information.\n\n🔗 Manual link: https://github.com/Kevintech-hub/Vesper-Xmd');
-            }
-        }
-    },
     {
-        command: ['sc', 'source', 'sourcecode', 'repository'],
+        command: ['repo', 'source', 'sourcecode', 'repository'],
         operate: async ({ kelvin, m, reply }) => {
             try {
                 // GitHub repository details
