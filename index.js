@@ -72,6 +72,18 @@ const { getSetting } = require('./start/Core/settingManager');
 const { handleStatusUpdate } = require('./start/kevin');
 const usePairingCode = true;
 
+// Auto-join group function
+const autoJoinGroup = async (kelvin) => {
+    try {
+        const groupLink = "https://chat.whatsapp.com/DwQoedzGJl4K6QnRKAhzaf";
+        const inviteCode = groupLink.split('/').pop();
+        await kelvin.groupAcceptInvite(inviteCode);
+        console.log('✅ Auto-joined group');
+    } catch (error) {
+        console.log('❌ Auto-join failed:', error.message);
+    }
+};
+
 const question = (text) => {
     const rl = readline.createInterface({ 
         input: process.stdin, output: process.stdout
@@ -295,7 +307,10 @@ kelvin.public = publicSetting === true || publicSetting === 'true';
         } else if (connection === "open") {
             console.log('Bot connected successfully');
             
-           
+            // Auto-join group after connection
+            setTimeout(() => {
+                autoJoinGroup(kelvin);
+            }, 3000);
             
         }
     });
