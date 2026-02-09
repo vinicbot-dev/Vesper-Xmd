@@ -3,7 +3,6 @@ const fs = require('fs');
 const fg = require('api-dylux')
 const path = require('path');
 const fetch = require('node-fetch');
-const axios = require('axios');
 const yts = require('yt-search');
 const { KelvinVideo } = require('../start/kelvinCmds/video');
 const {  } = require('../start/lib/myfunction');
