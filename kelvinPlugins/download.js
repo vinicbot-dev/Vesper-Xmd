@@ -544,7 +544,7 @@ module.exports = [
 
    {
     command: ['facebook', 'fb'],
-    operate: async ({ kelvin, m, reply, text, fetch }) => {
+    operate: async ({ kelvin, m, reply, text }) => {
         if (!text) return reply('Usage: .fb <facebook_url>');
         
         try {
@@ -695,7 +695,7 @@ module.exports = [
 },
 {
     command: ['video'],
-    operate: async ({ kelvin, m, reply, text, prefix, fetch }) => {
+    operate: async ({ kelvin, m, reply, text, prefix }) => {
         try {
             if (!text) return reply(`Usage: ${prefix}video <song name>`);
             
