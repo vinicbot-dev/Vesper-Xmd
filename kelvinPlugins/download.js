@@ -542,7 +542,7 @@ module.exports = [
     },
 
    {
-    command: ['fb', 'facebook'],
+    command: ['facebook', 'fb'],
     operate: async ({ kelvin, m, reply, text, fetch }) => {
         if (!text) return reply('Usage: .fb <facebook_url>');
         
