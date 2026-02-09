@@ -588,75 +588,79 @@ module.exports = [
         }
     },
     {
-        command: ['removebg', 'nobg', 'rmbg'],
-        operate: async ({ reply, m, kelvin, text, prefix, fetch, getBuffer }) => {
-            if (!text && !(m.quoted && (m.quoted.mtype === 'imageMessage' || m.quoted.mtype === 'stickerMessage'))) {
-                return reply(`Usage: ${prefix}removebg <image_url> or reply to an image with ${prefix}removebg`);
+    command: ['removebg', 'nobg', 'rmbg'],
+    operate: async ({ kelvin, m, reply, text, prefix }) => {
+        try {
+            if (!text && !m.quoted) {
+                return reply(`*Usage:*\n${prefix}removebg <image_url>\nor reply to an image with ${prefix}removebg`);
+            }
+
+            let imageUrl = '';
+            
+            // Handle URL input
+            if (text) {
+                imageUrl = text.trim();
+                if (!imageUrl.startsWith('http')) {
+                    imageUrl = 'https://' + imageUrl;
+                }
+            }
+            // Handle quoted image
+            else if (m.quoted) {
+                const mime = m.quoted.mimetype || '';
+                if (!mime.includes('image') && !mime.includes('sticker')) {
+                    return reply('Please reply to an image or sticker!');
+                }
+                
+                const buffer = await m.quoted.download();
+                const base64 = buffer.toString('base64');
+                
+                // Upload to Telegra.ph
+                const uploadRes = await fetch('https://telegra.ph/upload', {
+                    method: 'POST',
+                    body: JSON.stringify({ data: base64 }),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const uploadData = await uploadRes.json();
+                if (!uploadData[0]?.src) {
+                    return reply('❌ Failed to upload image. Try providing a direct URL instead.');
+                }
+                
+                imageUrl = 'https://telegra.ph' + uploadData[0].src;
+            }
+
+            // Send processing message
+            await reply('*Removing background Please wait*....');
+            
+            
+            const apiUrl = `https://api.giftedtech.co.ke/api/tools/removebg?url=${encodeURIComponent(imageUrl)}&apikey=gifted`;
+            const response = await fetch(apiUrl);
+            const result = await response.json();
+            
+            if (!result.success || !result.result?.image_url) {
+                return reply('Failed to remove background. Try with a different image.');
             }
             
-            try {
-                await kelvin.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
-                
-                let imageUrl = text ? text.trim() : '';
-                
-                // Handle quoted image
-                if (m.quoted && (m.quoted.mtype === 'imageMessage' || m.quoted.mtype === 'stickerMessage')) {
-                    try {
-                        const media = await m.quoted.download();
-                        // Convert to base64 and upload to Telegra.ph
-                        const base64Image = media.toString('base64');
-                        const telegraphResponse = await fetch('https://telegra.ph/upload', {
-                            method: 'POST',
-                            body: JSON.stringify({ data: base64Image }),
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                        
-                        const telegraphData = await telegraphResponse.json();
-                        if (telegraphData[0] && telegraphData[0].src) {
-                            imageUrl = 'https://telegra.ph' + telegraphData[0].src;
-                        } else {
-                            throw new Error('Telegra.ph upload failed');
-                        }
-                    } catch (uploadError) {
-                        console.error('Upload error:', uploadError);
-                        return reply('❌ Failed to upload image. Please provide a direct image URL instead.');
-                    }
-                }
-                
-                // Validate URL
-                if (!imageUrl.startsWith('http')) {
-                    return reply('❌ Please provide a valid image URL');
-                }
-                
-                const apiUrl = `https://api.giftedtech.co.ke/api/tools/removebg?apikey=gifted&url=${encodeURIComponent(imageUrl)}`;
-                
-                console.log('Processing image:', imageUrl);
-                
-                const response = await fetch(apiUrl);
-                const apiData = await response.json();
-                
-                if (!apiData.success || !apiData.result?.image_url) {
-                    return reply('❌ Background removal failed. Make sure the image URL is accessible.');
-                }
-
-                const result = apiData.result;
-                const imageBuffer = await getBuffer(result.image_url);
-                
-                await kelvin.sendMessage(m.chat, {
-                    image: imageBuffer,
-                    caption: `✅ *Background Removed*\n\n📁 Size: ${result.size || 'N/A'}\n👤 By: ${m.pushname || 'User'}`,
-                    mentions: [m.sender]
-                }, { quoted: m });
-
-                await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
-                
-            } catch (error) {
-                console.error('RemoveBG Error:', error);
-                await kelvin.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
-                reply(`❌ Error: ${error.message}`);
+            // Send the processed image
+            await kelvin.sendMessage(m.chat, {
+                image: { url: result.result.image_url },
+                caption: `✅ *Background Removed Successfully*`,
+                mentions: [m.sender]
+            }, { quoted: m });
+            
+        } catch (error) {
+            console.error('RemoveBG Error:', error);
+            
+            if (error.message.includes('timeout')) {
+                reply('Request timeout. Try with a smaller image.');
+            } else if (error.message.includes('fetch failed')) {
+                reply('Cannot connect to API. Check your internet.');
+            } else {
+                reply('Failed to process image. Try again later.');
             }
         }
-    },
+    }
+},
     {
         command: ['styletext', 'fancytext', 'stylish'],
         operate: async ({ reply, text }) => {
