@@ -171,7 +171,7 @@ module.exports = [
 },
 {
     command: ['kickall', 'removeall'],
-    operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, from, prefix }) => {
+    operate: async ({ kelvin, text, m, reply, isGroup, isSenderAdmin, from, prefix }) => {
         if (!m.isGroup) return reply(mess.notgroup);
         if (!isSenderAdmin) return reply(global.mess.notadmin);
         let bck = m.mentionedJid[0]
