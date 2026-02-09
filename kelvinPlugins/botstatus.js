@@ -35,7 +35,7 @@ module.exports = [
                 const latency = `${(endTime - startTime).toFixed(2)} ms`;
                 
                 await kelvin.sendMessage(m.chat, {
-                    text: `*🏓 ${getSetting(botNumber, 'botname', 'VESPER-XMD')} Speed:* ${latency}`,
+                    text: `*🏓 ${getSetting(botNumber, 'botname', 'Vesper-Xmd')} Speed:* ${latency}`,
                     edit: sentMessage.key, 
                     contextInfo: { quotedMessage: m.message }
                 });
@@ -172,7 +172,7 @@ Start server Enjoy 😉
                 const uptimeFormatted = runtime(uptime); // Using your existing runtime function
                 
                 // Get bot name from settings
-                const botname = getSetting(botNumber, 'botname', 'VESPER-XMD');
+                const botname = getSetting(botNumber, 'botname', 'Vesper-Xmd');
                 
                 // Get version from global or use default
                 const version = global.versions || '1.4.0';
