@@ -105,39 +105,6 @@ module.exports = [
         }
     },
     {
-        command: ['emoji', 'emojify'],
-        operate: async ({ kelvin, m, reply, args, text }) => {
-            try {
-                let inputText = text || args.join(" ");
-                
-                if (!inputText) {
-                    return reply("Please provide some text to convert into emojis!");
-                }
-
-                let emojiMapping = {
-                    "a": "🅰️", "b": "🅱️", "c": "🇨️", "d": "🇩️", "e": "🇪️",
-                    "f": "🇫️", "g": "🇬️", "h": "🇭️", "i": "🇮️", "j": "🇯️",
-                    "k": "🇰️", "l": "🇱️", "m": "🇲️", "n": "🇳️", "o": "🅾️",
-                    "p": "🇵️", "q": "🇶️", "r": "🇷️", "s": "🇸️", "t": "🇹️",
-                    "u": "🇺️", "v": "🇻️", "w": "🇼️", "x": "🇽️", "y": "🇾️",
-                    "z": "🇿️", "0": "0️⃣", "1": "1️⃣", "2": "2️⃣", "3": "3️⃣",
-                    "4": "4️⃣", "5": "5️⃣", "6": "6️⃣", "7": "7️⃣", "8": "8️⃣",
-                    "9": "9️⃣", " ": "␣", "!": "❗", "?": "❓", ".": "🔸"
-                };
-
-                let emojiText = inputText.toLowerCase().split("").map(char => emojiMapping[char] || char).join("");
-
-                await kelvin.sendMessage(m.chat, {
-                    text: emojiText,
-                }, { quoted: m });
-
-            } catch (error) {
-                console.log(error);
-                reply(`Error: ${error.message}`);
-            }
-        }
-    },
-        {
         command: ['jokes', 'joke', 'funny'],
         operate: async ({ kelvin, m, reply }) => {
             try {
@@ -186,7 +153,7 @@ module.exports = [
                 }
 
                 const json = await res.json();
-                const botname = getSetting(botNumber, 'botname', 'Jexploit');
+                const botname = getSetting(botNumber, 'botname', 'Vesper-Xmd');
                 const pickupLine = `*Here's a pickup line for you:*\n\n"${json.pickupline}"\n\n> *© Dropped by ${botname}*`;
 
                 await kelvin.sendMessage(m.chat, { text: pickupLine }, { quoted: m });
@@ -321,6 +288,80 @@ module.exports = [
                 reply("An error occurred while processing the command. Please try again.");
             }
         }
+    },
+    {
+  command: ['trivia'],
+  react: "❓",
+  operate: async ({ kelvin, m, reply }) => {
+    try {
+      let res = await fetch("https://opentdb.com/api.php?amount=1");
+      let json = await res.json();
+
+      let question = json.results[0].question;
+      let answer = json.results[0].correct_answer;
+
+      await kelvin.sendMessage(m.chat, { text: `Question: ${question}\n\nThink you know the answer? Sending the correct answer after 20 seconds` }, { quoted: m });
+      
+      setTimeout(async () => {
+        await kelvin.sendMessage(m.chat, { text: `Answer: ${answer}` });
+      }, 20000); // 20 seconds
+    } catch (error) {
+      console.error('Error fetching trivia question:', error);
+      reply('An error occurred while fetching the trivia question.');
     }
+  }
+},
+{
+  command: ['truthdetector', 'liedetector'],
+  react: "🕵️",
+  operate: async ({ m, reply }) => {
+    if (!m.quoted) return reply(`Please reply to the message you want to detect!`);
+
+    let responses = [
+      "That's a blatant lie!",
+      "Truth revealed!",
+      "Lie alert!",
+      "Hard to believe, but true!",
+      "Professional liar detected!",
+      "Fact-check: TRUE",
+      "Busted! That's a lie!",
+      "Unbelievable, but FALSE!",
+      "Detecting... TRUTH!",
+      "Lie detector activated: FALSE!",
+      "Surprisingly, TRUE!",
+      "My instincts say... LIE!",
+      "That's partially true!",
+      "Can't verify, try again!",
+      "Most likely, TRUE!",
+      "Don't believe you!",
+      "Surprisingly, FALSE!",
+      "Truth!",
+      "Honest as a saint!",
+      "Deceptive much?",
+      "Absolutely true!",
+      "Completely false!",
+      "Seems truthful.",
+      "Not buying it!",
+      "You're lying through your teeth!",
+      "Hard to believe, but it's true!",
+      "I sense honesty.",
+      "Falsehood detected!",
+      "Totally legit!",
+      "Lies, lies, lies!",
+      "You can't fool me!",
+      "Screams truth!",
+      "Fabrication alert!",
+      "Spot on!",
+      "Fishy story, isn't it?",
+      "Unquestionably true!",
+      "Pure fiction!"
+    ];
+
+    let result = responses[Math.floor(Math.random() * responses.length)];
+    let replyText = `*RESULT*: ${result}`;
+
+    await reply(replyText);
+  }
+}
     
 ];
