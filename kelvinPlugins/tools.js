@@ -942,6 +942,39 @@ module.exports = [
     }
 },
 {
+        command: ['emoji', 'emojify'],
+        operate: async ({ kelvin, m, reply, args, text }) => {
+            try {
+                let inputText = text || args.join(" ");
+                
+                if (!inputText) {
+                    return reply("Please provide some text to convert into emojis!");
+                }
+
+                let emojiMapping = {
+                    "a": "🅰️", "b": "🅱️", "c": "🇨️", "d": "🇩️", "e": "🇪️",
+                    "f": "🇫️", "g": "🇬️", "h": "🇭️", "i": "🇮️", "j": "🇯️",
+                    "k": "🇰️", "l": "🇱️", "m": "🇲️", "n": "🇳️", "o": "🅾️",
+                    "p": "🇵️", "q": "🇶️", "r": "🇷️", "s": "🇸️", "t": "🇹️",
+                    "u": "🇺️", "v": "🇻️", "w": "🇼️", "x": "🇽️", "y": "🇾️",
+                    "z": "🇿️", "0": "0️⃣", "1": "1️⃣", "2": "2️⃣", "3": "3️⃣",
+                    "4": "4️⃣", "5": "5️⃣", "6": "6️⃣", "7": "7️⃣", "8": "8️⃣",
+                    "9": "9️⃣", " ": "␣", "!": "❗", "?": "❓", ".": "🔸"
+                };
+
+                let emojiText = inputText.toLowerCase().split("").map(char => emojiMapping[char] || char).join("");
+
+                await kelvin.sendMessage(m.chat, {
+                    text: emojiText,
+                }, { quoted: m });
+
+            } catch (error) {
+                console.log(error);
+                reply(`Error: ${error.message}`);
+            }
+        }
+    },
+{
         command: ['smartphone', 'gsmarena'],
         operate: async ({ reply, text, mess }) => {
             if (!text) return reply("*Please provide a query to search for smartphones.*");
