@@ -541,51 +541,31 @@ module.exports = [
         }
     },
 
-    // Facebook command
-    {
-        command: ['facebook', 'fb'],
-        operate: async ({ kelvin, m, reply, text }) => {
-            if (!text) return reply(`*Please provide facebook link!* `);
-
-            try {
-                await kelvin.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
-
-                const apiUrl = `https://api.nekolabs.web.id/downloader/facebook?url=${encodeURIComponent(text)}`;
-                const response = await fetch(apiUrl);
-                const data = await response.json();
-
-                if (data.success && data.result && data.result.medias && data.result.medias.length > 0) {
-                    const videos = data.result.medias.filter(m => m.type === 'video');
-                    
-                    if (videos.length > 0) {
-                        const video = videos[0];
-                        
-                        await kelvin.sendMessage(
-                            m.chat,
-                            {
-                                video: { url: video.url },
-                                mimetype: 'video/mp4',
-                                caption: global.wm || ''
-                            },
-                            { quoted: m }
-                        );
-                    } else {
-                        reply('❌ *No video found in this Facebook post*');
-                    }
-                    
-                    await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
-                } else {
-                    throw new Error('No media found');
-                }
-                
-            } catch (error) {
-                console.error('Facebook command error:', error);
-                await kelvin.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
-                reply('❌ *Failed to download Facebook video. Check the URL.*');
+   {
+    command: ['fb', 'facebook'],
+    operate: async ({ kelvin, m, reply, text, fetch }) => {
+        if (!text) return reply('Usage: .fb <facebook_url>');
+        
+        try {
+            await reply('📥 Downloading...');
+            
+            const apiUrl = `https://api.giftedtech.co.ke/api/download/facebook?apikey=gifted&url=${encodeURIComponent(text)}`;
+            const res = await fetch(apiUrl);
+            const data = await res.json();
+            
+            if (data.result?.hd_video) {
+                await kelvin.sendMessage(m.chat, {
+                    video: { url: data.result.hd_video },
+                    caption: `> ${global.wm || ''}`
+                }, { quoted: m });
+            } else {
+                reply('Download failed');
             }
+        } catch {
+            reply('Error downloading');
         }
-    },
-
+    }
+},
     // Twitter/X command
     {
         command: ['twitter', 'x'],
@@ -709,6 +689,46 @@ module.exports = [
         } catch (error) {
             console.error('ytmp4 error:', error);
             reply('Error: ' + error.message);
+        }
+    }
+},
+{
+    command: ['video'],
+    operate: async ({ kelvin, m, reply, text, prefix, fetch }) => {
+        try {
+            if (!text) return reply(`Usage: ${prefix}video <song name>`);
+            
+            await reply(`🔍 Searching for "${text}"...`);
+            
+            // 1. Search video
+            const searchUrl = `https://api.giftedtech.co.ke/api/search/yts?apikey=gifted&query=${encodeURIComponent(text)}`;
+            const searchRes = await fetch(searchUrl);
+            const searchData = await searchRes.json();
+            
+            // Get first video
+            const video = searchData.results?.find(v => v.type === 'video');
+            if (!video) return reply('❌ No video found');
+            
+            // 2. Download video
+            await reply(`📥 Downloading: ${video.title}`);
+            
+            const downloadUrl = `https://api.giftedtech.co.ke/api/download/ytdl?apikey=gifted&url=https://youtu.be/${video.videoId}`;
+            const downloadRes = await fetch(downloadUrl);
+            const downloadData = await downloadRes.json();
+            
+            if (!downloadData.result?.video_url) {
+                return reply('Download failed');
+            }
+            
+            // 3. Send video
+            await kelvin.sendMessage(m.chat, {
+                video: { url: downloadData.result.video_url },
+                caption: `> ${global.wm || ''}`
+            }, { quoted: m });
+            
+        } catch (error) {
+            console.error('Video error:', error);
+            reply('Failed to download video');
         }
     }
 }
