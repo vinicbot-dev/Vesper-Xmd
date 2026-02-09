@@ -341,7 +341,7 @@ https://github.com/${repoOwner}/${repoName}
                         contextInfo: {
                             mentionedJid: [m.sender],
                             externalAdReply: {
-                                title: "Javelin Repository",
+                                title: "Vesper-Xmd repository",
                                 body: `⭐ Star the repo to support development!`,
                                 thumbnail: thumbnailBuffer,
                                 mediaType: 1,
