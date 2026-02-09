@@ -685,29 +685,30 @@ module.exports = [
             }
         }
     },
-    {
+   {
     command: ['ytmp4', 'ytv'],
     operate: async ({ kelvin, m, reply, text }) => {
-        if (!text) return reply('.ytmp4 <url>');
+        if (!text) return reply('.ytmp4 <YouTube URL>');
         
         try {
-            await reply('⏳');
+            await reply('⏳ Downloading video...');
             
-            const apiUrl = `https://api.nekolabs.my.id/downloader/youtube/play/v1?q=${encodeURIComponent(text)}`;
-            const res = await fetch(apiUrl);
-            const data = await res.json();
+            const apiUrl = `https://apiskeith.vercel.app/download/mp4?url=${encodeURIComponent(text)}`;
+            const res = await axios.get(apiUrl);
+            const data = res.data;
             
-            if (data.success && data.result?.downloadUrl) {
+            if (data.status && data.result) {
                 await kelvin.sendMessage(m.chat, {
-                    video: { url: data.result.downloadUrl },
-                    caption: global.wm || ''
+                    video: { url: data.result },
+                    caption: `📹 *YouTube Video*\n\n${global.wm || ''}`
                 }, { quoted: m });
             } else {
-                reply('❌');
+                reply('Failed to download video');
             }
             
-        } catch {
-            reply('❌');
+        } catch (error) {
+            console.error('ytmp4 error:', error);
+            reply('Error: ' + error.message);
         }
     }
 }
