@@ -377,7 +377,7 @@ module.exports = [
         command: ['topography', 'topofx'],
         operate: async ({ kelvin, m, reply, args, prefix, ephoto }) => {
             const q = args.join(" ");
-            if (!q) return reply(`*Example: ${prefix}topography Tylor*`);
+            if (!q) return reply(`*Example: ${prefix}topography Kevin*`);
             
             const link = "https://en.ephoto360.com/create-typography-text-effect-on-pavement-online-774.html";
             
@@ -531,5 +531,304 @@ module.exports = [
                 reply('❌ Error generating hologram. Please try again later.');
             }
         }
+    },
+    {
+  command: ["flag3dtext"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}flag3dtext Kelvin*`);
     }
+
+    const link = "https://en.ephoto360.com/free-online-american-flag-3d-text-effect-generator-725.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in flag3dtext command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["glitchtext"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}glitchtext Kelvin*`);
+    }
+
+    const link = "https://en.ephoto360.com/create-digital-glitch-text-effects-online-767.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in glitchtext command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+}, 
+{
+  command: ["dragonball"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}dragonball Kelvin*`);
+    }
+
+    const link = "https://en.ephoto360.com/create-dragon-ball-style-text-effects-online-809.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in dragonball command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["multicoloredneon"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}multicoloredneon Kevin*`);
+    }
+
+    const link = "https://en.ephoto360.com/create-multicolored-neon-light-signatures-591.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in multicoloredneon command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["neonglitch"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}neonglitch Kelvin*`);
+    }
+
+    const link = "https://en.ephoto360.com/create-impressive-neon-glitch-text-effects-online-768.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in neonglitch command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["papercutstyle"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}papercutstyle Kevin*`);
+    }
+
+    const link = "https://en.ephoto360.com/multicolor-3d-paper-cut-style-text-effect-658.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in papercutstyle command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["pixelglitch"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}pixelglitch Kelvin*`);
+    }
+
+    const link = "https://en.ephoto360.com/create-pixel-glitch-text-effect-online-769.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in pixelglitch command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["glowingtext"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}glowingtext Kevin*`);
+    }
+
+    const link = "https://en.ephoto360.com/create-glowing-text-effects-online-706.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in glowingtext command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["gradienttext"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}gradienttext Kelvin*`);
+    }
+
+    const link = "https://en.ephoto360.com/create-3d-gradient-text-effect-online-600.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in gradienttext command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["graffiti"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}graffiti Kevin*`);
+    }
+
+    const link = "https://en.ephoto360.com/cute-girl-painting-graffiti-text-effect-667.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in graffiti command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["incandescent"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}incandescent Kelvin*`);
+    }
+
+    const link = "https://en.ephoto360.com/text-effects-incandescent-bulbs-219.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in incandescent command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["lighteffects"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}lighteffects Kevin*`);
+    }
+
+    const link = "https://en.ephoto360.com/create-light-effects-green-neon-online-429.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `${global.wm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in lighteffects command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+},
+{
+  command: ["logomaker"],
+  operate: async ({ m, args, reply, kelvin, prefix, mess, ephoto }) => {
+    let q = args.join(" ");
+    if (!q) {
+      return reply(`*Example: ${prefix}logomaker Kelvin*`);
+    }
+
+    const link = "https://en.ephoto360.com/free-bear-logo-maker-online-673.html";
+
+    try {
+      let result = await ephoto(link, q);
+      await kelvin.sendMessage(
+        m.chat,
+        { image: { url: result }, caption: `> ${globalwm}` },
+        { quoted: m }
+      );
+    } catch (error) {
+      console.error("Error in logomaker command:", error);
+      reply("*An error occurred while generating the effect.*");
+    }
+  },
+}
 ];
