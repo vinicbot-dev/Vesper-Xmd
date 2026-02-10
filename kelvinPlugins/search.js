@@ -359,7 +359,7 @@ module.exports = [
 },
 {
         command: ['searchrepo', 'srepo'],
-        operate: async ({ kelvin, mek, m, args, store, reply, text, q }) => {
+        operate: async ({ kelvin, mek, m, args, store, from, reply, text, q }) => {
         try {
     const repoName = args.join(" ");
     if (!repoName) {
