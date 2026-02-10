@@ -359,7 +359,7 @@ module.exports = [
 },
 {
         command: ['searchrepo', 'srepo'],
-        operate: async ({ kelvin, mek, m, arg, store, reply, text, q }) => {
+        operate: async ({ kelvin, mek, m, args, store, reply, text, q }) => {
         try {
     const repoName = args.join(" ");
     if (!repoName) {
@@ -388,7 +388,7 @@ module.exports = [
 },
 {
         command: ['ytstalk'],
-        operate: async ({ kelvin, mek, m, arg, reply, from, text, q }) => {
+        operate: async ({ kelvin, mek, m, args, reply, from, text, q }) => {
         try {
     const username = args.join(" ");
     if (!username) {
