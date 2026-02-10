@@ -697,40 +697,100 @@ module.exports = [
     command: ['video'],
     operate: async ({ kelvin, m, reply, text, prefix }) => {
         try {
-            if (!text) return reply(`Usage: ${prefix}video <song name>`);
-            
-            await reply(`🔍 Searching for "${text}"...`);
-            
-            // 1. Search video
-            const searchUrl = `https://api.giftedtech.co.ke/api/search/yts?apikey=gifted&query=${encodeURIComponent(text)}`;
-            const searchRes = await fetch(searchUrl);
-            const searchData = await searchRes.json();
-            
-            // Get first video
-            const video = searchData.results?.find(v => v.type === 'video');
-            if (!video) return reply('❌ No video found');
-            
-            // 2. Download video
-            await reply(`📥 Downloading: ${video.title}`);
-            
-            const downloadUrl = `https://api.giftedtech.co.ke/api/download/ytdl?apikey=gifted&url=https://youtu.be/${video.videoId}`;
-            const downloadRes = await fetch(downloadUrl);
-            const downloadData = await downloadRes.json();
-            
-            if (!downloadData.result?.video_url) {
-                return reply('Download failed');
-            }
-            
-            // 3. Send video
-            await kelvin.sendMessage(m.chat, {
-                video: { url: downloadData.result.video_url },
-                caption: `> ${global.wm || ''}`
-            }, { quoted: m });
-            
-        } catch (error) {
-            console.error('Video error:', error);
-            reply('Failed to download video');
+        if (!text) return reply("Provide a YouTube video name or link.");
+
+        let videoUrl = "";
+        let videoTitle = "";
+        let videoThumbnail = "";
+
+        // Detect or Search
+        if (/^https?:\/\//.test(text)) {
+            videoUrl = text;
+        } else {
+            const s = await yts(text);
+            if (!s?.videos?.length) return reply("❌ No results found.");
+            const v = s.videos[0];
+            videoUrl = v.url;
+            videoTitle = v.title;
+            videoThumbnail = v.thumbnail;
         }
+
+        // Extract ID
+        const videoId =
+            (videoUrl.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/) || [])[1];
+
+        // Show preview fast
+        if (videoThumbnail || videoId) {
+            const thumb =
+                videoThumbnail ||
+                `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`;
+
+            await kelvin.sendMessage(
+                m.chat,
+                {
+                    image: { url: thumb },
+                    caption: `🎬 *${videoTitle || text}*\n⌛ Fetching downloaded video...`,
+                },
+                { quoted: m }
+            );
+        }
+
+        // Use yt-dl to get video title
+        if (!videoTitle && videoUrl) {
+            try {
+                const ytdl = require('ytdl-core');
+                const info = await ytdl.getInfo(videoUrl);
+                videoTitle = info.videoDetails.title;
+            } catch (e) {
+                console.log("yt-dl title fetch error:", e);
+            }
+        }
+
+        // Use only the last API
+        const API_URL = `https://media.cypherxbot.space/download/youtube/video?url=${encodeURIComponent(videoUrl)}`;
+        
+        let result = null;
+
+        // Fetch from the single API
+        try {
+            const response = await axios.get(API_URL, { timeout: 30000 });
+            const data = response.data;
+
+            // Normalize download URL detection
+            const dl =
+                data?.result?.download_url ||
+                data?.result?.mp4 ||
+                data?.result?.url ||
+                data?.download_url ||
+                data?.url ||
+                data?.videoUrl;
+
+            if (dl) {
+                result = {
+                    url: dl,
+                    title: videoTitle || data?.result?.title || "Downloaded Video",
+                };
+            }
+        } catch (error) {
+            console.log("API Error:", error);
+        }
+
+        if (!result) return reply("❌ Failed to download video from server.");
+
+        // SEND THE VIDEO
+        await kelvin.sendMessage(
+            m.chat,
+            {
+                video: { url: result.url },
+                mimetype: "video/mp4",
+                fileName: `${result.title.replace(/[^\w\s]/gi, '')}.mp4`,
+                caption: `🎥 *${result.title}*\n\n> ${global.wm} ™`
+            },
+            { quoted: m }
+        );
+    } catch (e) {
+        console.log("VIDEO ERROR:", e);
+        reply(mess.error);
     }
 }
     
