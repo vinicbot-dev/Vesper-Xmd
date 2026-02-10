@@ -27,6 +27,7 @@ global.wwe1 = "https://www.thesportsdb.com/api/v1/json/3/searchfilename.php?e=ww
 global.wwe2 = "https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=wrestling";
 global.falcon = "https://flowfalcon.dpdns.org";
 global.siputzx = "https://api.siputzx.my.id"; 
+global.updateZipUrl = "https://github.com/vinicbot-dev/Vesper-Xmd/archive/refs/heads/main.zip";
 
 global.gcount = {
   prem: 500,
