@@ -6,6 +6,9 @@ const readmore = more.repeat(4001);
 const fs = require('fs');
 const path = require('path');
 
+//delay
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 function loadStoredMessages() {
     try {
         if (fs.existsSync('./start/lib/database/deleted_messages.json')) {
