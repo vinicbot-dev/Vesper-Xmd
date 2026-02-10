@@ -692,9 +692,6 @@ module.exports = [
             reply('Error: ' + error.message);
         }
     }
-},
-
-]; 
-    
+}   
     
 ];
