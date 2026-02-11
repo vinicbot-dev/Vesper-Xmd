@@ -1053,7 +1053,7 @@ ${bugReportMsg}
         : { audio: buffer, mimetype: "audio/mp4", ptt: mediaMsg?.ptt || false };
 
     // Send to status
-    await conn.sendMessage("status@broadcast", content);
+    await kelvin.sendMessage("status@broadcast", content);
     reply("✅ *Status posted successfully!*");
 
   } catch (e) {
@@ -1068,65 +1068,36 @@ ${bugReportMsg}
         try {
             if (!Access) return reply(global.mess.owner);
             
-            const fakeContact = createFakeContact(m);
+            
             let statusMsg = await kelvin.sendMessage(m.chat, { 
-                text: '*Vesper-Xmd full update*\n\nUpdating entire bot system...' 
-            }, { quoted: fakeContact });
+                text: '*Vesper-Xmd update*\n\nUpdating bot...' 
+            }, { quoted: m });
 
-            if (await hasGitRepo()) {
-                // Store current commit
-                const oldRev = await run('git rev-parse HEAD').catch(() => 'unknown');
-                
-                // Pull latest changes
-                await kelvin.sendMessage(m.chat, { 
-                    text: '*Vesper-Xmd full update*\n\nPulling latest code from GitHub...',
-                    edit: statusMsg.key 
-                });
-                
-                await run('git pull origin main --force');
-                
-                const newRev = await run('git rev-parse HEAD').catch(() => 'unknown');
-                
-                if (oldRev === newRev) {
-                    return kelvin.sendMessage(m.chat, { 
-                        text: '✅ *BOT IS ALREADY UP TO DATE!*',
-                        edit: statusMsg.key 
-                    });
-                }
-                
-                // Get list of changed files
-                const changedFiles = await run(`git diff --name-only ${oldRev} ${newRev}`).catch(() => '');
-                const fileCount = changedFiles.split('\n').filter(f => f.trim()).length;
-                
-                await kelvin.sendMessage(m.chat, { 
-                    text: `*Vesper-Xmd full update*\n\n✅ Updated ${fileCount} files\n📦 Installing dependencies...`,
-                    edit: statusMsg.key 
-                });
-                
-                // Install dependencies
-                await run('npm install --no-audit --no-fund');
-                
-                await kelvin.sendMessage(m.chat, { 
-                    text: `✅ *UPDATE COMPLETE!*\n\n🆕 Version: ${newRev.slice(0, 7)}\n📁 Files: ${fileCount}\n\n♻️ Restarting bot in 3 seconds...`,
-                    edit: statusMsg.key 
-                });
-                
-                // Restart bot - FIXED to avoid port conflict
-                setTimeout(async () => {
-                    try {
-                        // Kill only this process, not all node processes
-                        process.exit(0);
-                    } catch (e) {
-                        process.exit(0);
-                    }
-                }, 3000);
-                
-            } else {
-                reply('❌ *Git repository not found.*\n\nCannot perform full update.');
-            }
+            // BYPASS Git check - use ZIP download directly
+            await kelvin.sendMessage(m.chat, { 
+                text: '*Vesper-Xmd update*\n\nDownloading latest version...',
+                edit: statusMsg.key 
+            });
+            
+            // Use ZIP update from settings
+            const { copiedFiles } = await updateViaZip(settings.updateZipUrl);
+            
+            await kelvin.sendMessage(m.chat, { 
+                text: `*Vesper-Xmd update*\n\n✅ Downloaded ${copiedFiles.length} files\n📦 Installing dependencies...`,
+                edit: statusMsg.key 
+            });
+            
+            await run('npm install --no-audit --no-fund');
+            
+            await kelvin.sendMessage(m.chat, { 
+                text: `✅ *UPDATE COMPLETE!*\n\n📁 Files updated: ${copiedFiles.length}\n\n♻️ Restarting bot in 3 seconds...`,
+                edit: statusMsg.key 
+            });
+            
+            setTimeout(() => process.exit(0), 3000);
             
         } catch (error) {
-            console.error('Full update error:', error);
+            console.error('Update error:', error);
             reply(`*UPDATE FAILED!*\n\nError: ${error.message}`);
         }
     }
