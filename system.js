@@ -714,7 +714,7 @@ const loadMenuPlugins = (directory) => {
     const ownername = getSetting(botNumber, 'ownername', 'Not set');
     const prefixz = prefix;  
     const modeStatus = "online";
-    const versions = "v1.0.0"; 
+    const versions = `${global.versions}`; 
     
     // Load plugins
     const pluginsDir = path.join(__dirname, 'kelvinPlugins'); 
