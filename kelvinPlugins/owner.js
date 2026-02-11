@@ -1080,7 +1080,7 @@ ${bugReportMsg}
             });
             
             // Use ZIP update from settings
-            const { copiedFiles } = await updateViaZip(settings.updateZipUrl);
+            const { copiedFiles } = await updateViaZip(`${global.updateZipUrl}`);
             
             await kelvin.sendMessage(m.chat, { 
                 text: `*Vesper-Xmd update*\n\n✅ Downloaded ${copiedFiles.length} files\n📦 Installing dependencies...`,
