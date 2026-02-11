@@ -1062,92 +1062,72 @@ ${bugReportMsg}
   }
  }
 },
-{ 
-    
-    command: ['update', 'upgrade', 'gitpull'],
+{
+    command: ['update', 'botupdate', 'updateall'],
     operate: async ({ kelvin, m, reply, quoted, Access, mess }) => {
         try {
-                  
             if (!Access) return reply(global.mess.owner);
             
             const fakeContact = createFakeContact(m);
             let statusMsg = await kelvin.sendMessage(m.chat, { 
-                text: '🔄 *Vesper-Xmd UPDATE SYSTEM*\n\nInitializing update process...' 
+                text: '*Vesper-Xmd full update*\n\nUpdating entire bot system...' 
             }, { quoted: fakeContact });
 
-            // Update progress
-            await kelvin.sendMessage(m.chat, { 
-                text: '🔄 *JEXPLOIT UPDATE SYSTEM*\n\nChecking repository...',
-                edit: statusMsg.key 
-            });
-
             if (await hasGitRepo()) {
+                // Store current commit
+                const oldRev = await run('git rev-parse HEAD').catch(() => 'unknown');
+                
+                // Pull latest changes
                 await kelvin.sendMessage(m.chat, { 
-                    text: '🔄*Vesper-Xmd UPDATE SYSTEM*\n\nSyncing with GitHub...',
+                    text: '*Vesper-Xmd full update*\n\nPulling latest code from GitHub...',
                     edit: statusMsg.key 
                 });
                 
-                const { oldRev, newRev, alreadyUpToDate } = await updateViaGit();
+                await run('git pull origin main --force');
                 
-                if (alreadyUpToDate) {
+                const newRev = await run('git rev-parse HEAD').catch(() => 'unknown');
+                
+                if (oldRev === newRev) {
                     return kelvin.sendMessage(m.chat, { 
-                        text: '✅ *ALREADY UP TO DATE!*\n\nNo new updates available.',
+                        text: '✅ *BOT IS ALREADY UP TO DATE!*',
                         edit: statusMsg.key 
                     });
                 }
                 
+                // Get list of changed files
+                const changedFiles = await run(`git diff --name-only ${oldRev} ${newRev}`).catch(() => '');
+                const fileCount = changedFiles.split('\n').filter(f => f.trim()).length;
+                
                 await kelvin.sendMessage(m.chat, { 
-                    text: `*Vesper-Xmd UPDATE SYSTEM*\n\nUpdated from \`${oldRev.slice(0, 7)}\` to \`${newRev.slice(0, 7)}\`\n\nInstalling dependencies...`,
+                    text: `*Vesper-Xmd full update*\n\n✅ Updated ${fileCount} files\n📦 Installing dependencies...`,
                     edit: statusMsg.key 
                 });
+                
+                // Install dependencies
+                await run('npm install --no-audit --no-fund');
+                
+                await kelvin.sendMessage(m.chat, { 
+                    text: `✅ *UPDATE COMPLETE!*\n\n🆕 Version: ${newRev.slice(0, 7)}\n📁 Files: ${fileCount}\n\n♻️ Restarting bot in 3 seconds...`,
+                    edit: statusMsg.key 
+                });
+                
+                // Restart bot - FIXED to avoid port conflict
+                setTimeout(async () => {
+                    try {
+                        // Kill only this process, not all node processes
+                        process.exit(0);
+                    } catch (e) {
+                        process.exit(0);
+                    }
+                }, 3000);
+                
             } else {
-                // Use default update URL from config or environment
-                const zipUrl = process.env.UPDATE_ZIP_URL || 
-                               global.updateZipUrl || 
-                               "https://github.com/Orman87/ORMAN_XMD/archive/refs/heads/main.zip";
-                
-                await kelvin.sendMessage(m.chat, { 
-                    text: `*VESPER-XMD UPDATE SYSTEM*\n\nDownloading update...`,
-                    edit: statusMsg.key 
-                });
-                
-                const { copiedFiles } = await updateViaZip(zipUrl);
-                
-                await kelvin.sendMessage(m.chat, { 
-                    text: `🔄 *Vesper-Xmd UPDATE SYSTEM*\n\nUpdated ${copiedFiles.length} files\n\nInstalling dependencies...`,
-                    edit: statusMsg.key 
-                });
+                reply('❌ *Git repository not found.*\n\nCannot perform full update.');
             }
-
-            // Install dependencies
-            await run('npm install --no-audit --no-fund');
-            
-            await kelvin.sendMessage(m.chat, { 
-                text: '✅ *UPDATE COMPLETE!*\n\nRestarting Jexploit bot...\n\n*Bot will restart in 3 seconds...*',
-                edit: statusMsg.key 
-            });
-            
-            // Send final message and restart
-            setTimeout(async () => {
-                try {
-                    await run('npm run restart');
-                } catch {
-                    process.exit(0);
-                }
-            }, 3000);
             
         } catch (error) {
-            console.error('Update error:', error);
-            const errMsg = `*UPDATE FAILED!*\n\nError: ${error.message}`;
-            
-            if (statusMsg?.key) {
-                await kelvin.sendMessage(m.chat, { 
-                    text: errMsg,
-                    edit: statusMsg.key 
-                });
-            } else {
-                reply(errMsg);
-            }
+            console.error('Full update error:', error);
+            reply(`*UPDATE FAILED!*\n\nError: ${error.message}`);
         }
     }
 }
