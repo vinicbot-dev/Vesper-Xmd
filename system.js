@@ -655,13 +655,13 @@ menu += `├─• 𝚁𝙰𝙼: ${progressBar(systemUsedMemory, totalMemory)}\n
 menu += `└─• ᴅᴇᴠ: ☘ ᴋᴇʟᴠɪɴ ᴛᴇᴄʜ ☘\n`;
 menu += `${readmore}\n`;
     for (const category in plugins) {
-        menu += `┌─❖  *${category.toUpperCase()} MENU* ❖─\n`;
+        menu += `╭═❖  *${category.toUpperCase()} MENU* ❖═╮\n`;
         plugins[category].forEach(plugin => {
             if (plugin.command && plugin.command.length > 0) {
-                menu += `├─❏ ${plugin.command[0]}\n`;
+                menu += `├─◈ ${plugin.command[0]}\n`;
             }
         });
-        menu += `└─❖\n\n`;
+        menu += `╰─✪\n\n`;
     }
     return menu;
 };
