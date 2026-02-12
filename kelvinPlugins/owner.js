@@ -1101,52 +1101,7 @@ ${bugReportMsg}
             reply(`*UPDATE FAILED!*\n\nError: ${error.message}`);
         }
     }
-},
-{
-    command: ['alwaysonline'],
-    operate: async ({ kelvin, m, reply, updateSetting, botNumber, from, Access, mess }) => {
-    if (!Access) return reply(mess.owner);
-    
-    const status = args[0]?.toLowerCase();
-    
-    if (!status || (status !== 'on' && status !== 'off')) {
-        const currentStatus = global.alwaysonline ? '✅ ON' : '❌ OFF';
-        return reply(`*Always Online Mode*\n\n` +
-            `Current Status: ${currentStatus}\n\n` +
-            `Usage: ${prefix}alwaysonline <on/off>\n\n` +
-            `• on - Bot will show as always online (green dot)\n` +
-            `• off - Bot will show as unavailable\n\n` +
-            `Note: This controls the bot's online status indicator in WhatsApp.`);
-    }
-    
-    const isEnabled = status === 'on';
-    
-    try {
-        // Save to database.json
-        const success = updateSetting(, 'alwaysonline', isEnabled);
-        
-        if (success) {
-            // Update global variable
-            global.alwaysonline = isEnabled;
-            
-            // Apply presence update immediately
-            if (isEnabled) {
-                await kelvin.sendPresenceUpdate("available", from);
-                reply('✅ Always online mode enabled successfully.');
-            } else {
-                await kelvin.sendPresenceUpdate("unavailable", from);
-                reply('Always online mode disabled');
-            }
-        } else {
-            reply('❌ Failed to save setting to database. Please try again.');
-        }
-    } catch (error) {
-        console.error('Error updating alwaysonline:', error);
-        reply('❌ Error updating always online setting. Please try again.');
-    }
-  }
 }
-
             
 
 ];
