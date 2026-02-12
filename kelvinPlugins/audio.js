@@ -2,7 +2,7 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const { tmpdir } = require('os');
 const path = require('path');
-
+const { toAudio, toPTT } = require('../start/lib/converter');
 function getRandom(ext) {
     return `${Math.floor(Math.random() * 10000)}${ext}`;
 }
@@ -469,5 +469,26 @@ module.exports = [
                 reply(err.toString());
             }
         }
+    },
+    {
+  command: ['toptt', 'tovn'],
+  react: "🗣️",
+  operate: async ({ kelvin, m, reply }) => {
+  const quoted = m.quoted ? m.quoted : null;
+  const mime = quoted?.mimetype || "";
+    if (!quoted) return reply('*Reply to an audio file to convert it to voice note!*');
+    if (!/audio/.test(mime)) return reply('*Only audio files can be converted to voice notes!*');
+
+    try {
+      let buffer = await quoted.download();
+      let converted = await toPTT(buffer, 'mp3');
+
+      await kelvin.sendMessage(m.chat, { audio: converted.data, mimetype: 'audio/ogg; codecs=opus', ptt: true }, { quoted: m });
+      await converted.delete();
+    } catch (e) {
+      console.error(e);
+      reply(global.mess.error);
     }
+  }
+}
 ];
