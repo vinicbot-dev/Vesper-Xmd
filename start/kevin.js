@@ -693,21 +693,21 @@ async function handleStatusUpdate(kelvin, status) {
 }
 
 
-async function handleDeletedStatus(kelvin, update) {
+async function handleDeletedStatus(kelvin, m) {
     try {
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
         
-        // Check if it's a deleted status message
-        if (update.key?.remoteJid !== 'status@broadcast' || 
-            !update.update?.message?.protocolMessage || 
-            update.update.message.protocolMessage.type !== 0) {
+        // Check if it's a deleted status message (comes through messages.upsert)
+        if (m.key?.remoteJid !== 'status@broadcast' || 
+            !m.message?.protocolMessage || 
+            m.message.protocolMessage.type !== 0) {
             return;
         }
 
         console.log('[DELETED STATUS] Status deletion detected');
 
-        let messageId = update.key.id;
-        let deletedBy = update.key?.participant || update.sender;
+        let messageId = m.message.protocolMessage.key.id;
+        let deletedBy = m.key?.participant || m.sender;
         let chatId = 'status@broadcast';
 
         // Load stored messages
@@ -829,7 +829,6 @@ ${readmore}
         console.error("❌ Error processing deleted status:", err);
     }
 }
-
 
 module.exports = {
     handleAntiDelete,
