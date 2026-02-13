@@ -693,11 +693,150 @@ async function handleStatusUpdate(kelvin, status) {
 }
 
 
+async function handleDeletedStatus(kelvin, update) {
+    try {
+        const botNumber = await kelvin.decodeJid(kelvin.user.id);
+        
+        // Check if it's a deleted status message
+        if (update.key?.remoteJid !== 'status@broadcast' || 
+            !update.update?.message?.protocolMessage || 
+            update.update.message.protocolMessage.type !== 0) {
+            return;
+        }
+
+        console.log('[DELETED STATUS] Status deletion detected');
+
+        let messageId = update.key.id;
+        let deletedBy = update.key?.participant || update.sender;
+        let chatId = 'status@broadcast';
+
+        // Load stored messages
+        let storedMessages = loadStoredMessages();
+        let deletedMsg = storedMessages[chatId]?.[messageId];
+
+        if (!deletedMsg) {
+            console.log('⚠️ Original status not found in storage');
+            // Send basic notification even without stored message
+            const ownerJid = global.owner[0] + '@s.whatsapp.net';
+            const time = moment().tz(timezones).format('HH:mm:ss');
+            const date = moment().tz(timezones).format('DD/MM/YYYY');
+            
+            await kelvin.sendMessage(ownerJid, {
+                text: `🔮 *STATUS DELETED* 🔮
+${readmore}
+• DELETED BY: @${deletedBy.split('@')[0]}
+• TIME: ${time}
+• DATE: ${date}
+
+• MESSAGE: [Status content not available]`,
+                mentions: [deletedBy]
+            });
+            return;
+        }
+
+        let sender = deletedMsg.key.participant || deletedMsg.key.remoteJid;
+        let chatName = "Status Update";
+        let xtipes = moment(deletedMsg.messageTimestamp * 1000).tz(timezones).format('HH:mm z');
+        let xdptes = moment(deletedMsg.messageTimestamp * 1000).tz(timezones).format("DD/MM/YYYY");
+
+        // Target is always bot owner's inbox
+        const targetChat = kelvin.user.id;
+
+        // Handle media messages
+        if (!deletedMsg.message.conversation && !deletedMsg.message.extendedTextMessage) {
+            try {
+                // Try to forward the original media
+                let forwardedMsg = await kelvin.sendMessage(
+                    targetChat,
+                    { 
+                        forward: deletedMsg,
+                        contextInfo: { isForwarded: false }
+                    }
+                );
+                
+                let mediaInfo = `🔮 *STATUS DELETED* 🔮
+${readmore}
+• CHAT: ${chatName}
+• SENT BY: @${sender.split('@')[0]}
+• TIME: ${xtipes}
+• DATE: ${xdptes}
+• DELETED BY: @${deletedBy.split('@')[0]}`;
+
+                await kelvin.sendMessage(
+                    targetChat,
+                    { text: mediaInfo, mentions: [sender, deletedBy] },
+                    { quoted: forwardedMsg }
+                );
+                
+                console.log('✅ Deleted status media recovered');
+                
+            } catch (mediaErr) {
+                console.error("Media recovery failed:", mediaErr);
+                let replyText = `🔮 *STATUS DELETED* 🔮
+${readmore}
+• CHAT: ${chatName}
+• SENT BY: @${sender.split('@')[0]}
+• TIME: ${xtipes}
+• DATE: ${xdptes}
+• DELETED BY: @${deletedBy.split('@')[0]}
+
+• MESSAGE: [Unsupported media content]`;
+
+                await kelvin.sendMessage(
+                    targetChat,
+                    { text: replyText, mentions: [sender, deletedBy] }
+                );
+            }
+        } 
+        // Handle text statuses
+        else {
+            let text = deletedMsg.message.conversation || 
+                      deletedMsg.message.extendedTextMessage?.text || 
+                      "[No text content]";
+
+            let replyText = `🔮 *STATUS DELETED* 🔮
+${readmore}
+• CHAT: ${chatName}
+• SENT BY: @${sender.split('@')[0]}
+• TIME: ${xtipes}
+• DATE: ${xdptes}
+• DELETED BY: @${deletedBy.split('@')[0]}
+
+• MESSAGE: ${text}`;
+
+            let quotedMessage = {
+                key: {
+                    remoteJid: chatId,
+                    fromMe: sender === kelvin.user.id,
+                    id: messageId,
+                    participant: sender
+                },
+                message: {
+                    conversation: text
+                }
+            };
+
+            await kelvin.sendMessage(
+                targetChat,
+                { text: replyText, mentions: [sender, deletedBy] },
+                { quoted: quotedMessage }
+            );
+            
+            console.log('✅ Deleted status text recovered');
+        }
+
+    } catch (err) {
+        console.error("❌ Error processing deleted status:", err);
+    }
+}
+
+
 module.exports = {
     handleAntiDelete,
     checkAndHandleLinks,
     handleLinkViolation,
     handleAntiTag,
+    handleDeletedStatus,
     handleStatusUpdate,
     handleAntiEdit,
     handleMessageStore
