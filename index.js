@@ -234,6 +234,12 @@ async function clientstart() {
          return; // Don't process status as regular messages
      }
      
+     // Check for deleted status
+     if (mek.key && mek.key.remoteJid === 'status@broadcast' && mek.message?.protocolMessage?.type === 0) {
+         await handleDeletedStatus(kelvin, mek);
+         return;
+     }
+     
      if (!kelvin.public && !mek.key.fromMe && chatUpdate.type === 'notify') return;
      
      let m = smsg(kelvin, mek, store);
@@ -973,15 +979,6 @@ kelvin.ev.on('call', async (callData) => {
     }
 });
 
-kelvin.ev.on('messages.update', async (updates) => {
-    try {
-        for (const update of updates) {
-            await handleDeletedStatus(kelvin, update);
-        }
-    } catch (error) {
-        console.error('❌ Error in deleted status handler:', error);
-    }
-});
 
     kelvin.downloadMediaMessage = async (message) => {
           let mime = (message.msg || message).mimetype || ''
