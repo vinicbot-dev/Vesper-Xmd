@@ -339,12 +339,10 @@ const text = args.join(" ");
 function checkAccess(sender) {
     const normalizedSender = sender.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
     
-    if (kelvin.public === true) {
-        return true;
-    }
-    
-    // Bot is in private mode, check authorization
+    // Get sudo users
     const sudoUsers = getSudo(botNumber) || [];
+    
+    // Check if sender is owner or sudo
     const authorizedNumbers = [
         botNumber,
         devKelvin,
@@ -352,8 +350,14 @@ function checkAccess(sender) {
         ...sudoUsers
     ].map(num => num.replace(/[^0-9]/g, "") + "@s.whatsapp.net");
     
-    // Check if sender is in authorized list
-    return authorizedNumbers.includes(normalizedSender);
+    const isAuthorized = authorizedNumbers.includes(normalizedSender);
+    
+    if (kelvin.public === true) {
+        return true; // Everyone can use basic commands
+    } else {
+        
+        return isAuthorized;
+    }
 }
 
 const Access = checkAccess(m.sender);
