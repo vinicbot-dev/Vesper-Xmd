@@ -6,9 +6,6 @@ const readmore = more.repeat(4001);
 const fs = require('fs');
 const path = require('path');
 
-//delay
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 function loadStoredMessages() {
     try {
         if (fs.existsSync('./start/lib/database/deleted_messages.json')) {
@@ -396,7 +393,7 @@ function detectUrls(message) {
     return matches ? matches : [];
 }
 
-async function handleLinkViolation(kelvin, message, isSenderAdmin, botNumber) {
+async function handleLinkViolation(kelvin, message, m, botNumber) {
     try {
         if (!message || !message.key || !message.key.remoteJid) {
             return;
@@ -406,9 +403,7 @@ async function handleLinkViolation(kelvin, message, isSenderAdmin, botNumber) {
         const sender = message.key.participant || message.key.remoteJid;
         const messageId = message.key.id;
 
-        // Skip if sender is admin
-        if (isSenderAdmin) {
-            console.log(`✅ Admin ${sender} allowed to send link`);
+        if (m.isAdmin) {
             return;
         }
 
@@ -500,7 +495,7 @@ async function handleLinkViolation(kelvin, message, isSenderAdmin, botNumber) {
     }
 }
 
-async function checkAndHandleLinks(kelvin, message, isSenderAdmin, botNumber) {
+async function checkAndHandleLinks(kelvin, message, m, botNumber) {
     try {
         // Only check group messages
         if (!message.key.remoteJid.endsWith('@g.us')) return;
@@ -515,9 +510,9 @@ async function checkAndHandleLinks(kelvin, message, isSenderAdmin, botNumber) {
         const urls = detectUrls(message.message);
         if (urls.length === 0) return;
         
-        // Now check anti-link settings, passing isSenderAdmin
-        await handleLinkViolation(kelvin, message, isSenderAdmin, botNumber);
+        await handleLinkViolation(kelvin, message,  botNumber);
         
+       
     } catch (error) {
         // Silently handle errors
     }
@@ -525,16 +520,14 @@ async function checkAndHandleLinks(kelvin, message, isSenderAdmin, botNumber) {
 
 //<================================================>//
 
-async function handleAntiTag(kelvin, m, isSenderAdmin, botNumber) {
+async function handleAntiTag(kelvin, m, message, botNumber) {
     try {
         if (!m.isGroup) return;
         
         const chatId = m.chat;
         const sender = m.sender;
         
-        // Skip if sender is admin
-        if (isSenderAdmin) {
-            console.log(`✅ Admin ${sender} allowed to tag members`);
+         if (m.isAdmin) {
             return;
         }
         
@@ -595,7 +588,61 @@ async function handleAntiTag(kelvin, m, isSenderAdmin, botNumber) {
         console.error('Anti-tag error:', error);
     }
 }
+async function handleAntiTagAdmin(kelvin, m) {
+    try {
+        if (!m || !m.isGroup || !m.message || m.key.fromMe) {
+            return;
+        }
 
+        const botNumber = await kelvin.decodeJid(kelvin.user.id);
+        const isEnabled = global.settingsManager?.getSetting(botNumber, 'antitagadmin', false);
+        
+        if (!isEnabled) return;
+
+        const chatId = m.chat;
+        const sender = m.sender;
+        const message = m.message;
+        
+        // Skip if sender is admin
+        if (m.isAdmin) {
+            return;
+        }
+        
+        // Get group admins
+        const groupMetadata = await kelvin.groupMetadata(chatId);
+        const admins = groupMetadata.participants.filter(p => p.admin).map(p => p.id);
+        
+        // Check if message contains @admin or tags admin
+        const messageText = extractMessageText(message);
+        const mentionedUsers = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
+        
+        // Check for @admin mentions
+        const hasAdminMention = messageText.toLowerCase().includes('@admin') || 
+                               messageText.toLowerCase().includes('@admins');
+        
+        // Check if any mentioned user is an admin
+        const isTaggingAdmin = mentionedUsers.some(user => admins.includes(user));
+        
+        if (hasAdminMention || isTaggingAdmin) {
+            // Delete the message
+            try {
+                await kelvin.sendMessage(chatId, { delete: m.key });
+                console.log(`✅ Deleted admin tag message from ${sender}`);
+                
+                // Warn the user
+                await kelvin.sendMessage(chatId, {
+                    text: `⚠️ @${sender.split('@')[0]}, please don't tag admins unnecessarily!\nUse group features or report to owner directly.`,
+                    mentions: [sender]
+                });
+            } catch (error) {
+                console.error('Failed to handle admin tag:', error);
+            }
+        }
+        
+    } catch (error) {
+        console.error('Anti-tag admin error:', error);
+    }
+}
 async function handleStatusUpdate(kelvin, status) {
     try {
         // Get bot number
@@ -693,149 +740,13 @@ async function handleStatusUpdate(kelvin, status) {
 }
 
 
-async function handleDeletedStatus(kelvin, m) {
-    try {
-        const botNumber = await kelvin.decodeJid(kelvin.user.id);
-        
-        // Check if it's a deleted status message (comes through messages.upsert)
-        if (m.key?.remoteJid !== 'status@broadcast' || 
-            !m.message?.protocolMessage || 
-            m.message.protocolMessage.type !== 0) {
-            return;
-        }
-
-        console.log('[DELETED STATUS] Status deletion detected');
-
-        let messageId = m.message.protocolMessage.key.id;
-        let deletedBy = m.key?.participant || m.sender;
-        let chatId = 'status@broadcast';
-
-        // Load stored messages
-        let storedMessages = loadStoredMessages();
-        let deletedMsg = storedMessages[chatId]?.[messageId];
-
-        if (!deletedMsg) {
-            console.log('⚠️ Original status not found in storage');
-            // Send basic notification even without stored message
-            const ownerJid = global.owner[0] + '@s.whatsapp.net';
-            const time = moment().tz(timezones).format('HH:mm:ss');
-            const date = moment().tz(timezones).format('DD/MM/YYYY');
-            
-            await kelvin.sendMessage(ownerJid, {
-                text: `🔮 *STATUS DELETED* 🔮
-${readmore}
-• DELETED BY: @${deletedBy.split('@')[0]}
-• TIME: ${time}
-• DATE: ${date}
-
-• MESSAGE: [Status content not available]`,
-                mentions: [deletedBy]
-            });
-            return;
-        }
-
-        let sender = deletedMsg.key.participant || deletedMsg.key.remoteJid;
-        let chatName = "Status Update";
-        let xtipes = moment(deletedMsg.messageTimestamp * 1000).tz(timezones).format('HH:mm z');
-        let xdptes = moment(deletedMsg.messageTimestamp * 1000).tz(timezones).format("DD/MM/YYYY");
-
-        // Target is always bot owner's inbox
-        const targetChat = kelvin.user.id;
-
-        // Handle media messages
-        if (!deletedMsg.message.conversation && !deletedMsg.message.extendedTextMessage) {
-            try {
-                // Try to forward the original media
-                let forwardedMsg = await kelvin.sendMessage(
-                    targetChat,
-                    { 
-                        forward: deletedMsg,
-                        contextInfo: { isForwarded: false }
-                    }
-                );
-                
-                let mediaInfo = `🔮 *STATUS DELETED* 🔮
-${readmore}
-• CHAT: ${chatName}
-• SENT BY: @${sender.split('@')[0]}
-• TIME: ${xtipes}
-• DATE: ${xdptes}
-• DELETED BY: @${deletedBy.split('@')[0]}`;
-
-                await kelvin.sendMessage(
-                    targetChat,
-                    { text: mediaInfo, mentions: [sender, deletedBy] },
-                    { quoted: forwardedMsg }
-                );
-                
-                console.log('✅ Deleted status media recovered');
-                
-            } catch (mediaErr) {
-                console.error("Media recovery failed:", mediaErr);
-                let replyText = `🔮 *STATUS DELETED* 🔮
-${readmore}
-• CHAT: ${chatName}
-• SENT BY: @${sender.split('@')[0]}
-• TIME: ${xtipes}
-• DATE: ${xdptes}
-• DELETED BY: @${deletedBy.split('@')[0]}
-
-• MESSAGE: [Unsupported media content]`;
-
-                await kelvin.sendMessage(
-                    targetChat,
-                    { text: replyText, mentions: [sender, deletedBy] }
-                );
-            }
-        } 
-        // Handle text statuses
-        else {
-            let text = deletedMsg.message.conversation || 
-                      deletedMsg.message.extendedTextMessage?.text || 
-                      "[No text content]";
-
-            let replyText = `🔮 *STATUS DELETED* 🔮
-${readmore}
-• CHAT: ${chatName}
-• SENT BY: @${sender.split('@')[0]}
-• TIME: ${xtipes}
-• DATE: ${xdptes}
-• DELETED BY: @${deletedBy.split('@')[0]}
-
-• MESSAGE: ${text}`;
-
-            let quotedMessage = {
-                key: {
-                    remoteJid: chatId,
-                    fromMe: sender === kelvin.user.id,
-                    id: messageId,
-                    participant: sender
-                },
-                message: {
-                    conversation: text
-                }
-            };
-
-            await kelvin.sendMessage(
-                targetChat,
-                { text: replyText, mentions: [sender, deletedBy] },
-                { quoted: quotedMessage }
-            );
-            
-            console.log('✅ Deleted status text recovered');
-        }
-
-    } catch (err) {
-        console.error("❌ Error processing deleted status:", err);
-    }
-}
 
 module.exports = {
     handleAntiDelete,
     checkAndHandleLinks,
     handleLinkViolation,
     handleAntiTag,
-    handleDeletedStatus,
+    handleAntiTagAdmin,
     handleStatusUpdate,
     handleAntiEdit,
     handleMessageStore
