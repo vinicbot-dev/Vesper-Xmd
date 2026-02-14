@@ -307,40 +307,39 @@ kelvin.public = publicSetting === true || publicSetting === 'true';
 
 
     kelvin.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect } = update;
-        if (connection === 'close') {
-            const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
-            console.log(lastDisconnect.error);
-            if (lastDisconnect.error == 'Error: Stream Errored (unknown)') {
-                process.exit();
-            } else if (reason === DisconnectReason.badSession) {
-                console.log(`Bad Session File, Please Delete Session and Scan Again`);
-                process.exit();
-            } else if (reason === DisconnectReason.connectionClosed) {
-                console.log('Connection closed, reconnecting...');
-                process.exit();
-            } else if (reason === DisconnectReason.connectionLost) {
-                console.log('Connection lost, trying to reconnect');
-                process.exit();
-            } else if (reason === DisconnectReason.connectionReplaced) {
-                console.log('Connection Replaced, Another New Session Opened, Please Close Current Session First');
-                kelvin.logout();
-            } else if (reason === DisconnectReason.loggedOut) {
-                console.log(`Device Logged Out, Please Scan Again And Run.`);
-                kelvin.logout();
-            } else if (reason === DisconnectReason.restartRequired) {
-                console.log('Restart Required, Restarting...');
-                await clientstart();
-            } else if (reason === DisconnectReason.timedOut) {
-                console.log('Connection TimedOut, Reconnecting...');
-                clientstart();
-            }
-        } else if (connection === "connecting") {
-            console.log('connecting . . . ');
-       } else if (connection === "open") {
-    console.log('Bot connected successfully');
-    
-    setTimeout(async () => {
+    const { connection, lastDisconnect } = update;
+    if (connection === 'close') {
+        const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
+        console.log(lastDisconnect.error);
+        if (lastDisconnect.error == 'Error: Stream Errored (unknown)') {
+            process.exit();
+        } else if (reason === DisconnectReason.badSession) {
+            console.log(`Bad Session File, Please Delete Session and Scan Again`);
+            process.exit();
+        } else if (reason === DisconnectReason.connectionClosed) {
+            console.log('Connection closed, reconnecting...');
+            process.exit();
+        } else if (reason === DisconnectReason.connectionLost) {
+            console.log('Connection lost, trying to reconnect');
+            process.exit();
+        } else if (reason === DisconnectReason.connectionReplaced) {
+            console.log('Connection Replaced, Another New Session Opened, Please Close Current Session First');
+            kelvin.logout();
+        } else if (reason === DisconnectReason.loggedOut) {
+            console.log(`Device Logged Out, Please Scan Again And Run.`);
+            kelvin.logout();
+        } else if (reason === DisconnectReason.restartRequired) {
+            console.log('Restart Required, Restarting...');
+            await clientstart();
+        } else if (reason === DisconnectReason.timedOut) {
+            console.log('Connection TimedOut, Reconnecting...');
+            clientstart();
+        }
+    } else if (connection === "connecting") {
+        console.log('connecting . . . ');
+    } else if (connection === "open") {
+        console.log('Bot connected successfully');
+        
         try {
             const ownerJid = global.owner[0] + "@s.whatsapp.net";
             
@@ -371,9 +370,8 @@ kelvin.public = publicSetting === true || publicSetting === 'true';
         } catch (error) {
             console.error('Error sending welcome message:', error);
         }
-      })
-    });  
-}
+    }
+});
     
     kelvin.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
     let quoted = message.msg ? message.msg : message;
