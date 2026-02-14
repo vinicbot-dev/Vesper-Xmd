@@ -337,10 +337,10 @@ kelvin.public = publicSetting === true || publicSetting === 'true';
             }
         } else if (connection === "connecting") {
             console.log('connecting . . . ');
-        } else if (connection === "open") {
-            console.log('Bot connected successfully');
-            
-            setTimeout(async () => {
+       } else if (connection === "open") {
+    console.log('Bot connected successfully');
+    
+    setTimeout(async () => {
         try {
             const ownerJid = global.owner[0] + "@s.whatsapp.net";
             
@@ -357,7 +357,7 @@ kelvin.public = publicSetting === true || publicSetting === 'true';
 │
 ╰─❖ *Powered by Kelvin Tech* ❖─╯
 
-> ${global.wm || '©Jexploit is awesome 🔥'}`;
+> ${global.wm || '© Vesper-Xmd is awesome 🔥'}`;
 
             await kelvin.sendMessage(ownerJid, { 
                 text: welcomeMessage 
@@ -368,8 +368,11 @@ kelvin.public = publicSetting === true || publicSetting === 'true';
                 autoJoinGroup(kelvin);
             }, 3000);
             
+        } catch (error) {
+            console.error('Error sending welcome message:', error);
         }
-    });
+    });  
+}
     
     kelvin.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
     let quoted = message.msg ? message.msg : message;
