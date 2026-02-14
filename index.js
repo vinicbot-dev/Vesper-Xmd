@@ -371,6 +371,7 @@ kelvin.public = publicSetting === true || publicSetting === 'true';
         } catch (error) {
             console.error('Error sending welcome message:', error);
         }
+      })
     });  
 }
     
