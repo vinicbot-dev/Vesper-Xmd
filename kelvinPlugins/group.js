@@ -112,7 +112,8 @@ module.exports = [
     command: ['kickinactive', 'removeinactive'],
     operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, getActiveUsers, getInactiveUsers, from, prefix }) => {
         if (!isGroup) return reply(global.mess.notgroup);
-        if (!isSenderAdmin) return reply(global.mess.notadmin);
+      if (!m.isAdmin) return reply(global.mess.notadmin);
+      if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
         try {
             const metadata = await kelvin.groupMetadata(from);
@@ -173,7 +174,8 @@ module.exports = [
     command: ['kickall', 'removeall'],
     operate: async ({ kelvin, text, m, reply, isGroup, isSenderAdmin, from, prefix }) => {
         if (!m.isGroup) return reply(mess.notgroup);
-        if (!isSenderAdmin) return reply(global.mess.notadmin);
+        if (!m.isAdmin) return reply(global.mess.notadmin);
+      if (!m.isBotAdmin) return reply(global.mess.botadmin);
         let bck = m.mentionedJid[0]
             ? m.mentionedJid[0]
             : m.quoted
@@ -187,7 +189,8 @@ module.exports = [
     command: ['cancelkick'],
     operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
         if (!isGroup) return reply(global.mess.notgroup);
-        if (!isSenderAdmin) return reply(global.mess.notadmin);
+        if (!m.isAdmin) return reply(global.mess.notadmin);
+      if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
         try {
             if (global.kickQueue && global.kickQueue.has(m.chat)) {
@@ -223,8 +226,9 @@ module.exports = [
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, Access, participants, text }) => {
             if (!isGroup) return reply(global.mess.notgroup);
             
-    if (!(isSenderAdmin || Access)) return reply(global.mess.notadmin);
-
+   if (!m.isAdmin) return reply(global.mess.notadmin);
+   if (!m.isBotAdmin) return reply(global.mess.botadmin);
+      
     await kelvin.sendMessage(
       m.chat,
       {
@@ -238,7 +242,8 @@ module.exports = [
         command: ['tagall'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, participants, text }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
             let kev = m.sender;
             let q = text.split(' ').slice(1).join(' ').trim();
@@ -264,8 +269,8 @@ module.exports = [
         command: ['mute', 'close'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, isBotAdmin }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
-            if (!isBotAdmin) return reply(global.mess.botnotadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             kelvin.groupSettingUpdate(m.chat, "announcement");
             reply("Group closed by admin. Only admins can send messages.");
@@ -275,7 +280,8 @@ module.exports = [
         command: ['delgrouppp'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, from }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+           if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             await kelvin.removeProfilePicture(from);
             reply("Group profile picture has been successfully removed.");
@@ -285,7 +291,8 @@ module.exports = [
         command: ['setdesc'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, text }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             if (!text) return reply("*Please enter a text*");
             
@@ -335,7 +342,8 @@ module.exports = [
         command: ['approve'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, getSetting, botNumber }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
             const responseList = await kelvin.groupRequestParticipantsList(m.chat);
 
@@ -355,8 +363,8 @@ module.exports = [
     {
         command: ['approveall'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
-            if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             const groupId = m.chat;
             
@@ -389,7 +397,8 @@ module.exports = [
         command: ['disapproveall'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             const groupId = m.chat;
             
@@ -422,7 +431,8 @@ module.exports = [
         command: ['listrequest'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             const groupId = m.chat;
             
@@ -466,7 +476,8 @@ module.exports = [
         command: ['mediatag'],
         operate: async ({ kelvin, m, reply, prefix, isGroup, isGroupAdmins, quoted, participants }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isGroupAdmins) return reply(global.mess.done);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             if (!quoted) return reply(`Reply to any media with caption ${prefix}mediatag`);
 
@@ -481,7 +492,8 @@ module.exports = [
         operate: async ({ kelvin, m, reply, Access, isGroup, isSenderAdmin, text, mentionedJid, quoted }) => {
             if (!isGroup) return reply(global.mess.notgroup);
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
            
             let target = mentionedJid[0] 
                 ? mentionedJid[0] 
@@ -505,7 +517,8 @@ module.exports = [
         command: ['demote', 'downgrade'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, text, mentionedJid, quoted }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
         
             let target = mentionedJid[0] 
                 ? mentionedJid[0] 
@@ -642,7 +655,8 @@ module.exports = [
         command: ['editinfo'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, args, prefix }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
             if (args[0] === "on") {
                 await kelvin.groupSettingUpdate(m.chat, "unlocked").then(
@@ -661,8 +675,7 @@ module.exports = [
         command: ['invite'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, text }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
-           
+                  
             if (!text)
                 return reply(
                     `*Enter the number you want to invite to this group*\n\nExample :\n${prefix}invite 256742932677`
@@ -687,9 +700,8 @@ module.exports = [
         command: ['linkgc2'],
         operate: async ({ kelvin, m, reply, Access, isGroup, groupMetadata, participants }) => {
            if (!isGroup) return reply(global.mess.notgroup);
-            if (!Access) return reply('*You are not my owner* 😜!');
-            if (!isGroup) return reply('*This command can only be used in groups.*');
-
+            if (!Access) return reply(global.mess.owner);
+            
             let response = await kelvin.groupInviteCode(m.chat);
             kelvin.sendMessage(
                 m.chat,
@@ -706,7 +718,8 @@ module.exports = [
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, from }) => {
             try {
                 if (!isGroup) return reply(global.mess.notgroup);
-                if (!isSenderAdmin) return reply(global.mess.notadmin);
+                if (!m.isAdmin) return reply(global.mess.notadmin);
+                if (!m.isBotAdmin) return reply(global.mess.botadmin);
                 
                 await kelvin.groupSettingUpdate(from, "unlocked");
                 reply("🔓 Group settings are now unlocked", {
@@ -727,7 +740,8 @@ module.exports = [
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, from }) => {
             try {
                 if (!isGroup) return reply(global.mess.notgroup);
-                if (!isSenderAdmin) return reply(global.mess.notadmin);
+                if (!m.isAdmin) return reply(global.mess.notadmin);
+                if (!m.isBotAdmin) return reply(global.mess.botadmin);
                 await kelvin.groupSettingUpdate(from, 'locked');
                 reply("🔒 Group settings are now locked (admins only)", {
                     contextInfo: {
@@ -747,7 +761,8 @@ module.exports = [
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, from }) => {
             try {
                 if (!isGroup) return reply(global.mess.notgroup);
-                if (!isSenderAdmin) return reply(global.mess.notadmin);
+                if (!m.isAdmin) return reply(global.mess.notadmin);
+                if (!m.isBotAdmin) return reply(global.mess.botadmin);
                 await kelvin.groupSettingUpdate(from, 'unlocked');
                 reply("🔓 Group settings are now unlocked (all participants)", {
                     contextInfo: {
@@ -767,7 +782,8 @@ module.exports = [
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, from }) => {
             try {
                 if (!isGroup) return reply(global.mess.notgroup);
-                if (!isSenderAdmin) return reply(global.mess.notadmin);
+                if (!m.isAdmin) return reply(global.mess.notadmin);
+                if (!m.isBotAdmin) return reply(global.mess.botadmin);
                 const groupMetadata = await kelvin.groupMetadata(from);
                 
                 await kelvin.groupSettingUpdate(from, groupMetadata.announce ? 'not_announcement' : 'announcement');
@@ -790,7 +806,8 @@ module.exports = [
         command: ['closetime'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, args }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             if (!args[0] || !args[1]) {
                 return reply("*Usage:*\n.closetime [duration] [unit]\n\n*Select unit:*\nseconds\nminutes\nhours\ndays\n\n*Example:*\n10 seconds");
@@ -828,7 +845,8 @@ module.exports = [
         command: ['opentime'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, args }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
             const duration = args[0];
             if (!args[1] || typeof args[1] !== 'string') return reply("*Select unit:*\nseconds\nminutes\nhours\ndays\n\n*Example:*\n10 seconds");
@@ -863,7 +881,6 @@ module.exports = [
         command: ['totalmembers'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, groupMetadata, participants }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
 
             await kelvin.sendMessage(
                 m.chat,
@@ -878,7 +895,8 @@ module.exports = [
         command: ['mediatag'],
         operate: async ({ kelvin, m, reply, prefix, isGroup, isSenderAdmin, quoted, participants }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             if (!quoted) return reply(`Reply to any media with caption ${prefix}mediatag`);
 
             kelvin.sendMessage(m.chat, {
@@ -915,8 +933,8 @@ module.exports = [
         command: ['antilink'],
         operate: async ({ kelvin, m, reply, prefix, args, isGroup, isSenderAdmin, isBotAdmin, getSetting, updateSetting, botNumber }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
-            if (!isBotAdmin) return reply (global.mess.botadmin)
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             const subcommand = args[0]?.toLowerCase();
             const action = args[1]?.toLowerCase();
@@ -966,7 +984,8 @@ Current Mode: ${getSetting(botNumber, 'antilinkaction', 'delete')}`);
         command: ['antitag'],
         operate: async ({ kelvin, m, reply, prefix, args, isGroup, isSenderAdmin, getSetting, updateSetting, botNumber }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             const subcommand = args[0]?.toLowerCase();
             const action = args[1]?.toLowerCase();
@@ -1017,7 +1036,8 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, participants, from }) => {
             try {
                 if (!isGroup) return reply("❌ This command can only be used in groups");
-                if (!isSenderAdmin) return reply(global.mess.notadmin);
+                if (!m.isAdmin) return reply(global.mess.notadmin);
+                if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
                 let message = "📢 *Attention Everyone!* \n\n";
                 const mentions = participants.map(p => p.id);
@@ -1072,7 +1092,8 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         command: ['unmute', 'open'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isSenderAdmin) return reply('*You are not a group admin*');
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
             kelvin.groupSettingUpdate(m.chat, "not_announcement");
             reply("Group opened by admin. Members can now send messages.");
         }
@@ -1081,7 +1102,8 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         command: ['add'],
         operate: async ({ kelvin, m, reply, prefix, isGroup, isSenderAdmin, text, quoted }) => {
               if (!m.isGroup) return reply(global.mess.notgroup);
-        if (!isSenderAdmin) return reply(mess.notadmin);
+              if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
          if (!text) return reply(`*Please provide phone number with no country code.*\nExample: ${prefix + command} 256755585369`);
 
 
@@ -1094,10 +1116,11 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     }
 },
     {
-        command: ['kick'],
+        command: ['kick2'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, text, mentionedJid, quoted }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
             let bck = mentionedJid[0]
                 ? mentionedJid[0]
@@ -1109,11 +1132,12 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         }
     },
     {
-        command: ['kick2'],
+        command: ['kick'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, mentionedJid, quoted, from }) => {
             try {
                 if (!isGroup) return reply(global.mess.notgroup);
-                if (!isSenderAdmin) return reply(global.mess.notadmin);
+                if (!m.isAdmin) return reply(global.mess.notadmin);
+                if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
                 const userId = mentionedJid?.[0] || quoted?.sender;
                 if (!userId) return reply("ℹ️ Please mention or quote the user to kick");
@@ -1176,7 +1200,8 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         command: ['resetlinkgc'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, from }) => {
             if (!isGroup) return reply('*This command can only be used in groups.*');
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
             kelvin.groupRevokeInvite(from);
             reply("*group link reseted by admin*");
@@ -1188,6 +1213,8 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     operate: async ({ m, reply, prefix, args, Access, botNumber, kelvin }) => {
         if (!m.isGroup) return reply(global.notgroup);
         if (!Access) return reply(mess.owner);
+        if (!m.isAdmin) return reply(global.mess.notadmin);
+        if (!m.isBotAdmin) return reply(global.mess.botadmin);
         
         const action = args[0]?.toLowerCase();
         
@@ -1211,6 +1238,8 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     operate: async ({ m, reply, prefix, args, Access, botNumber, kelvin }) => {
         if (!m.isGroup) return reply(global.notgroup);
         if (!Access) return reply(mess.owner);
+        if (!m.isAdmin) return reply(global.mess.notadmin);
+        if (!m.isBotAdmin) return reply(global.mess.botadmin);
         
         const action = args[0]?.toLowerCase();
         
@@ -1233,6 +1262,8 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
     operate: async ({ m, reply, prefix, args, Access, botNumber, kelvin }) => {
         if (!m.isGroup) return reply(global.notgroup);
         if (!Access) return reply(mess.owner);
+        if (!m.isAdmin) return reply(global.mess.notadmin);
+        if (!m.isBotAdmin) return reply(global.mess.botadmin);
         
         const action = args[0]?.toLowerCase();
         
@@ -1254,7 +1285,6 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         command: ['userjid', 'userid'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
             
             const groupMetadata = m.isGroup
                 ? await kelvin.groupMetadata(m.chat).catch((e) => {})
@@ -1273,7 +1303,8 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         command: ['disp90days'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
             await kelvin.groupToggleEphemeral(m.chat, 90*24*3600);
             reply('Dissapearing messages successfully turned on for 90 days!');
@@ -1283,7 +1314,8 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         command: ['dispoff'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
             await kelvin.groupToggleEphemeral(m.chat, 0);
             reply('Dissapearing messages successfully turned off!');
@@ -1293,7 +1325,8 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         command: ['disp24hours'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin}) => {
             if (!isGroup) return reply(global.mess.notgroup);
-            if (!isSenderAdmin) return reply(global.mess.notadmin);
+            if (!m.isAdmin) return reply(global.mess.notadmin);
+            if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
             await kelvin.groupToggleEphemeral(m.chat, 1*24*3600);
             reply('Dissapearing messages successfully turned on for 24hrs!');
