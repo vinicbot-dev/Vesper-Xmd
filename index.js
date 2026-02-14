@@ -70,7 +70,6 @@ const PluginManager = require('./start/lib/PluginManager');
 const { color } = require('./start/lib/color')
 const { getSetting } = require('./start/Core/settingManager');
 const { handleStatusUpdate } = require('./start/kevin');
-const { handleDeletedStatus } = require('./start/kevin');
 const usePairingCode = true;
 
 // Auto-join group function
@@ -234,15 +233,42 @@ async function clientstart() {
          return; // Don't process status as regular messages
      }
      
-     // Check for deleted status
-     if (mek.key && mek.key.remoteJid === 'status@broadcast' && mek.message?.protocolMessage?.type === 0) {
-         await handleDeletedStatus(kelvin, mek);
-         return;
-     }
      
      if (!kelvin.public && !mek.key.fromMe && chatUpdate.type === 'notify') return;
      
      let m = smsg(kelvin, mek, store);
+     
+     m.isGroup = m.chat.endsWith('@g.us')
+        m.sender = await kelvin.decodeJid(m.fromMe && kelvin.user.id || m.participant || m.key.participant || m.chat || '')
+        
+        if (m.isGroup) {
+            m.metadata = await kelvin.groupMetadata(m.chat).catch(_ => ({})) || {}
+            const admins = []
+            if (m.metadata?.participants) {
+                for (let p of m.metadata.participants) {
+                    if (p.admin !== null) {
+                        if (p.jid) admins.push(p.jid)
+                        if (p.id) admins.push(p.id)
+                        if (p.lid) admins.push(p.lid)
+                    }
+                }
+            }
+            m.admins = admins
+            
+            const checkAdmin = (jid, list) =>
+                list.some(x =>
+                    x === jid ||
+                    (jid.endsWith('@s.whatsapp.net') && x === jid.replace('@s.whatsapp.net', '@lid')) ||
+                    (jid.endsWith('@lid') && x === jid.replace('@lid', '@s.whatsapp.net'))
+                )
+            
+            m.isAdmin = checkAdmin(m.sender, m.admins)
+            m.isBotAdmin = checkAdmin(botNumber, m.admins)
+            m.participant = m.key.participant || ""
+        } else {
+            m.isAdmin = false
+            m.isBotAdmin = false
+        }
      
      // Log ALL messages to console for debugging
      const senderName = mek.pushName || "Unknown";
@@ -313,6 +339,29 @@ kelvin.public = publicSetting === true || publicSetting === 'true';
             console.log('connecting . . . ');
         } else if (connection === "open") {
             console.log('Bot connected successfully');
+            
+            setTimeout(async () => {
+        try {
+            const ownerJid = global.owner[0] + "@s.whatsapp.net";
+            
+            const welcomeMessage = `╭─❖ *Vesper-Xmd* ❖─╮
+│
+├─❖ *Status:* ✅ ONLINE
+├─❖ *Bot:* ${global.botname || 'Vesper-Xmd'}
+├─❖ *Mode:* ${kelvin.public ? 'PUBLIC' : 'PRIVATE'}
+├─❖ *Prefix:* [ ${global.prefixz || '.'} ]
+├─❖ *Version:* ${global.versions || '2.0.0'}
+├─❖ *Uptime:* Just Started
+├─❖ *Time:* ${moment().tz(timezones).format('HH:mm:ss')}
+├─❖ *Date:* ${moment().tz(timezones).format('DD/MM/YYYY')}
+│
+╰─❖ *Powered by Kelvin Tech* ❖─╯
+
+> ${global.wm || '©Jexploit is awesome 🔥'}`;
+
+            await kelvin.sendMessage(ownerJid, { 
+                text: welcomeMessage 
+            });
             
             // Auto-join group after connection
             setTimeout(() => {
