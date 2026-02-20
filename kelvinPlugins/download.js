@@ -492,7 +492,7 @@ module.exports = [
     // TikTok command (version 1)
     {
         command: ['tiktok', 'tt'],
-        operate: async ({ kelvin, m, reply, text, prefix, command, botNumber, getSetting }) => {
+        operate: async ({ kelvin, m, reply, text, prefix, command, botNumber }) => {
             if (!text) return reply(`Use : ${prefix + command} link`)
             
             try {
@@ -500,7 +500,7 @@ module.exports = [
                 
                 let data = await fg.tiktok(text);
                 let json = data.result;
-                let botname = getSetting(botNumber, 'botname', 'Jexploit');
+                let botname = `${global.botname}`;
                 let caption = `[ TIKTOK - DOWNLOAD ]\n\n`;
                 caption += `◦ *Id* : ${json.id}\n`;
                 caption += `◦ *Username* : ${json.author.nickname}\n`;
@@ -674,7 +674,7 @@ module.exports = [
         try {
             await reply('⏳ Downloading video...');
             
-            const apiUrl = `https://apiskeith.vercel.app/download/mp4?url=${encodeURIComponent(text)}`;
+            const apiUrl = `https://apiskeith.top/download/mp4?url=${encodeURIComponent(text)}`;
             const res = await axios.get(apiUrl);
             const data = res.data;
             
