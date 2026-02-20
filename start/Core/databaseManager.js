@@ -1,9 +1,9 @@
 // databaseManager.js
-const SQLiteDatabase = require('../start/lib/database');
+const SQLiteDatabase = require('../../start/lib/database');
 const path = require('path');
 
 class DatabaseManager {
-    constructor(dbPath = '../../start/data/bot.db') {
+    constructor(dbPath = './start/data/bot.db') {
         this.db = new SQLiteDatabase(dbPath);
         this.cache = new Map();
         this.cacheTimeout = 30000; // 30 seconds
