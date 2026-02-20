@@ -7,7 +7,6 @@ const util = require('util');
 const { downloadContentFromMessage,getContentType } = require('@whiskeysockets/baileys');
 const https = require('https');
 const settings = require('../start/Core/developer');
-const { generateSettingsText } = require('../start/kelvinCmds/owner');
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
@@ -247,14 +246,14 @@ module.exports = [
     },
 {
     command: ['mode', 'public', 'private'],
-    operate: async ({ kelvin, m, reply, prefix, args, getSetting, updateSetting, Access, botNumber }) => {
+    operate: async ({ kelvin, m, reply, prefix, args, db, botNumber, Access }) => {
         if (!Access) return reply(global.mess.owner);
         
         const subcommand = args[0]?.toLowerCase();
         
         if (!subcommand) {
             const currentMode = kelvin.public ? 'Public 🌍' : 'Private 🔒';
-            const savedMode = getSetting(botNumber, 'mode', 'public');
+            const savedMode = await db.get(botNumber, 'mode', 'public');
             
             return reply(`*Bot Mode Settings*
 
@@ -272,23 +271,23 @@ Usage:
         switch(subcommand) {
             case 'public': {
                 kelvin.public = true;
-                await updateSetting(botNumber, 'mode', 'public');
+                await db.set(botNumber, 'mode', 'public');
                 
-                reply(`Bot set to public mode successfully ✅.`);
+                reply(`✅ Bot set to public mode successfully.`);
                 break;
             }
             
             case 'private': {
                 kelvin.public = false;
-                await updateSetting(botNumber, 'mode', 'private');
+                await db.set(botNumber, 'mode', 'private');
                 
-                reply(`Bot set to private mode successfully✅.`);
+                reply(`✅ Bot set to private mode successfully.`);
                 break;
             }
             
             case 'status': {
                 const currentMode = kelvin.public ? 'Public 🌍' : 'Private 🔒';
-                const savedMode = getSetting(botNumber, 'mode', 'public');
+                const savedMode = await db.get(botNumber, 'mode', 'public');
                 
                 reply(`*Bot Mode Status*
 
@@ -301,7 +300,7 @@ Use ${prefix}mode public/private to change`);
             }
             
             default: {
-                reply(` Invalid option. Use ${prefix}mode to see options`);
+                reply(`❌ Invalid option. Use ${prefix}mode to see options`);
                 break;
             }
         }
@@ -509,11 +508,11 @@ https://chat.whatsapp.com/${inviteCode}`;
 },
 {
     command: ['restart', 'reboot'],
-    operate: async ({ kelvin, m, reply, Access, getSetting, botNumber, pushname }) => {
+    operate: async ({ kelvin, m, reply, Access, botNumber, pushname }) => {
           if (!Access) return reply(global.mess.owner);
         
         try {
-            const botName = getSetting(botNumber, 'botname', 'Vesper-Xmd');
+            const botName = `${global.botname}`;
             
             await reply(`*Restarting ${botName} Bot...*\n\nPlease wait 10-15 seconds for the bot to restart.`);
             
@@ -825,196 +824,254 @@ ${bugReportMsg}
 },
 {
     command: ['setprefix'],
-    operate: async ({ kelvin, m, reply, args, prefix, botNumber, getSetting, updateSetting, Access, mess }) => {
-        if (!Access) return reply(global.mess.owner);
-        
-        const newPrefix = args[0];
-        if (!newPrefix || newPrefix.length < 1 || newPrefix.length > 3) {
-            return reply(`Usage: ${prefix}setprefix <new_prefix>\nExample: ${prefix}setprefix !\nNote: Prefix must be 1-3 characters`);
-        }
-        
-        if (newPrefix.includes(' ')) {
-            return reply('Prefix cannot contain spaces');
-        }
-        
-        // Get current prefix before update
-        const oldPrefix = getSetting(botNumber, 'prefix', '.');
-        
-        
-        const success = updateSetting(botNumber, 'prefix', newPrefix);
-        
-        if (success) {
-            // Update local variable
-            prefix = newPrefix;
-            
-            reply(`✅ Prefix updated to ${newPrefix}`);
-        } else {
-            reply('Failed to update prefix');
-        }
+    operate: async ({ kelvin, m, reply, args, prefix, botNumber, db, Access, mess }) => {
+       if (!Access) return reply(global.mess.owner);
+    
+    const newPrefix = args[0];
+    if (!newPrefix) {
+        const currentPrefix = await db.get(botNumber, 'prefix', '.');
+        return reply(`*📝 PREFIX SETTINGS*\n\nCurrent prefix: *${currentPrefix}*\n\nUsage: ${currentPrefix}setprefix <new prefix>\nExample: ${currentPrefix}setprefix !`);
     }
+    
+    await db.set(botNumber, 'prefix', newPrefix);
+    reply(`✅ Prefix has been changed to: *${newPrefix}*`);
+   }
 },
 {
     command: ['setownername'],
-    operate: async ({ kelvin, m, reply, args, text, prefix, botNumber, getSetting, updateSetting, Access, mess }) => {
-        if (!Access) return reply(global.mess.owner);
-        
-        if (!text) {
-            return reply(`*SET OWNER NAME*\n\n*Usage:* ${prefix}setownername [new owner name]\n*Example:* ${prefix}setownername Kelvin Tech\n\n*Current owner name:* ${getSetting(botNumber, 'ownername', 'Not set')}`);
-        }
-
-        try {
-            // Validate name length
-            if (text.length > 30) {
-                return reply('*Owner name too long!* Maximum 30 characters allowed.');
-            }
-            
-            if (text.length < 2) {
-                return reply('*Owner name too short!* Minimum 2 characters required.');
-            }
-
-            await updateSetting(botNumber, 'ownername', text.trim());
-
-            // Simple success message
-            reply(`✅ Owner name set to: ${text.trim()}`);
-
-        } catch (error) {
-            console.error('Error in setownername command:', error);
-            reply('*Failed to update owner name.* Please try again.');
-        }
+    operate: async ({ kelvin, m, reply, args, text, prefix, botNumber, db, Access, mess }) => {
+         if (!Access) return reply(mess.owner);
+    
+    if (!text) {
+        const currentName = await db.get(botNumber, 'ownername', 'Not set');
+        return reply(`*SET OWNER NAME*\n\n*Usage:* ${prefix}setownername [new owner name]\n*Example:* ${prefix}setownername Kelvin Tech\n\n*Current owner name:* ${currentName}`);
     }
+
+    try {
+        // Validate name length
+        if (text.length > 30) {
+            return reply('❌ *Owner name too long!* Maximum 30 characters allowed.');
+        }
+        
+        if (text.length < 2) {
+            return reply('❌ *Owner name too short!* Minimum 2 characters required.');
+        }
+
+        // Set the new owner name in SQLite
+        await db.set(botNumber, 'ownername', text.trim());
+
+        // Update global for current session
+        global.ownername = text.trim();
+
+        reply(`✅ Owner name set to: ${text.trim()}`);
+
+    } catch (error) {
+        console.error('Error in setownername command:', error);
+        reply('❌ *Failed to update owner name.* Please try again.');
+    }
+  }
 },
 {
     command: ['setownernumber'],
-    operate: async ({ kelvin, m, reply, args, prefix, command, botNumber, getSetting, updateSetting, Access, mess }) => {
-        if (!Access) return reply(global.mess.owner);
-        
-        if (args.length < 1) return reply(`Example: ${prefix + command} 256755585369\n\nThis will change the owner's number in the database`);
+    operate: async ({ kelvin, m, reply, args, prefix, command, db, botNumber, Access, mess }) => {
+          if (!Access) return reply(mess.owner);
+    
+    if (args.length < 1) return reply(`Example: ${prefix + command} 256755585369\n\nThis will change the owner's number in the database`);
 
-        // Join all arguments to capture the full number including spaces
-        let fullInput = args.join(' ');
-        let newNumber = fullInput.replace(/\D/g, '');
+    // Join all arguments to capture the full number including spaces
+    let fullInput = args.join(' ');
+    let newNumber = fullInput.replace(/\D/g, '');
 
-        console.log(`Input: ${fullInput}, Extracted Number: ${newNumber}`); // Debug log
+    console.log(`Input: ${fullInput}, Extracted Number: ${newNumber}`); // Debug log
 
-        if (newNumber.startsWith('0')) {
-            return reply("⚠️ Phone numbers should not start with *0*. Use the full international format (e.g., *256...* instead of *07...*)");
-        }
-
-        if (newNumber.length < 5 || newNumber.length > 15) {
-            return reply(`⚠️ Please provide a valid phone number (5-15 digits)\n\nYou provided: ${newNumber.length} digits: ${newNumber}`);
-        }
-
-        // Store the old number for comparison
-        const oldNumber = getSetting(botNumber, 'ownernumber', 'Not set');
-
-        // Update owner number in SettingsManager
-        await updateSetting(botNumber, 'ownernumber', newNumber);
-
-        // Update owner array in global
-        const newOwnerJid = newNumber + "@s.whatsapp.net";
-        global.owner = [newOwnerJid]; // Replace entire array with new owner
-
-        // Update sudo array if needed
-        if (!global.sudo) global.sudo = [];
-        if (!global.sudo.includes(newOwnerJid)) {
-            global.sudo.push(newOwnerJid);
-        }
-
-        reply(`✅ Owner number set to: ${newNumber}`);
+    if (newNumber.startsWith('0')) {
+        return reply("⚠️ Phone numbers should not start with *0*. Use the full international format (e.g., *256...* instead of *07...*)");
     }
+
+    if (newNumber.length < 5 || newNumber.length > 15) {
+        return reply(`⚠️ Please provide a valid phone number (5-15 digits)\n\nYou provided: ${newNumber.length} digits: ${newNumber}`);
+    }
+
+    // Store the old number for comparison
+    const oldNumber = await db.get(botNumber, 'ownernumber', 'Not set');
+
+    // Update owner number in SQLite
+    await db.set(botNumber, 'ownernumber', newNumber);
+
+    // Update owner array in database
+    const newOwnerJid = newNumber + "@s.whatsapp.net";
+    const currentOwners = await db.get(botNumber, 'owners', []);
+    
+    // Add new owner to owners list if not already there
+    if (!currentOwners.includes(newOwnerJid)) {
+        currentOwners.push(newOwnerJid);
+        await db.set(botNumber, 'owners', currentOwners);
+    }
+
+    // Update global for current session
+    global.owner = [newOwnerJid];
+
+    // Add to sudo if not already there
+    const currentSudo = await db.getSudo(botNumber);
+    if (!currentSudo.includes(newOwnerJid)) {
+        await db.addSudo(botNumber, newOwnerJid);
+    }
+
+    reply(`✅ Owner number set to: ${newNumber}`);
+  }
 },
 {
-    command: ['delsudo'],
-    operate: async ({ kelvin, m, reply, text, mentionedJid, quoted, Access, mess }) => {
-        if (!Access) return reply(global.mess.owner);
-        
-        if (m.chat.endsWith('@g.us') && !(mentionedJid && mentionedJid[0]) && !(quoted && quoted.sender)) {
-            return reply('Reply to or tag a person!');
-        }
-
-        let mentionedUser = mentionedJid && mentionedJid[0];
-        let quotedUser = quoted && quoted.sender;
-        let userToRemove = mentionedUser || quotedUser || (text ? text.replace(/\D/g, "") + "@s.whatsapp.net" : null) || m.chat;
-
-        if (!userToRemove) return reply('Mention a user or reply to their message to remove them from the sudo list.');
-
-        const sudoList = global.sudo;
-        const index = sudoList.indexOf(userToRemove);
-
-        if (index !== -1) {
-            sudoList.splice(index, 1);
-            await reply(`+${userToRemove.split('@')[0]} removed from the sudo list.`);
-        } else {
-            await reply(`+${userToRemove.split('@')[0]} is not in the sudo list.`);
-        }
+    command: ['removeowner', 'delsudo'],
+    operate: async ({ kelvin, m, reply, text, mentionedJid, quoted, db, Access, mess }) => {
+         if (!Access) return reply(global.mess.owner);
+    
+    const user = m.mentionedJid[0] || args[0];
+    if (!user) return reply('Mention user or provide JID');
+    
+    // Get current owners
+    let owners = await db.get(botNumber, 'owners', []);
+    
+    // Normalize the JID
+    const normalizedJid = user.includes('@s.whatsapp.net') ? user : user + '@s.whatsapp.net';
+    
+    const index = owners.indexOf(normalizedJid);
+    if (index > -1) {
+        owners.splice(index, 1);
+        await db.set(botNumber, 'owners', owners);
+        reply(`✅ @${normalizedJid.split('@')[0]} removed from owners list!`, { mentions: [normalizedJid] });
+    } else {
+        reply(`❌ User is not in owners list!`);
     }
+  }
 },
 {
     command: ['addowner', 'addsudo'],
-    operate: async ({ kelvin, m, reply, text, mentionedJid, quoted, botNumber, Access, mess, addSudo }) => {
-        if (!Access) return reply(global.mess.owner);
-        
-        if (m.chat.endsWith('@g.us') && !(mentionedJid && mentionedJid[0]) && !(quoted && quoted.sender)) {
-            return reply('Reply to or tag a person!');
-        }
-
-        let mentionedUser = mentionedJid && mentionedJid[0];
-        let quotedUser = quoted && quoted.sender;
-        let userToAdd = mentionedUser || quotedUser || (text ? text.replace(/\D/g, "") + "@s.whatsapp.net" : null) || m.chat;
-
-        if (!userToAdd) return reply('Mention a user or reply to their message to add them to the sudo list.');
-
-        // Add to database.json
-        const success = await addSudo(botNumber, userToAdd);
-        
-        if (success) {
-            // Also update global.sudo for immediate use
-            if (!global.sudo) global.sudo = [];
-            if (!global.sudo.includes(userToAdd)) {
-                global.sudo.push(userToAdd);
-            }
-            await reply(`✅ +${userToAdd.split('@')[0]} added to the sudo list.\nThey can now use any function of the bot even in private mode.`);
-        } else {
-            await reply(`ℹ️ +${userToAdd.split('@')[0]} is already a sudo user.`);
-        }
+    operate: async ({ kelvin, m, reply, text, mentionedJid, db, quoted, botNumber, Access, mess, }) => {
+        if (!Access) return reply(mess.owner);
+    
+    const user = m.mentionedJid[0] || args[0];
+    if (!user) return reply('❌ Mention user or provide JID');
+    
+    // Get current owners
+    let owners = await db.get(botNumber, 'owners', []);
+    
+    // Normalize the JID
+    const normalizedJid = user.includes('@s.whatsapp.net') ? user : user + '@s.whatsapp.net';
+    
+    if (!owners.includes(normalizedJid)) {
+        owners.push(normalizedJid);
+        await db.set(botNumber, 'owners', owners);
+        reply(`✅ @${normalizedJid.split('@')[0]} added to owners list!`, { mentions: [normalizedJid] });
+    } else {
+        reply(`❌ User is already an owner!`);
     }
+  }
 },
 {
-    command: ['listsudo'],
-    operate: async ({ kelvin, m, reply, botNumber, Access, mess, getSudo }) => {
-        if (!Access) return reply(global.mess.owner);
-        
-        // Get sudo list from database.json
-        const sudoList = getSudo(botNumber);
-        
-        // Also sync with global.sudo for consistency
-        global.sudo = sudoList;
-
-        if (sudoList.length === 0) {
-            reply('The sudo list is empty.');
-        } else {
-            let sudoText = '*SUDO USERS LIST*\n\n';
-            sudoList.forEach((jid, index) => {
-                const number = jid.split('@')[0];
-                sudoText += `${index + 1}. wa.me/${number}\n`;
-            });
-            sudoText += `\nTotal: ${sudoList.length} user(s)`;
-            reply(sudoText);
-        }
+    command: ['listowners', 'listsudo'],
+    operate: async ({ kelvin, m, reply, botNumber, db, Access, mess, }) => {
+      const owners = await db.get(botNumber, 'owners', []);
+    const sudo = await db.getSudo(botNumber);
+    
+    if (owners.length === 0 && sudo.length === 0) {
+        return reply('📋 No owners or sudo users found.');
+    }
+    
+    let message = `*AUTHORIZED USERS*\n\n`;
+    
+    if (owners.length > 0) {
+        message += `*📋 Owners:*\n`;
+        owners.forEach((jid, i) => {
+            message += `${i+1}. @${jid.split('@')[0]}\n`;
+        });
+        message += `\n`;
+    }
+    
+    if (sudo.length > 0) {
+        message += `*Sudo Users:*\n`;
+        sudo.forEach((jid, i) => {
+            message += `${i+1}. @${jid.split('@')[0]}\n`;
+        });
+    }
+    
+    await kelvin.sendMessage(m.chat, {
+        text: message,
+        mentions: [...owners, ...sudo]
+    }, { quoted: m });
     }
 },
 {
     command: ['settings', 'config'],
-    operate: async ({ kelvin, m, reply, botNumber, getSetting, Access, mess }) => {
+    operate: async ({ kelvin, m, reply, botNumber, db, Access, mess }) => {
         if (!Access) return reply(global.mess.owner);
-        
-        // Get current prefix
-        const currentPrefix = getSetting(botNumber, 'prefix', '.');
-        
-        // Generate settings text using the function
-        const settingsText = generateSettingsText(botNumber, currentPrefix);
-        
-        reply(settingsText);
+    
+    // Fetch all settings from SQLite
+    const [
+        prefix,
+        alwaysonline,
+        antidelete,
+        antiedit,
+        anticall,
+        antilinkdelete,
+        antilinkaction,
+        antibadword,
+        antibadwordaction,
+        antitag,
+        antitagaction,
+        autorecording,
+        autoTyping,
+        autoread,
+        autoreact,
+        AI_CHAT,
+        autoviewstatus,
+        autoreactstatus,
+        statusemoji,
+        welcome,
+        adminevent
+    ] = await Promise.all([
+        db.get(botNumber, 'prefix', '.'),
+        db.get(botNumber, 'alwaysonline', false),
+        db.get(botNumber, 'antidelete', 'off'),
+        db.get(botNumber, 'antiedit', 'off'),
+        db.get(botNumber, 'anticall', 'off'),
+        db.get(botNumber, 'antilink', false),
+        db.get(botNumber, 'antilinkaction', 'delete'),
+        db.get(botNumber, 'antibadword', false),
+        db.get(botNumber, 'antibadwordaction', 'delete'),
+        db.get(botNumber, 'antitag', false),
+        db.get(botNumber, 'antitagaction', 'delete'),
+        db.get(botNumber, 'autorecording', false),
+        db.get(botNumber, 'autoTyping', false),
+        db.get(botNumber, 'autoread', false),
+        db.get(botNumber, 'autoreact', false),
+        db.get(botNumber, 'AI_CHAT', false),
+        db.get(botNumber, 'autoviewstatus', false),
+        db.get(botNumber, 'autoreactstatus', false),
+        db.get(botNumber, 'statusemoji', '💚'),
+        db.get(botNumber, 'welcome', false),
+        db.get(botNumber, 'adminevent', false)
+    ]);
+
+    let settingsMsg = `*📊 BOT SETTINGS STATUS*\n\n`;
+    settingsMsg += `🔸 Prefix: ${prefix}\n`;
+    settingsMsg += `🔸 Always Online: ${alwaysonline ? 'True' : 'False'}\n`;
+    settingsMsg += `🔸 Anti-Delete: ${antidelete !== 'off' ? 'True (' + antidelete + ')' : 'False'}\n`;
+    settingsMsg += `🔸 Anti-Edit: ${antiedit !== 'off' ? 'True (' + antiedit + ')' : 'False'}\n`;
+    settingsMsg += `🔸 Anti-Call: ${anticall !== 'off' ? 'True (' + anticall + ')' : 'False'}\n`;
+    settingsMsg += `🔸 Anti-Link: ${antilinkdelete ? 'True (' + antilinkaction + ')' : 'False'}\n`;
+    settingsMsg += `🔸 Anti-Badword: ${antibadword ? 'True (' + antibadwordaction + ')' : 'False'}\n`;
+    settingsMsg += `🔸 Anti-Tag: ${antitag ? 'True (' + antitagaction + ')' : 'False'}\n`;
+    settingsMsg += `🔸 Auto-Recording: ${autorecording ? 'True' : 'False'}\n`;
+    settingsMsg += `🔸 Auto-Typing: ${autoTyping ? 'True' : 'False'}\n`;
+    settingsMsg += `🔸 Auto-Read: ${autoread ? 'True' : 'False'}\n`;
+    settingsMsg += `🔸 Auto-React: ${autoreact ? 'True' : 'False'}\n`;
+    settingsMsg += `🔸 AI Chatbot: ${AI_CHAT ? 'True' : 'False'}\n`;
+    settingsMsg += `🔸 Auto-View Status: ${autoviewstatus ? 'True' : 'False'}\n`;
+    settingsMsg += `🔸 Auto-React Status: ${autoreactstatus ? 'True (' + statusemoji + ')' : 'False'}\n`;
+    settingsMsg += `🔸 Welcome Message: ${welcome ? 'True' : 'False'}\n`;
+    settingsMsg += `🔸 Admin Events: ${adminevent ? 'True' : 'False'}`;
+    
+    reply(settingsMsg);
     }
 },
 {
