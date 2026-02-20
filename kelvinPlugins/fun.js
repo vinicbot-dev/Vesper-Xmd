@@ -1,5 +1,4 @@
 const { truthCommand, dareCommand } = require('../start/kelvinCmds/fun.js');
-const { getSetting } = require('../start/Core/settingManager');
 
 function getCompatibilityMessage(score) {
     if (score >= 900) return "Soulmates! 💞 You're perfect for each other!";
