@@ -335,7 +335,7 @@ module.exports = [
     {
         command: ['kelvinai'],
         operate: async ({ kelvin, m, reply, args, text }) => {
-            await keithAICommand(kelvin, m.chat, text, m);
+            await kelvinAICommand(kelvin, m.chat, text, m);
         }
     },
     {
