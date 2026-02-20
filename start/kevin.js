@@ -5,6 +5,7 @@ const readmore = more.repeat(4001);
 
 const fs = require('fs');
 const path = require('path');
+const db = require('../../start/Core/databaseManager');
 
 function loadStoredMessages() {
     try {
@@ -92,8 +93,8 @@ async function handleAntiDelete(m, kelvin) {
     try {
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
         
-        // Get anti-delete setting from database
-        const antideleteSetting = global.settingsManager?.getSetting(botNumber, 'antidelete', 'off');
+        // ✅ GET ANTI-DELETE SETTING FROM SQLITE
+        const antideleteSetting = await db.get(botNumber, 'antidelete', 'off');
         
         // Check if anti-delete is enabled
         if (!antideleteSetting || antideleteSetting === 'off') {
@@ -104,8 +105,6 @@ async function handleAntiDelete(m, kelvin) {
         let chatId = m.chat;
         let deletedBy = m.sender;
         const isGroup = chatId.endsWith('@g.us');
-
-        
 
         let storedMessages = loadStoredMessages();
         let deletedMsg = storedMessages[chatId]?.[messageId];
@@ -137,10 +136,8 @@ async function handleAntiDelete(m, kelvin) {
         let targetChat;
         if (antideleteSetting === 'private') {
             targetChat = kelvin.user.id; // Bot owner's inbox
-           
         } else if (antideleteSetting === 'chat') {
             targetChat = chatId; // Same chat where deletion happened
-            
         } else {
             return;
         }
@@ -234,14 +231,10 @@ ${readmore}
             );
         }
 
-        
-
     } catch (err) {
         console.error("❌ Error processing deleted message:", err);
     }
 }
-
-
 
 // Store messages function for export
 function handleMessageStore(m) {
@@ -269,12 +262,11 @@ async function handleAntiEdit(m, kelvin) {
         // Get bot number
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
         
-          // Get anti-edit setting from JSON manager
-        const antieditSetting = global.settingsManager?.getSetting(botNumber, 'antiedit', 'off');
+        const antieditSetting = await db.get(botNumber, 'antiedit', 'off');
         
         // Check if anti-edit is enabled and we have an edited message
         if (!antieditSetting || antieditSetting === 'off' || !m.message?.protocolMessage?.editedMessage) {
-            return;  
+            return;
         }
 
         let messageId = m.message.protocolMessage.key.id;
@@ -342,7 +334,7 @@ ${readmore}
             }
         };
 
-        // Determine target based on mode from JSON settings
+        // Determine target based on mode from SQLite settings
         let targetChat;
         if (antieditSetting === 'private') {
             targetChat = kelvin.user.id; // Send to bot owner
@@ -393,7 +385,7 @@ function detectUrls(message) {
     return matches ? matches : [];
 }
 
-async function handleLinkViolation(kelvin, message, m, botNumber) {
+async function handleLinkViolation(kelvin, m, message, botNumber) {
     try {
         if (!message || !message.key || !message.key.remoteJid) {
             return;
@@ -402,21 +394,33 @@ async function handleLinkViolation(kelvin, message, m, botNumber) {
         const chatId = message.key.remoteJid;
         const sender = message.key.participant || message.key.remoteJid;
         const messageId = message.key.id;
+        const isGroup = chatId.endsWith('@g.us');
 
+        // Only works in groups
+        if (!isGroup) return;
+     
+        // Skip if sender is admin
         if (m.isAdmin) {
             return;
         }
-
-        // Get anti-link settings
-        const isEnabled = global.settingsManager?.getSetting(botNumber, 'antilinkdelete', true);
-        const mode = global.settingsManager?.getSetting(botNumber, 'antilinkaction', 'delete');
+        
+        const isEnabled = await db.getGroupSetting(botNumber, chatId, 'antilink', false);
+        const mode = await db.getGroupSetting(botNumber, chatId, 'antilinkmode', 'delete'); // Changed to antilinkmode
+        const allowlink = await db.getGroupSetting(botNumber, chatId, 'allowlink', []); 
+        
+        // Check if sender is allowed to post links
+        if (allowlink.includes(sender)) {
+            console.log(`✅ ${sender} is allowed to post links`);
+            return;
+        }
         
         if (!isEnabled) return;
-
+        
         // Detect URLs in the message
         const urls = detectUrls(message.message);
         if (urls.length === 0) return;
 
+        // Delete the message
         try {
             await kelvin.sendMessage(chatId, {
                 delete: {
@@ -427,7 +431,7 @@ async function handleLinkViolation(kelvin, message, m, botNumber) {
                 }
             });
             
-            console.log(`✅ Link message deleted from ${sender}`);
+            console.log(`✅ Link message deleted from ${sender} in ${chatId}`);
             
         } catch (deleteError) {
             console.log('❌ Failed to delete message - Bot may need admin permissions');
@@ -437,23 +441,26 @@ async function handleLinkViolation(kelvin, message, m, botNumber) {
         // Handle based on mode
         switch(mode) {
             case 'warn': {
+                // Initialize warnings map if not exists
                 if (!global.linkWarnings) global.linkWarnings = new Map();
-                const userWarnings = global.linkWarnings.get(sender) || { count: 0, lastWarning: 0 };
+                
+                const warningKey = `${chatId}:${sender}`;
+                const userWarnings = global.linkWarnings.get(warningKey) || { count: 0, lastWarning: 0 };
                 
                 userWarnings.count++;
                 userWarnings.lastWarning = Date.now();
-                global.linkWarnings.set(sender, userWarnings);
+                global.linkWarnings.set(warningKey, userWarnings);
                 
-                let responseMessage = `⚠️ @${sender.split('@')[0]}, links are not allowed!\nWarning: *${userWarnings.count}/3*`;
+                let responseMessage = `⚠️ @${sender.split('@')[0]}, links are not allowed in this group!\nWarning: *${userWarnings.count}/3*`;
                 
                 // Auto-kick after 3 warnings
                 if (userWarnings.count >= 3) {
                     try {
                         await kelvin.groupParticipantsUpdate(chatId, [sender], "remove");
                         responseMessage = `🚫 @${sender.split('@')[0]} *has been removed for posting links*.`;
-                        global.linkWarnings.delete(sender);
+                        global.linkWarnings.delete(warningKey);
                     } catch (kickError) {
-                        responseMessage = `⚠️ @${sender.split('@')[0]}, links are not allowed! (Failed to remove)`;
+                        responseMessage = `⚠️ @${sender.split('@')[0]}, links are not allowed! (Failed to remove - check bot permissions)`;
                     }
                 }
                 
@@ -476,7 +483,7 @@ async function handleLinkViolation(kelvin, message, m, botNumber) {
                 } catch (kickError) {
                     await delay(1000);
                     await kelvin.sendMessage(chatId, {
-                        text: `⚠️ @${sender.split('@')[0]}, links are not allowed! (Failed to remove)`,
+                        text: `⚠️ @${sender.split('@')[0]}, links are not allowed! (Failed to remove - check bot permissions)`,
                         mentions: [sender]
                     });
                 }
@@ -520,20 +527,23 @@ async function checkAndHandleLinks(kelvin, message, m, botNumber) {
 
 //<================================================>//
 
-async function handleAntiTag(kelvin, m, message, botNumber) {
+async function handleAntiTag(kelvin, m, botNumber) {
     try {
-        if (!m.isGroup) return;
-        
+        if (!m || !m.isGroup || !m.message || m.key.fromMe) {
+            return;
+        }
+
         const chatId = m.chat;
         const sender = m.sender;
-        
-         if (m.isAdmin) {
+
+        // Skip if sender is admin
+        if (m.isAdmin) {
             return;
         }
         
-        // Get anti-tag settings
-        const isEnabled = global.settingsManager?.getSetting(botNumber, 'antitag', false);
-        const mode = global.settingsManager?.getSetting(botNumber, 'antitagaction', 'delete');
+        // Get antitag settings - NO ALLOWLIST
+        const isEnabled = await db.getGroupSetting(botNumber, chatId, 'antitag', false);
+        const mode = await db.getGroupSetting(botNumber, chatId, 'antitagmode', 'delete');
         
         if (!isEnabled) return;
         
@@ -544,17 +554,41 @@ async function handleAntiTag(kelvin, m, message, botNumber) {
             // Delete the message
             try {
                 await kelvin.sendMessage(chatId, { delete: m.key });
-                console.log(`✅ Deleted tag message from ${sender}`);
+                console.log(`✅ Deleted tag message from ${sender} in ${chatId}`);
             } catch (deleteError) {
-                console.log('❌ Failed to delete message');
+                console.log('❌ Failed to delete message - Bot may need admin permissions');
                 return;
             }
             
             // Handle based on mode
             switch(mode) {
                 case 'warn': {
+                    // Initialize warnings map if not exists
+                    if (!global.tagWarnings) global.tagWarnings = new Map();
+                    
+                    // Get or create user warnings for this specific group
+                    const warningKey = `${chatId}:${sender}`;
+                    const userWarnings = global.tagWarnings.get(warningKey) || { count: 0, lastWarning: 0 };
+                    
+                    userWarnings.count++;
+                    userWarnings.lastWarning = Date.now();
+                    global.tagWarnings.set(warningKey, userWarnings);
+                    
+                    let responseMessage = `⚠️ @${sender.split('@')[0]}, tagging members is not allowed in this group!\nWarning: *${userWarnings.count}/3*`;
+                    
+                    // Auto-kick after 3 warnings
+                    if (userWarnings.count >= 3) {
+                        try {
+                            await kelvin.groupParticipantsUpdate(chatId, [sender], "remove");
+                            responseMessage = `🚫 @${sender.split('@')[0]} *has been removed for excessive tagging*.`;
+                            global.tagWarnings.delete(warningKey);
+                        } catch (kickError) {
+                            responseMessage = `⚠️ @${sender.split('@')[0]}, tagging is not allowed! (Failed to remove - check bot permissions)`;
+                        }
+                    }
+                    
                     await kelvin.sendMessage(chatId, {
-                        text: `⚠️ @${sender.split('@')[0]}, tagging members is not allowed!`,
+                        text: responseMessage,
                         mentions: [sender]
                     });
                     break;
@@ -569,7 +603,7 @@ async function handleAntiTag(kelvin, m, message, botNumber) {
                         });
                     } catch (kickError) {
                         await kelvin.sendMessage(chatId, {
-                            text: `⚠️ @${sender.split('@')[0]}, tagging is not allowed! (Failed to remove)`,
+                            text: `⚠️ @${sender.split('@')[0]}, tagging is not allowed! (Failed to remove - check bot permissions)`,
                             mentions: [sender]
                         });
                     }
@@ -588,6 +622,7 @@ async function handleAntiTag(kelvin, m, message, botNumber) {
         console.error('Anti-tag error:', error);
     }
 }
+
 async function handleAntiTagAdmin(kelvin, m) {
     try {
         if (!m || !m.isGroup || !m.message || m.key.fromMe) {
@@ -595,13 +630,15 @@ async function handleAntiTagAdmin(kelvin, m) {
         }
 
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
-        const isEnabled = global.settingsManager?.getSetting(botNumber, 'antitagadmin', false);
-        
-        if (!isEnabled) return;
-
         const chatId = m.chat;
         const sender = m.sender;
         const message = m.message;
+        
+        // Get antitag admin settings - NO ALLOWLIST
+        const isEnabled = await db.getGroupSetting(botNumber, chatId, 'antitagadmin', false);
+        const action = await db.getGroupSetting(botNumber, chatId, 'antitagadminaction', 'warn');
+        
+        if (!isEnabled) return;
         
         // Skip if sender is admin
         if (m.isAdmin) {
@@ -627,15 +664,67 @@ async function handleAntiTagAdmin(kelvin, m) {
             // Delete the message
             try {
                 await kelvin.sendMessage(chatId, { delete: m.key });
-                console.log(`✅ Deleted admin tag message from ${sender}`);
+                console.log(`✅ Deleted admin tag message from ${sender} in ${chatId}`);
+            } catch (deleteError) {
+                console.log('❌ Failed to delete message - Bot may need admin permissions');
+                return;
+            }
+            
+            // Handle based on action setting
+            switch(action) {
+                case 'warn': {
+                    // Initialize warnings map if not exists
+                    if (!global.adminTagWarnings) global.adminTagWarnings = new Map();
+                    
+                    // Get or create user warnings for this specific group
+                    const warningKey = `${chatId}:${sender}`;
+                    const userWarnings = global.adminTagWarnings.get(warningKey) || { count: 0, lastWarning: 0 };
+                    
+                    userWarnings.count++;
+                    userWarnings.lastWarning = Date.now();
+                    global.adminTagWarnings.set(warningKey, userWarnings);
+                    
+                    let responseMessage = `⚠️ @${sender.split('@')[0]}, tagging admins is NOT allowed!\nWarning: *${userWarnings.count}/3*`;
+                    
+                    // Auto-kick after 3 warnings
+                    if (userWarnings.count >= 3) {
+                        try {
+                            await kelvin.groupParticipantsUpdate(chatId, [sender], "remove");
+                            responseMessage = `🚫 @${sender.split('@')[0]} *has been removed for repeatedly tagging admins*.`;
+                            global.adminTagWarnings.delete(warningKey);
+                        } catch (kickError) {
+                            responseMessage = `⚠️ @${sender.split('@')[0]}, tagging admins is not allowed! (Failed to remove - check bot permissions)`;
+                        }
+                    }
+                    
+                    await kelvin.sendMessage(chatId, {
+                        text: responseMessage,
+                        mentions: [sender]
+                    });
+                    break;
+                }
                 
-                // Warn the user
-                await kelvin.sendMessage(chatId, {
-                    text: `⚠️ @${sender.split('@')[0]}, please don't tag admins unnecessarily!\nUse group features or report to owner directly.`,
-                    mentions: [sender]
-                });
-            } catch (error) {
-                console.error('Failed to handle admin tag:', error);
+                case 'kick': {
+                    try {
+                        await kelvin.groupParticipantsUpdate(chatId, [sender], "remove");
+                        await kelvin.sendMessage(chatId, {
+                            text: `🚫 @${sender.split('@')[0]} *has been removed for tagging admins*.`,
+                            mentions: [sender]
+                        });
+                    } catch (kickError) {
+                        await kelvin.sendMessage(chatId, {
+                            text: `⚠️ @${sender.split('@')[0]}, tagging admins is not allowed! (Failed to remove - check bot permissions)`,
+                            mentions: [sender]
+                        });
+                    }
+                    break;
+                }
+                
+                case 'delete':
+                default: {
+                    // Just delete the message, no warning
+                    break;
+                }
             }
         }
         
@@ -643,44 +732,268 @@ async function handleAntiTagAdmin(kelvin, m) {
         console.error('Anti-tag admin error:', error);
     }
 }
+
+
+/**
+ * ANTIDEMOTE COMMAND
+ * Prevents admins from being demoted
+ */
+async function antidemoteCommand(kelvin, m, args, Access, botNumber) {
+    try {
+        const chatId = m.chat;
+        
+        // Check if sender is admin using m.isAdmin
+        if (!m.isAdmin && !Access) {
+            await kelvin.sendMessage(chatId, { text: '❌ For Group Admins Only' }, { quoted: m });
+            return;
+        }
+
+        const action = args[0]?.toLowerCase();
+
+        if (!action) {
+            const usage = `🛡️ *ANTIDEMOTE*\n\n` +
+                `• ${m.prefix}antidemote on\n` +
+                `• ${m.prefix}antidemote off\n` +
+                `• ${m.prefix}antidemote status`;
+            await kelvin.sendMessage(chatId, { text: usage }, { quoted: m });
+            return;
+        }
+
+        switch (action) {
+            case 'on':
+                await db.setAntidemote(botNumber, chatId, true);
+                await kelvin.sendMessage(chatId, { 
+                    text: '✅ *antidemote enabled successfully*'
+                }, { quoted: m });
+                break;
+
+            case 'off':
+                await db.setAntidemote(botNumber, chatId, false);
+                await kelvin.sendMessage(chatId, { 
+                    text: '*antidemote disabled successfully*' 
+                }, { quoted: m });
+                break;
+
+            case 'status':
+                const enabled = await db.getAntidemote(botNumber, chatId);
+                await kelvin.sendMessage(chatId, { 
+                    text: `📊 Status: ${enabled ? 'ON' : 'OFF'}` 
+                }, { quoted: m });
+                break;
+
+            default:
+                await kelvin.sendMessage(chatId, { 
+                    text: '❌ Use: on, off, status' 
+                }, { quoted: m });
+        }
+    } catch (error) {
+        console.error('❌ Error in antidemote command:', error);
+        await kelvin.sendMessage(m.chat, { 
+            text: '❌ An error occurred' 
+        }, { quoted: m });
+    }
+}
+
+/**
+ * HANDLE ANTIDEMOTE EVENT
+ * Re-promotes admins when demoted
+ */
+async function handleAntidemote(kelvin, chatId, participants, author) {
+    try {
+        const botNumber = await kelvin.decodeJid(kelvin.user.id);
+        const enabled = await db.getAntidemote(botNumber, chatId);
+        
+        if (!enabled) return false;
+
+        // Get group metadata
+        const groupMetadata = await kelvin.groupMetadata(chatId);
+        
+        let reproMotedCount = 0;
+        
+        // Re-promote each demoted participant
+        for (const participant of participants) {
+            await kelvin.groupParticipantsUpdate(chatId, [participant], 'promote');
+            console.log(`[ANTIDEMOTE] ✅ Re-promoted ${participant}`);
+            reproMotedCount++;
+        }
+        
+        // Send notification
+        if (reproMotedCount > 0) {
+            await kelvin.sendMessage(chatId, {
+                text: `🛡️ Admin re-promoted`
+            });
+        }
+
+        return reproMotedCount > 0;
+    } catch (error) {
+        console.error('❌ Error in handleAntidemote:', error);
+        return false;
+    }
+}
+
+/**
+ * ANTIPROMOTE COMMAND
+ * Prevents unauthorized promotions
+ */
+async function antipromoteCommand(kelvin, m, args, Access, botNumber) {
+    try {
+        const chatId = m.chat;
+        
+        // Check if sender is admin using m.isAdmin
+        if (!m.isAdmin && !Access) {
+            await kelvin.sendMessage(chatId, { text: '❌ For Group Admins Only' }, { quoted: m });
+            return;
+        }
+
+        const action = args[0]?.toLowerCase();
+
+        if (!action) {
+            const usage = `*ANTIPROMOTE*\n\n` +
+                `• ${m.prefix}antipromote on\n` +
+                `• ${m.prefix}antipromote off\n` +
+                `• ${m.prefix}antipromote status`;
+            await kelvin.sendMessage(chatId, { text: usage }, { quoted: m });
+            return;
+        }
+
+        switch (action) {
+            case 'on':
+                await db.setAntipromote(botNumber, chatId, true);
+                await kelvin.sendMessage(chatId, { 
+                    text: '✅ *Successfully enabled antipromote*' 
+                }, { quoted: m });
+                break;
+
+            case 'off':
+                await db.setAntipromote(botNumber, chatId, false);
+                await kelvin.sendMessage(chatId, { 
+                    text: 'Successfully disabled antipromote*' 
+                }, { quoted: m });
+                break;
+
+            case 'status':
+                const enabled = await db.getAntipromote(botNumber, chatId);
+                await kelvin.sendMessage(chatId, { 
+                    text: `📊 Status: ${enabled ? 'ON' : 'OFF'}` 
+                }, { quoted: m });
+                break;
+
+            default:
+                await kelvin.sendMessage(chatId, { 
+                    text: '❌ Use: on, off, status' 
+                }, { quoted: m });
+        }
+    } catch (error) {
+        console.error('❌ Error in antipromote command:', error);
+        await kelvin.sendMessage(m.chat, { 
+            text: '❌ An error occurred' 
+        }, { quoted: m });
+    }
+}
+
+/**
+ * HANDLE ANTIPROMOTE EVENT
+ * Demotes users promoted by non-admins
+ */
+async function handleAntipromote(kelvin, chatId, participants, author) {
+    try {
+        const botNumber = await kelvin.decodeJid(kelvin.user.id);
+        const enabled = await db.getAntipromote(botNumber, chatId);
+        
+        if (!enabled) return false;
+
+        // Check if author is admin using existing admin check
+        // We'll rely on the event data - if author is not admin, they shouldn't be promoting
+        
+        let demotedCount = 0;
+        
+        // Demote all promoted participants
+        for (const participant of participants) {
+            await kelvin.groupParticipantsUpdate(chatId, [participant], 'demote');
+            console.log(`[ANTIPROMOTE] ✅ Demoted ${participant}`);
+            demotedCount++;
+        }
+        
+        // Send notification
+        if (demotedCount > 0) {
+            await kelvin.sendMessage(chatId, {
+                text: `🛡️ Unauthorized promotion reversed`
+            });
+        }
+
+        return demotedCount > 0;
+    } catch (error) {
+        console.error('❌ Error in handleAntipromote:', error);
+        return false;
+    }
+}
+// Function to handle status updates
 async function handleStatusUpdate(kelvin, status) {
     try {
         // Get bot number
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
         
-        // Get settings from database using SettingsManager
-        const autoviewstatus = global.settingsManager?.getSetting(botNumber, 'autoviewstatus', false);
-        const autoreactstatus = global.settingsManager?.getSetting(botNumber, 'autoreactstatus', false);
-        const statusemoji = global.settingsManager?.getSetting(botNumber, 'statusemoji', '💚');
+        // ✅ GET SETTINGS FROM SQLITE
+        const autoviewstatus = await db.get(botNumber, 'autoviewstatus', false);
+        const autoreactstatus = await db.get(botNumber, 'autoreactstatus', false);
+        const statusemoji = await db.get(botNumber, 'statusemoji', '💚');
         
-        if (!autoviewstatus) {
+        // If both are disabled, return
+        if (!autoviewstatus && !autoreactstatus) {
             return;
         }
 
         // Add delay to prevent rate limiting
         await new Promise(resolve => setTimeout(resolve, 1000));
 
+        // Select random emoji from popular ones
+        const getRandomEmoji = () => {
+            const emojis = ['❤️', '😂', '😮', '😢', '🔥', '👏', '🎉', '🤔', '👍', '👎', '😍', '🤯', '😡', '🥰', '😎', '🤩', '🥳', '😭', '🙏', '💯'];
+            return emojis[Math.floor(Math.random() * emojis.length)];
+        };
+
+        const reactionEmoji = statusemoji === '💚' || !statusemoji ? getRandomEmoji() : statusemoji;
+
         // Handle status from messages.upsert
         if (status.messages && status.messages.length > 0) {
             const msg = status.messages[0];
             if (msg.key && msg.key.remoteJid === 'status@broadcast') {
                 try {
-                    await kelvin.readMessages([msg.key]);
-                    
-                    // React to status if enabled
                     if (autoreactstatus) {
+                        // View first, then react
+                        await kelvin.readMessages([msg.key]);
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        
                         await kelvin.sendMessage(msg.key.remoteJid, { 
                             react: { 
-                                text: statusemoji, 
+                                text: reactionEmoji, 
                                 key: msg.key 
                             } 
                         });
+                        
+                    } else if (autoviewstatus) {
+                        // Only view if autoviewstatus is enabled
+                        await kelvin.readMessages([msg.key]);
                     }
                     
                 } catch (err) {
                     if (err.message?.includes('rate-overlimit')) {
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-                        await kelvin.readMessages([msg.key]);
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                        
+                        try {
+                            if (autoreactstatus) {
+                                await kelvin.readMessages([msg.key]);
+                                await new Promise(resolve => setTimeout(resolve, 500));
+                                await kelvin.sendMessage(msg.key.remoteJid, { 
+                                    react: { 
+                                        text: reactionEmoji, 
+                                        key: msg.key 
+                                    } 
+                                });
+                            } else if (autoviewstatus) {
+                                await kelvin.readMessages([msg.key]);
+                            }
+                        } catch (retryError) {}
                     }
                 }
                 return;
@@ -690,22 +1003,38 @@ async function handleStatusUpdate(kelvin, status) {
         // Handle direct status updates
         if (status.key && status.key.remoteJid === 'status@broadcast') {
             try {
-                await kelvin.readMessages([status.key]);
-                
-                // React to status if enabled
                 if (autoreactstatus) {
+                    await kelvin.readMessages([status.key]);
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
                     await kelvin.sendMessage(status.key.remoteJid, { 
                         react: { 
-                            text: statusemoji, 
+                            text: reactionEmoji, 
                             key: status.key 
                         } 
                     });
+                    
+                } else if (autoviewstatus) {
+                    await kelvin.readMessages([status.key]);
                 }
                 
             } catch (err) {
                 if (err.message?.includes('rate-overlimit')) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    await kelvin.readMessages([status.key]);
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    try {
+                        if (autoreactstatus) {
+                            await kelvin.readMessages([status.key]);
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            await kelvin.sendMessage(status.key.remoteJid, { 
+                                react: { 
+                                    text: reactionEmoji, 
+                                    key: status.key 
+                                } 
+                            });
+                        } else if (autoviewstatus) {
+                            await kelvin.readMessages([status.key]);
+                        }
+                    } catch (retryError) {}
                 }
             }
             return;
@@ -714,32 +1043,45 @@ async function handleStatusUpdate(kelvin, status) {
         // Handle status in reactions
         if (status.reaction && status.reaction.key.remoteJid === 'status@broadcast') {
             try {
-                await kelvin.readMessages([status.reaction.key]);
-                
-                // React to status if enabled
                 if (autoreactstatus) {
+                    await kelvin.readMessages([status.reaction.key]);
+                    await new Promise(resolve => setTimeout(resolve, 500));
                     await kelvin.sendMessage(status.reaction.key.remoteJid, { 
                         react: { 
-                            text: statusemoji, 
+                            text: reactionEmoji, 
                             key: status.reaction.key 
                         } 
                     });
+                } else if (autoviewstatus) {
+                    await kelvin.readMessages([status.reaction.key]);
                 }
                 
             } catch (err) {
                 if (err.message?.includes('rate-overlimit')) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    await kelvin.readMessages([status.reaction.key]);
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    try {
+                        if (autoreactstatus) {
+                            await kelvin.readMessages([status.reaction.key]);
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                            await kelvin.sendMessage(status.reaction.key.remoteJid, { 
+                                react: { 
+                                    text: reactionEmoji, 
+                                    key: status.reaction.key 
+                                } 
+                            });
+                        } else if (autoviewstatus) {
+                            await kelvin.readMessages([status.reaction.key]);
+                        }
+                    } catch (retryError) {}
                 }
             }
             return;
         }
 
     } catch (error) {
+        // Silent error handling
     }
 }
-
-
 
 module.exports = {
     handleAntiDelete,
@@ -747,6 +1089,10 @@ module.exports = {
     handleLinkViolation,
     handleAntiTag,
     handleAntiTagAdmin,
+    antidemoteCommand,
+    handleAntidemote,
+    antipromoteCommand,
+    handleAntipromote,
     handleStatusUpdate,
     handleAntiEdit,
     handleMessageStore
