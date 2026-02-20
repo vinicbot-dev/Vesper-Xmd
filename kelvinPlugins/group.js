@@ -1,4 +1,7 @@
-// activeusers.js
+const {
+antidemoteCommand,
+antipromoteCommand
+} = require('../start/kevin');
 module.exports = [
 {
     command: ['listactive', 'activeusers'],
@@ -931,111 +934,104 @@ module.exports = [
     },
     {
         command: ['antilink'],
-        operate: async ({ kelvin, m, reply, prefix, args, isGroup, isSenderAdmin, isBotAdmin, getSetting, updateSetting, botNumber }) => {
+        operate: async ({ kelvin, m, reply, prefix, args, isGroup, db, isBotAdmin, getSetting, botNumber }) => {
             if (!isGroup) return reply(global.mess.notgroup);
             if (!m.isAdmin) return reply(global.mess.notadmin);
             if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
-            const subcommand = args[0]?.toLowerCase();
-            const action = args[1]?.toLowerCase();
-            
-            if (!subcommand) {
-                return reply(`🔗 *Anti-Link System*
-                
-Usage:
-• ${prefix}antilink delete on/off - Delete mode
-• ${prefix}antilink warn on/off - Warn mode  
-• ${prefix}antilink kick on/off - Kick mode
-• ${prefix}antilink status - Show settings
-
-Current Mode: ${getSetting(botNumber, 'antilinkaction', 'delete')}`);
-            }
-            
-            if (subcommand === 'status') {
-                const mode = getSetting(botNumber, 'antilinkaction', 'delete');
-                const isEnabled = getSetting(botNumber, 'antilinkdelete', true);
-                
-                reply(`🔗 *Anti-Link Status*
-                
-• Enabled: ${isEnabled ? '✅ ON' : '❌ OFF'}
-• Mode: ${mode}
-• Action: ${mode === 'delete' ? 'Delete messages' : 
-                   mode === 'warn' ? 'Delete + warn (3 warnings = kick)' : 
-                   'Delete + kick'}`);
-                return;
-            }
-            
-            if (!['delete', 'warn', 'kick'].includes(subcommand) || !['on', 'off'].includes(action)) {
-                reply(`❌ Invalid. Use:\n• ${prefix}antilink delete on/off\n• ${prefix}antilink warn on/off\n• ${prefix}antilink kick on/off`);
-                return;
-            }
-            
-            // Set the mode
-            await updateSetting(botNumber, 'antilinkaction', subcommand);
-            
-            // Turn on/off
-            const boolValue = action === 'on';
-            await updateSetting(botNumber, 'antilinkdelete', boolValue);
-            
-            reply(`✅ Anti-link ${subcommand} mode ${boolValue ? 'enabled' : 'disabled'}`);
-        }
-    },
+            const mode = args[0]?.toLowerCase();
+    
+    if (!mode) {
+        const status = await db.getGroupSetting(botNumber, m.chat, 'antilink', false);
+        const currentMode = await db.getGroupSetting(botNumber, m.chat, 'antilinkmode', 'delete');
+        return reply(`*ANTILINK SETTINGS*\n\nStatus: ${status ? '✅ ON' : '❌ OFF'}\nMode: ${currentMode}\n\nOptions:\n• ${prefix}antilink on\n• ${prefix}antilink off\n• ${prefix}antilink delete\n• ${prefix}antilink warn\n• ${prefix}antilink kick`);
+    }
+    
+    // Handle on/off
+    if (mode === 'on') {
+        await db.setGroupSetting(botNumber, m.chat, 'antilink', true);
+        return reply('✅ Antilink has been enabled');
+    }
+    
+    if (mode === 'off') {
+        await db.setGroupSetting(botNumber, m.chat, 'antilink', false);
+        return reply('✅ Antilink has been disabled');
+    }
+    
+    // Handle mode settings
+    if (mode === 'delete') {
+        await db.setGroupSetting(botNumber, m.chat, 'antilinkmode', 'delete');
+        await db.setGroupSetting(botNumber, m.chat, 'antilink', true); // Auto-enable
+        return reply('✅ Antilink mode set to: *Delete* (messages will be deleted)');
+    }
+    
+    if (mode === 'warn') {
+        await db.setGroupSetting(botNumber, m.chat, 'antilinkmode', 'warn');
+        await db.setGroupSetting(botNumber, m.chat, 'antilink', true); // Auto-enable
+        return reply('✅ Antilink mode set to: *Warn* (users will be warned)');
+    }
+    
+    if (mode === 'kick') {
+        await db.setGroupSetting(botNumber, m.chat, 'antilinkmode', 'kick');
+        await db.setGroupSetting(botNumber, m.chat, 'antilink', true); // Auto-enable
+        return reply('✅ Antilink mode set to: *Kick* (users will be kicked)');
+    }
+    
+    reply(`Invalid option! Use: on, off, delete, warn, kick`);
+  }
+},
     {
         command: ['antitag'],
-        operate: async ({ kelvin, m, reply, prefix, args, isGroup, isSenderAdmin, getSetting, updateSetting, botNumber }) => {
+        operate: async ({ kelvin, m, reply, prefix, args, isGroup, isSenderAdmin, db, botNumber }) => {
             if (!isGroup) return reply(global.mess.notgroup);
             if (!m.isAdmin) return reply(global.mess.notadmin);
             if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
-            const subcommand = args[0]?.toLowerCase();
-            const action = args[1]?.toLowerCase();
-            
-            if (!subcommand) {
-                return reply(`🏷️ *Anti-Tag System*
-                
-Usage:
-• ${prefix}antitag delete on/off - Delete mode
-• ${prefix}antitag warn on/off - Warn mode  
-• ${prefix}antitag kick on/off - Kick mode
-• ${prefix}antitag status - Show settings
-
-Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
-            }
-            
-            if (subcommand === 'status') {
-                const mode = getSetting(botNumber, 'antitagaction', 'delete');
-                const isEnabled = getSetting(botNumber, 'antitag', false);
-                
-                reply(`🏷️ *Anti-Tag Status*
-                
-• Enabled: ${isEnabled ? '✅ ON' : '❌ OFF'}
-• Mode: ${mode}
-• Action: ${mode === 'delete' ? 'Delete messages' : 
-                   mode === 'warn' ? 'Delete + warn' : 
-                   'Delete + kick'}`);
-                return;
-            }
-            
-            if (!['delete', 'warn', 'kick'].includes(subcommand) || !['on', 'off'].includes(action)) {
-                reply(`❌ Invalid. Use:\n• ${prefix}antitag delete on/off\n• ${prefix}antitag warn on/off\n• ${prefix}antitag kick on/off`);
-                return;
-            }
-            
-            // Set the mode
-            await updateSetting(botNumber, 'antitagaction', subcommand);
-            
-            // Turn on/off
-            const boolValue = action === 'on';
-            await updateSetting(botNumber, 'antitag', boolValue);
-            
-            reply(`✅ Anti-tag ${subcommand} mode ${boolValue ? 'enabled' : 'disabled'}`);
-        }
-    },
+            const mode = args[0]?.toLowerCase();
+    const action = args[1]?.toLowerCase();
+    
+    // Delete mode
+    if (mode === 'delete' && action === 'on') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitagmode', 'delete');
+        await db.setGroupSetting(botNumber, m.chat, 'antitag', true);
+        return reply('✅ Delete mode ON');
+    }
+    if (mode === 'delete' && action === 'off') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitag', false);
+        return reply('❌ Delete mode OFF');
+    }
+    
+    // Warn mode
+    if (mode === 'warn' && action === 'on') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitagmode', 'warn');
+        await db.setGroupSetting(botNumber, m.chat, 'antitag', true);
+        return reply('✅ Warn mode ON');
+    }
+    if (mode === 'warn' && action === 'off') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitag', false);
+        return reply('Warn mode OFF');
+    }
+    
+    // Kick mode
+    if (mode === 'kick' && action === 'on') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitagmode', 'kick');
+        await db.setGroupSetting(botNumber, m.chat, 'antitag', true);
+        return reply('✅ Kick mode ON');
+    }
+    if (mode === 'kick' && action === 'off') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitag', false);
+        return reply('Kick mode OFF');
+    }
+    
+    // Show help if invalid
+    reply('Use: delete on/off, warn on/off, kick on/off');
+  }
+},
     {
         command: ['tagall2'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, participants, from }) => {
             try {
-                if (!isGroup) return reply("❌ This command can only be used in groups");
+                if (!isGroup) return reply(global.mess.notgroup);
                 if (!m.isAdmin) return reply(global.mess.notadmin);
                 if (!m.isBotAdmin) return reply(global.mess.botadmin);
 
@@ -1216,21 +1212,7 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         if (!m.isAdmin) return reply(global.mess.notadmin);
         if (!m.isBotAdmin) return reply(global.mess.botadmin);
         
-        const action = args[0]?.toLowerCase();
-        
-        
-        if (!action || !['on', 'off'].includes(action)) {
-            const isEnabled = global.settingsManager?.getSetting(botNumber, 'antidemote', true);
-            return reply(`*Anti-Demote:* ${isEnabled ? '✅ ON' : '❌ OFF'}\n${prefix}antidemote on/off`);
-        }
-        
-        if (action === 'on') {
-            await global.settingsManager?.updateSetting(botNumber, 'antidemote', true);
-            reply(`✅ *Antidemote successfully enabled*`);
-        } else {
-            await global.settingsManager?.updateSetting(botNumber, 'antidemote', false);
-            reply(`✅ *Antidemote successfully disabled*`);
-        }
+        await antidemoteCommand(kelvin, m, args, botNumber);
     }
 },
 {
@@ -1241,44 +1223,142 @@ Current Mode: ${getSetting(botNumber, 'antitagaction', 'delete')}`);
         if (!m.isAdmin) return reply(global.mess.notadmin);
         if (!m.isBotAdmin) return reply(global.mess.botadmin);
         
-        const action = args[0]?.toLowerCase();
-        
-        if (!action || !['on', 'off'].includes(action)) {
-            const isEnabled = global.settingsManager?.getSetting(botNumber, 'antipromote', true);
-            return reply(`*Anti-Promote:* ${isEnabled ? '✅ ON' : '❌ OFF'}\n${prefix}antipromote on/off`);
-        }
-        
-        if (action === 'on') {
-            await global.settingsManager?.updateSetting(botNumber, 'antipromote', true);
-            reply(`✅ *Antipromote successfully enabled*`);
-        } else {
-            await global.settingsManager?.updateSetting(botNumber, 'antipromote', false);
-            reply(`✅ *Antipromote successfully disabled*`);
-        }
+        await antipromoteCommand(kelvin, m, args, botNumber);
     }
 },
 {
     command: ['antitagadmin'],
-    operate: async ({ m, reply, prefix, args, Access, botNumber, kelvin }) => {
+    operate: async ({ m, reply, prefix, args, Access, db, botNumber, kelvin }) => {
         if (!m.isGroup) return reply(global.notgroup);
         if (!Access) return reply(mess.owner);
         if (!m.isAdmin) return reply(global.mess.notadmin);
         if (!m.isBotAdmin) return reply(global.mess.botadmin);
         
-        const action = args[0]?.toLowerCase();
+        const mode = args[0]?.toLowerCase();
+    
+    if (!mode) {
+        const status = await db.getGroupSetting(botNumber, m.chat, 'antitagadmin', false);
+        const currentAction = await db.getGroupSetting(botNumber, m.chat, 'antitagadminaction', 'warn');
+        return reply(`*👑 ANTITAG ADMIN SETTINGS*\n\nStatus: ${status ? '✅ ON' : '❌ OFF'}\nAction: ${currentAction}\n\nOptions:\n• ${prefix}antitagadmin on\n• ${prefix}antitagadmin off\n• ${prefix}antitagadmin delete\n• ${prefix}antitagadmin warn\n• ${prefix}antitagadmin kick`);
+    }
+    
+    // Handle on/off
+    if (mode === 'on') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitagadmin', true);
+        return reply('✅ Anti-tag admin has been enabled');
+    }
+    
+    if (mode === 'off') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitagadmin', false);
+        return reply('✅ Anti-tag admin has been disabled');
+    }
+    
+    // Handle action settings
+    if (mode === 'delete') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitagadminaction', 'delete');
+        await db.setGroupSetting(botNumber, m.chat, 'antitagadmin', true); // Auto-enable
+        return reply('✅ Anti-tag admin set to: *Delete* (messages will be deleted)');
+    }
+    
+    if (mode === 'warn') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitagadminaction', 'warn');
+        await db.setGroupSetting(botNumber, m.chat, 'antitagadmin', true); // Auto-enable
+        return reply('✅ Anti-tag admin set to: *Warn* (3 warnings then kick)');
+    }
+    
+    if (mode === 'kick') {
+        await db.setGroupSetting(botNumber, m.chat, 'antitagadminaction', 'kick');
+        await db.setGroupSetting(botNumber, m.chat, 'antitagadmin', true); // Auto-enable
+        return reply('✅ Anti-tag admin set to: *Kick* (users will be kicked immediately)');
+    }
+    
+    reply(`Invalid option! Use: on, off, delete, warn, kick`);
+    }
+},
+ {
+        command: ['allowlink'],
+        operate: async ({ kelvin, m, reply, Access, isGroup, db, text, botNumber, mentionedJid, quoted }) => {
+        if (!m.isGroup) return reply(mess.group);
+    if (!m.isAdmin && !Access) return reply(mess.notadmin);
+    if (!m.isBotAdmin) return reply(mess.botadmin);
+    
+    const action = args[0]?.toLowerCase();
+    
+    // Get target user from:
+    // 1. Mentioned user
+    // 2. Quoted message sender
+    // 3. Argument (phone number)
+    let target = m.mentionedJid[0] || (m.quoted ? m.quoted.sender : args[1]);
+    
+    if (!action) {
+        const allowed = await db.getGroupSetting(botNumber, m.chat, 'allowlink', []);
+        return reply(`*📋 ALLOWLINK COMMANDS*\n\n• ${prefix}allowlink add @user (or reply to their message)\n• ${prefix}allowlink remove @user (or reply to their message)\n• ${prefix}allowlink list\n• ${prefix}allowlink clear\n\nTotal allowed: ${allowed.length}`);
+    }
+    
+    // ADD USER
+    if (action === 'add') {
+        if (!target) return reply('❌ Please mention the user, reply to their message, or provide their number!\nExample: .allowlink add @user');
         
-        if (!action || !['on', 'off'].includes(action)) {
-            const isEnabled = global.settingsManager?.getSetting(botNumber, 'antitagadmin', false);
-            return reply(`*Anti-Tag Admin:* ${isEnabled ? '✅ ON' : '❌ OFF'}\n${prefix}antitagadmin on/off`);
+        const jid = target.includes('@s.whatsapp.net') ? target : target + '@s.whatsapp.net';
+        let allowed = await db.getGroupSetting(botNumber, m.chat, 'allowlink', []);
+        
+        if (allowed.includes(jid)) {
+            return reply(`❌ @${jid.split('@')[0]} is already in allowlist`, { mentions: [jid] });
         }
         
-        if (action === 'on') {
-            await global.settingsManager?.updateSetting(botNumber, 'antitagadmin', true);
-            reply(`✅ *Antitagadmin successfully enabled*`);
-        } else {
-            await global.settingsManager?.updateSetting(botNumber, 'antitagadmin', false);
-            reply(`✅ *Antitagadmin successfully disabled*`);
+        allowed.push(jid);
+        await db.setGroupSetting(botNumber, m.chat, 'allowlink', allowed);
+        
+        // Get username for better response
+        const name = await kelvin.getName(jid) || jid.split('@')[0];
+        return reply(`✅ @${name} can now post links`, { mentions: [jid] });
+    }
+    
+    // REMOVE USER
+    if (action === 'remove') {
+        if (!target) return reply('Please mention the user, reply to their message, or provide their number!\nExample: .allowlink remove @user');
+        
+        const jid = target.includes('@s.whatsapp.net') ? target : target + '@s.whatsapp.net';
+        let allowed = await db.getGroupSetting(botNumber, m.chat, 'allowlink', []);
+        
+        const index = allowed.indexOf(jid);
+        if (index === -1) {
+            return reply(`❌ @${jid.split('@')[0]} is not in allowlist`, { mentions: [jid] });
         }
+        
+        allowed.splice(index, 1);
+        await db.setGroupSetting(botNumber, m.chat, 'allowlink', allowed);
+        
+        const name = await kelvin.getName(jid) || jid.split('@')[0];
+        return reply(`✅ @${name} removed from allowlist`, { mentions: [jid] });
+    }
+    
+    // LIST ALLOWED USERS
+    if (action === 'list') {
+        let allowed = await db.getGroupSetting(botNumber, m.chat, 'allowlink', []);
+        
+        if (allowed.length === 0) {
+            return reply('📋 No users are allowed to post links');
+        }
+        
+        let msg = `*📋 ALLOWED USERS (${allowed.length})*\n\n`;
+        allowed.forEach((jid, i) => {
+            msg += `${i + 1}. @${jid.split('@')[0]}\n`;
+        });
+        
+        return kelvin.sendMessage(m.chat, { 
+            text: msg, 
+            mentions: allowed 
+        }, { quoted: m });
+    }
+    
+    // CLEAR ALL ALLOWED USERS
+    if (action === 'clear') {
+        await db.setGroupSetting(botNumber, m.chat, 'allowlink', []);
+        return reply('✅ All users removed from allowlist');
+    }
+    
+    reply(`❌ Invalid action! Use: add, remove, list, clear`);
     }
 },
     {
