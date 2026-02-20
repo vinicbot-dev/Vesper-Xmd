@@ -1,4 +1,4 @@
-const { getSetting } = require('../start/Core/settingManager');
+
 const { runtime,
 formatSize,
 getBuffer
@@ -22,7 +22,7 @@ module.exports = [
 
 {
         command: ['ping', 'p'],
-        operate: async ({ m, kelvin, botNumber, getSetting }) => {
+        operate: async ({ m, kelvin, botNumber }) => {
             const startTime = performance.now();
 
             try {
@@ -35,7 +35,7 @@ module.exports = [
                 const latency = `${(endTime - startTime).toFixed(2)} ms`;
                 
                 await kelvin.sendMessage(m.chat, {
-                    text: `*🏓 ${getSetting(botNumber, 'botname', 'Vesper-Xmd')} Speed:* ${latency}`,
+                    text: `*🏓 ${global.botname} Speed:* ${latency}`,
                     edit: sentMessage.key, 
                     contextInfo: { quotedMessage: m.message }
                 });
@@ -81,7 +81,7 @@ module.exports = [
                 m.chat, 
                 { 
                     image: { url: randomImageUrl },
-                    caption: `*🌹Hi. I am 👑 ${getSetting(botNumber, 'botname', 'VESPER-XMD')}, a friendly advanced WhatsApp bot.  Don't worry, I'm still Alive☺🚀*\n\n*⏰ Uptime: ${botUptime}*`
+                    caption: `*🌹Hi. I am 👑 ${global.botname}, a friendly advanced WhatsApp bot.  Don't worry, I'm still Alive☺🚀*\n\n*⏰ Uptime: ${botUptime}*`
                 },
                 { quoted: m }
             );
@@ -172,7 +172,7 @@ Start server Enjoy 😉
                 const uptimeFormatted = runtime(uptime); // Using your existing runtime function
                 
                 // Get bot name from settings
-                const botname = getSetting(botNumber, 'botname', 'Vesper-Xmd');
+                const botname = `${global.botname}`;
                 
                 // Get version from global or use default
                 const version = global.versions || '1.4.0';
@@ -202,7 +202,7 @@ Start server Enjoy 😉
         {
         command: ['botinfo', 'info', 'about'],
         operate: async ({ kelvin, m, reply, botNumber }) => {
-            const botname = getSetting(botNumber, 'botname', 'Vesper-Xmd');
+            const botname = `${global.botname}`;
             const ownername = "Kelvin Tech";
             
             const botInfo = `
@@ -235,7 +235,7 @@ Start server Enjoy 😉
                 m.chat, 
                 { 
                     image: { url: imageUrl },
-                    caption: `*🌹Hi. I am 👑 ${getSetting(botNumber, 'botname', 'VESPER-XMD')}, a friendly WhatsApp bot.*${botInfo}`
+                    caption: `*🌹Hi. I am 👑 ${global.botname}, a friendly WhatsApp bot.*${botInfo}`
                 },
                 { quoted: m }
             );
