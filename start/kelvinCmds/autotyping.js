@@ -1,10 +1,11 @@
-// ========== AUTO-TYPING INDICATOR HANDLER (USING JSON SETTINGS) ==========
+const db = require('../../start/Core/databaseManager'); // Import your database manager
+
 async function handleAutoTyping(m, kelvin) {
     try {
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
         
-        // Get auto-typing setting from JSON manager
-        const autoTyping = global.settingsManager?.getSetting(botNumber, 'autoTyping', false);
+        // ✅ GET AUTO-TYPING SETTING FROM SQLITE
+        const autoTyping = await db.get(botNumber, 'autoTyping', false);
         
         // Check if auto-typing is enabled
         if (!autoTyping) {
@@ -29,8 +30,6 @@ async function handleAutoTyping(m, kelvin) {
 
         // Send typing indicator
         await kelvin.sendPresenceUpdate('composing', m.chat);
-        
-        
         
         // Stop typing after 5 seconds
         setTimeout(async () => {
