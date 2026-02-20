@@ -1146,7 +1146,7 @@ module.exports = [
 },
 {
         command: ['npm'],
-        operate: async ({ kelvin, m, reply, args, text, botNumber, getSetting }) => {
+        operate: async ({ kelvin, m, reply, args, text, botNumber, }) => {
             try {
                 // Check if a package name is provided
                 if (!args.length) {
@@ -1171,7 +1171,7 @@ module.exports = [
 
                 // Create the response message
                 const message = `
-*${getSetting(botNumber, 'botname', 'Jexploit')} npm search*
+*${global.botname} npm search*
 
 *👀 NPM PACKAGE:* ${packageName}
 *📄 DESCRIPTION:* ${description}
