@@ -5,7 +5,7 @@ mistralAICommand,
 perplexityAICommand,
 bardAICommand,
 gpt4NanoAICommand,
-keithAICommand,
+kelvinAICommand,
 claudeAICommand
 } = require('../start/kelvinCmds/ai');
 
