@@ -68,7 +68,7 @@ const {
 const settings = require('./settings');
 const PluginManager = require('./start/lib/PluginManager');
 const { color } = require('./start/lib/color')
-const { getSetting } = require('./start/Core/settingManager');
+const { db } = require('./start/Core/databaseManager');
 const { handleStatusUpdate } = require('./start/kevin');
 const usePairingCode = true;
 
@@ -301,9 +301,7 @@ async function clientstart() {
         }
     });
 
-    
-const publicSetting = getSetting(botNumber, 'public', true);
-kelvin.public = publicSetting === true || publicSetting === 'true';
+   kelvin.public = global.status; 
 
 
     kelvin.ev.on('connection.update', async (update) => {
@@ -727,11 +725,20 @@ kelvin.ev.on('group-participants.update', async (anu) => {
         const botNumber = kelvin.decodeJid(kelvin.user.id);
         const groupId = anu.id;
         
-        // Get adminevent setting first (for logging)
-        const admineventEnabled = global.settingsManager?.getSetting(botNumber, 'adminevent', false);
+        // Get settings
+        const admineventEnabled = await db.get(botNumber, 'adminevent', false);
+        const welcomeEnabled = await db.isWelcomeEnabled(botNumber, groupId);
         
-        // Check group-specific welcome setting
-        const welcomeEnabled = global.settingsManager?.isWelcomeEnabled(botNumber, groupId);
+        // ========== HANDLE ANTIDEMOTE ==========
+        if (anu.action === 'demote') {
+            
+            await handleAntidemote(kelvin, groupId, anu.participants, anu.author);
+        }
+        
+        if (anu.action === 'promote') {
+            
+            await handleAntipromote(kelvin, groupId, anu.participants, anu.author);
+        }
         
         if (welcomeEnabled === true) {
             console.log(`[WELCOME] Processing welcome/goodbye for group ${groupId}`);
@@ -746,17 +753,14 @@ kelvin.ev.on('group-participants.update', async (anu) => {
                     if (typeof participant === 'string') {
                         participantJid = participant;
                     } else if (participant && participant.id) {
-                        // If participant is an object with id property
                         participantJid = participant.id;
                     } else {
                         console.error('[WELCOME] Invalid participant format:', participant);
                         continue;
                     }
                     
-                    // Skip if participant is the bot itself
                     if (participantJid === botNumber) continue;
                     
-                    // Extract user ID safely
                     let userId;
                     if (participantJid.includes('@')) {
                         userId = participantJid.split('@')[0];
@@ -813,16 +817,13 @@ kelvin.ev.on('group-participants.update', async (anu) => {
             } catch (err) {
                 console.error('Error in welcome feature:', err);
             }
-        } else {
-            // Welcome disabled, skip
         }
         
-        // ADMIN EVENTS SECTION
+        // ========== HANDLE ADMIN EVENTS ==========
         if (admineventEnabled === true) {
             console.log('[ADMIN EVENT] Processing admin events');
             
-            // Check if bot is in the participants list (skip if true)
-            const participantJids = participants.map(p => 
+            const participantJids = anu.participants.map(p => 
                 typeof p === 'string' ? p : (p?.id || '')
             ).filter(p => p);
             
@@ -833,11 +834,9 @@ kelvin.ev.on('group-participants.update', async (anu) => {
                 let participants = anu.participants;
                 
                 for (let participant of participants) {
-                    // Get participant JID safely
                     let participantJid = typeof participant === 'string' ? participant : participant?.id;
                     if (!participantJid) continue;
                     
-                    // Get author JID safely
                     let authorJid = anu.author;
                     if (anu.author && typeof anu.author !== 'string' && anu.author.id) {
                         authorJid = anu.author.id;
@@ -846,7 +845,6 @@ kelvin.ev.on('group-participants.update', async (anu) => {
                     let check = authorJid && authorJid !== participantJid;
                     let tag = check ? [authorJid, participantJid] : [participantJid];
                     
-                    // Extract user IDs for mention
                     let participantUserId = participantJid.includes('@') ? 
                         participantJid.split('@')[0] : participantJid;
                     let authorUserId = authorJid && authorJid.includes('@') ? 
@@ -899,23 +897,19 @@ kelvin.ev.on('group-participants.update', async (anu) => {
             } catch (err) {
                 console.log('Error in admin event feature:', err);
             }
-        } else {
-            // Admin events disabled, skip
         }
         
     } catch (error) {
         console.error('Error in group-participants.update:', error);
     }
 });
-
 kelvin.ev.on('call', async (callData) => {
     try {
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
         
-         const anticallSetting = global.settingsManager?.getSetting(botNumber, 'anticall', 'off');
+        // GET ANTICALL SETTING FROM SQLITE
+        const anticallSetting = await db.get(botNumber, 'anticall', 'off');
         
-        
-        // Check if anticall is enabled
         if (!anticallSetting || anticallSetting === 'off') {
             console.log(chalk.gray('[ANTICALL] Disabled'));
             return;
@@ -925,24 +919,22 @@ kelvin.ev.on('call', async (callData) => {
             const from = call.from;
             const callId = call.id;
             
-            // Check if caller is owner (allow calls from owner)
-            const ownerNumbers = global.owner || [];
-            const isOwner = ownerNumbers.some(num => from.includes(num.replace('+', '').replace(/[^0-9]/g, '')));
+            // Get owners from database
+            const owners = await db.get(botNumber, 'owners', []);
+            const isOwner = owners.some(num => from.includes(num.replace('+', '').replace(/[^0-9]/g, '')));
             
             if (isOwner) {
                 console.log(chalk.green(`[ANTICALL] Allowing call from owner: ${from}`));
                 continue;
             }
             
-            // Safe check for recentCallers with initialization fallback
             try {
                 const now = Date.now();
                 const lastWarn = global.recentCallers?.get(from) || 0;
-                const COOLDOWN = 30 * 1000; // 30 seconds cooldown per caller
+                const COOLDOWN = 30 * 1000;
                 
                 if (now - lastWarn < COOLDOWN) {
                     console.log(chalk.yellow(`[ANTICALL] Suppressing repeated warning to ${from}`));
-                    // Still attempt to reject/block silently
                     try {
                         if (typeof kelvin.rejectCall === 'function') {
                             await kelvin.rejectCall(callId, from);
@@ -954,7 +946,6 @@ kelvin.ev.on('call', async (callData) => {
                 if (!global.recentCallers) global.recentCallers = new Map();
                 global.recentCallers.set(from, now);
                 
-                // Auto cleanup after cooldown
                 setTimeout(() => {
                     if (global.recentCallers?.has(from)) {
                         global.recentCallers.delete(from);
@@ -968,7 +959,6 @@ kelvin.ev.on('call', async (callData) => {
             
             console.log(chalk.yellow(`[ANTICALL] ${anticallSetting} call from: ${from}`));
             
-            // Send message to the caller's chat
             try {
                 const callerName = await kelvin.getName(from) || from.split('@')[0];
                 let warningMessage = '';
@@ -978,20 +968,19 @@ kelvin.ev.on('call', async (callData) => {
                         `*Caller:* @${from.split('@')[0]}\n` +
                         `*Time:* ${moment().tz(timezones).format('HH:mm:ss')}\n` +
                         `*Date:* ${moment().tz(timezones).format('DD/MM/YYYY')}\n\n` +
-                        `*🌹 Hi, I am ${global.botname || 'VESPER-XMD'}, a friendly WhatsApp bot.*\n\n` +
+                        `*🌹 Hi, I am ${global.botname}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kelvin Tech.*\n\n` +
                         `*My owner cannot receive calls at this moment. Calls are automatically blocked.*\n\n` +
-                        `> ${global.wm || ''}`;
+                        `> ${global.wm}`;
                 } else {
                     warningMessage = `🚫 *CALL DECLINED*\n\n` +
                         `*Caller:* @${from.split('@')[0]}\n` +
                         `*Time:* ${moment().tz(timezones).format('HH:mm:ss')}\n` +
                         `*Date:* ${moment().tz(timezones).format('DD/MM/YYYY')}\n\n` +
-                        `*🌹 Hi, I am ${global.botname || 'VESPER-XMD'}, a friendly WhatsApp bot.*\n\n` +
+                        `*🌹 Hi, I am ${global.botname}, a friendly WhatsApp bot from Uganda 🇺🇬, created by Kelvin Tech.*\n\n` +
                         `*My owner cannot receive calls at this moment. Please avoid unnecessary calling.*\n\n` +
-                        `> ${global.wm || ''}`;
+                        `> ${global.wm}`;
                 }
 
-                // Send message to the caller's chat
                 await kelvin.sendMessage(from, { 
                     text: warningMessage,
                     mentions: [from]
@@ -1003,13 +992,11 @@ kelvin.ev.on('call', async (callData) => {
                 console.error(chalk.red('[ANTICALL] Failed to send message to chat:'), msgError);
             }
             
-            // Decline or block the call
             try {
                 if (typeof kelvin.rejectCall === 'function') {
                     await kelvin.rejectCall(callId, from);
                     console.log(chalk.green(`[ANTICALL] Successfully ${anticallSetting === 'block' ? 'blocked' : 'declined'} call from: ${from}`));
                     
-                    // If mode is block, also block the user
                     if (anticallSetting === 'block') {
                         try {
                             await kelvin.updateBlockStatus(from, 'block');
@@ -1029,6 +1016,7 @@ kelvin.ev.on('call', async (callData) => {
         console.error(chalk.red('[ANTICALL ERROR]'), error);
     }
 });
+
 
 
     kelvin.downloadMediaMessage = async (message) => {
