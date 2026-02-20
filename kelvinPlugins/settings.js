@@ -1,36 +1,23 @@
-const { 
-    getSetting,
-    updateSetting,
-    getAllSettings,
-    getSudo,
-    addSudo,
-    removeSudo,
-    settingsManager,
-    hasSudo
-} = require('../start/Core/settingManager');
-
 module.exports = [
     {
         command: ['antidelete', 'antidel', 'deletealert'],
-        operate: async ({ kelvin, m, reply, prefix, args, Access, mess, botNumber }) => {
+        operate: async ({ kelvin, m, reply, prefix, args, Access, db, mess, botNumber }) => {
             if (!Access) return reply(global.mess.owner);
-            
-            const subcommand = args[0]?.toLowerCase();
-            const value = args[1]?.toLowerCase();
-            
-            // Get current setting from database
-            const currentMode = getSetting(botNumber, 'antidelete', 'off');
-            
-            if (!subcommand) {
-                return reply(`*Anti-Delete System*
-                
+    
+    const subcommand = args[0]?.toLowerCase();
+    const value = args[1]?.toLowerCase();
+    
+    if (!subcommand) {
+        const currentMode = await db.get(botNumber, 'antidelete', 'off');
+        
+        return reply(`*Anti-Delete System*
+        
 Usage:
 • ${prefix}antidelete on - Enable anti-delete (default: chat mode)
 • ${prefix}antidelete off - Disable anti-delete
 • ${prefix}antidelete chat - Send alerts to same chat
 • ${prefix}antidelete private - Send alerts to bot owner's inbox
 • ${prefix}antidelete status - Show current settings
-• ${prefix}antidelete test - Test the anti-delete system
 
 Current Mode: ${currentMode}
 Enabled: ${currentMode !== 'off' ? '✅' : '❌'}
@@ -39,565 +26,375 @@ Enabled: ${currentMode !== 'off' ? '✅' : '❌'}
 • chat - Alerts sent to same chat where deletion happened
 • private - Alerts sent to bot owner's private inbox
 • off - Anti-delete disabled`);
-            }
-            
-            switch(subcommand) {
-                case 'on': {
-                    // Default to chat mode when turning on
-                    await updateSetting(botNumber, 'antidelete', 'chat');
-                    reply(`✅ *Successfully enabled antidelete chat mode*`);
-                    break;
-                }
-                
-                case 'off': {
-                    await updateSetting(botNumber, 'antidelete', 'off');
-                    reply(`✅ *Successfully disabled antidelete*`);
-                    break;
-                }
-                
-                case 'chat': {
-                    // Enable with specified mode
-                    await updateSetting(botNumber, 'antidelete', subcommand);
-                    reply(`✅ *Successfully enabled antidelete chat mode*`);
-                    break;
-                }
-                
-                case 'private': {
-                    // Enable with specified mode
-                    await updateSetting(botNumber, 'antidelete', subcommand);
-                    reply(`✅ *Successfully enabled antidelete private mode*`);
-                    break;
-                }
-                
-                case 'status': {
-                    const mode = getSetting(botNumber, 'antidelete', 'off');
-                    const isEnabled = mode !== 'off';
-                    
-                    reply(`*Anti-Delete Status*
-                    
-• Status: ${isEnabled ? '✅ Enabled' : '❌ Disabled'}
-• Mode: ${mode}
-• Alerts: ${mode === 'chat' ? 'Same chat where deletion happens' : 
-                   mode === 'private' ? "Bot owner's private inbox" : 
-                   'Not active'}
-
-📌 Captures: Text messages, images, videos, documents
-📌 Works in: Groups and private chats`);
-                    break;
-                }
-                
-                case 'test': {
-                    // Test the anti-delete feature
-                    const mode = getSetting(botNumber, 'antidelete', 'off');
-                    if (mode === 'off') {
-                        reply('❌ Anti-delete is disabled. Enable it first with .antidelete on');
-                        break;
-                    }
-                    
-                    reply(`*Anti-Delete Test*
-                    
-Anti-delete is working in *${mode}* mode
-Status: ✅ Active
-
-Send a message, delete it, and see the alert in:
-${mode === 'chat' ? '• This chat' : '• Bot owner\'s inbox'}
-
-Note: This only works for messages sent AFTER anti-delete was enabled.`);
-                    break;
-                }
-                
-                default: {
-                    reply(`❌ Invalid subcommand. Use ${prefix}antidelete to see all options`);
-                    break;
-                }
-            }
+    }
+    
+    switch(subcommand) {
+        case 'on': {
+            // ✅ Default to chat mode when turning on
+            await db.set(botNumber, 'antidelete', 'chat');
+            reply(`*Successfully enabled antidelete chat mode*`);
+            break;
         }
-    },
+        
+        case 'off': {
+            // ✅ Save to SQLite
+            await db.set(botNumber, 'antidelete', 'off');
+            reply(`*Successfully disabled antidelete*`);
+            break;
+        }
+        
+        case 'chat': {
+            // ✅ Save to SQLite
+            await db.set(botNumber, 'antidelete', 'chat');
+            reply(`*Successfully enabled antidelete chat mode*`);
+            break;
+        }
+        
+        case 'private': {
+            // ✅ Save to SQLite
+            await db.set(botNumber, 'antidelete', 'private');
+            reply(`*Successfully enabled antidelete private mode*`);
+            break;
+        }
+        
+        case 'status': {
+            // ✅ Get current status from SQLite
+            const currentMode = await db.get(botNumber, 'antidelete', 'off');
+            reply(`*Anti-Delete Status*
+            
+Mode: ${currentMode}
+Enabled: ${currentMode !== 'off' ? '✅' : '❌'}
+
+Chat Mode: Sends alerts to the same chat
+Private Mode: Sends alerts to bot owner's inbox`);
+            break;
+        }
+        
+        default: {
+            reply(`Invalid subcommand. Use: on, off, chat, private, status`);
+        }
+    }
+  }
+},
     {
         command: ['antiedit', 'editalert'],
-        operate: async ({ kelvin, m, reply, prefix, args, Access, mess, botNumber }) => {
-            if (!Access) return reply(global.mess.owner);
-            
-            
-            const subcommand = args[0]?.toLowerCase();
-            const value = args[1]?.toLowerCase();
-            
-            if (!subcommand) {
-                return reply(`*Anti-Edit System*
-                
-Usage:
+        operate: async ({ kelvin, m, reply, prefix, args, db, Access, mess, botNumber }) => {
+             if (!Access) return reply(mess.owner);
+    
+    const subcommand = args[0]?.toLowerCase();
+    
+    if (!subcommand) {
+        const currentMode = await db.get(botNumber, 'antiedit', 'off');
+        return reply(`*ANTI-EDIT SETTINGS*
+
+Current Mode: ${currentMode}
+
+📌 *Commands:*
 • ${prefix}antiedit on - Enable anti-edit (default: chat mode)
 • ${prefix}antiedit off - Disable anti-edit
 • ${prefix}antiedit chat - Send alerts to same chat
 • ${prefix}antiedit private - Send alerts to bot owner's inbox
 • ${prefix}antiedit status - Show current settings
 
-Current Mode: ${getSetting(botNumber, 'antiedit', 'off')}
-Enabled: ${getSetting(botNumber, 'antiedit', 'off') !== 'off' ? '✅' : '❌'}
-
-📌 *Modes:*
-• chat - Alerts sent to same chat where edit happened
+*Modes:*
+• chat - Alerts sent to same chat where editing happened
 • private - Alerts sent to bot owner's private inbox
 • off - Anti-edit disabled`);
+    }
+    
+    switch(subcommand) {
+        case 'on': {
+            // Default to chat mode when turning on
+            await db.set(botNumber, 'antiedit', 'chat');
+            reply(`✅ Anti-edit enabled (chat mode)`);
+            break;
+        }
+        
+        case 'off': {
+            await db.set(botNumber, 'antiedit', 'off');
+            reply(`✅ Anti-edit disabled`);
+            break;
+        }
+        
+        case 'chat': {
+            await db.set(botNumber, 'antiedit', 'chat');
+            reply(`✅ Anti-edit set to chat mode (alerts sent to same chat)`);
+            break;
+        }
+        
+        case 'private': {
+            await db.set(botNumber, 'antiedit', 'private');
+            reply(`✅ Anti-edit set to private mode (alerts sent to bot owner)`);
+            break;
+        }
+        
+        case 'status': {
+            const currentMode = await db.get(botNumber, 'antiedit', 'off');
+            let statusMsg = `*📊 ANTI-EDIT STATUS*\n\n`;
+            statusMsg += `Mode: *${currentMode}*\n`;
+            statusMsg += `Status: ${currentMode !== 'off' ? '✅ ENABLED' : '❌ DISABLED'}\n\n`;
+            
+            if (currentMode === 'chat') {
+                statusMsg += `📍 Alerts will be sent to the same chat where editing occurred.`;
+            } else if (currentMode === 'private') {
+                statusMsg += `📍 Alerts will be sent to bot owner's private inbox.`;
+            } else {
+                statusMsg += `📍 Anti-edit is currently disabled.`;
             }
             
-            switch(subcommand) {
-                case 'on': {
-                    // Default to chat mode when turning on
-                    await updateSetting(botNumber, 'antiedit', 'chat');
-                    reply(`*Successfully enabled antiedit chat mode*`);
-                    break;
-                }
-                
-                case 'off': {
-                    await updateSetting(botNumber, 'antiedit', 'off');
-                    reply(`*Successfully disabled antiedit*`);
-                    break;
-                }
-                
-                case 'chat': {
-                    // Enable with specified mode
-                    await updateSetting(botNumber, 'antiedit', subcommand);
-                    reply(`*Successfully enabled antiedit chat mode*`);
-                    break;
-                }
-                
-                case 'private': {
-                    // Enable with specified mode
-                    await updateSetting(botNumber, 'antiedit', subcommand);
-                    reply(`*Successfully enabled antiedit private mode*`);
-                    break;
-                }
-                
-                case 'status': {
-                    const mode = getSetting(botNumber, 'antiedit', 'off');
-                    const isEnabled = mode !== 'off';
-                    
-                    reply(`*Anti-Edit Status*
-                    
-• Status: ${isEnabled ? '✅ Enabled' : '❌ Disabled'}
-• Mode: ${mode}
-• Alerts: ${mode === 'chat' ? 'Same chat where edit happens' : 
-                     mode === 'private' ? 'Bot owner\'s private inbox' : 
-                     'Not active'}
-
-📌 Captures: Edited text messages
-📌 Shows: Original text → Edited text`);
-                    break;
-                }
-                
-                default: {
-                    reply(`❌ Invalid subcommand. Use ${prefix}antiedit to see all options`);
-                    break;
-                }
-            }
+            reply(statusMsg);
+            break;
         }
-    },
+        
+        default: {
+            reply(`Invalid option! Use: on, off, chat, private, status`);
+        }
+    }
+  }
+},
     {
         command: ['autorecording'],
-        operate: async ({ kelvin, m, reply, prefix, args, Access, mess, botNumber }) => {
+        operate: async ({ kelvin, m, reply, prefix, args, db, Access, mess, botNumber }) => {
             if (!Access) return reply(global.mess.owner);
-            
-            const mode = args[0]?.toLowerCase();
-            if (!mode || !['on', 'off'].includes(mode)) {
-                return reply(`❌ Usage: ${prefix}autorecording <on/off>\nExample: ${prefix}autorecording on`);
-            }
-            
-            const boolValue = mode === 'on';
-            await updateSetting(botNumber, 'autorecording', boolValue);
-            reply(`✅ Auto-recording ${boolValue ? 'enabled' : 'disabled'}`);
-        }
-    },
+    
+    const mode = args[0]?.toLowerCase();
+    if (!mode || !['on', 'off'].includes(mode)) {
+        const current = await db.get(botNumber, 'autorecording', false);
+        return reply(`Usage: ${prefix}autorecord <on/off>\n\nCurrent: ${current ? 'ON ✅' : 'OFF '}`);
+    }
+    
+    const boolValue = mode === 'on';
+    await db.set(botNumber, 'autorecording', boolValue);
+    reply(`✅ Auto-recording ${boolValue ? 'enabled' : 'disabled'}`);
+   
+     }
+},
     {
         command: ['autotyping', 'typing'],
-        operate: async ({ kelvin, m, reply, prefix, args, Access, mess, botNumber }) => {
-            if (!Access) return reply(global.mess.owner);
-                
-            
-            const mode = args[0]?.toLowerCase();
-            if (!mode || !['on', 'off'].includes(mode)) {
-                return reply(`❌ Usage: ${prefix}autotyping <on/off>\nExample: ${prefix}autotyping on`);
-            }
-            
-            const boolValue = mode === 'on';
-            await updateSetting(botNumber, 'autoTyping', boolValue);
-            reply(`✅ Auto-typing ${boolValue ? 'enabled' : 'disabled'}`);
-        }
-    },
+        operate: async ({ kelvin, m, reply, prefix, args, db, Access, mess, botNumber }) => {
+    if (!Access) return reply(global.mess.owner);
+    
+    const autoTyping = await db.get(botNumber, 'autoTyping', false);
+    
+    if (!Access) return reply(mess.owner);
+    
+    const mode = args[0]?.toLowerCase();
+    if (!mode || !['on', 'off'].includes(mode)) {
+        return reply(`Usage: ${prefix}autotyping <on/off>`);
+    }
+    
+    const boolValue = mode === 'on';
+    
+    // Save to database (batched, efficient!)
+    await db.set(botNumber, 'autoTyping', boolValue);
+    
+    reply(`✅ Auto-typing ${boolValue ? 'enabled' : 'disabled'}`);
+    
+  }
+},
     {
         command: ['autoread'],
-        operate: async ({ kelvin, m, reply, prefix, args, Access, mess, botNumber }) => {
+        operate: async ({ kelvin, m, reply, prefix, args, db, Access, mess, botNumber }) => {
             if (!Access) return reply(global.mess.owner);
-            
-            
-            const mode = args[0]?.toLowerCase();
-            if (!mode || !['on', 'off'].includes(mode)) {
-                return reply(`❌ Usage: ${prefix}autoread <on/off>\nExample: ${prefix}autoread on`);
-            }
-            
-            const boolValue = mode === 'on';
-            await updateSetting(botNumber, 'autoread', boolValue);
-            reply(`✅ Auto-read ${boolValue ? 'enabled' : 'disabled'}`);
-        }
-    },
+    
+    const mode = args[0]?.toLowerCase();
+    if (!mode || !['on', 'off'].includes(mode)) {
+        const current = await db.get(botNumber, 'autoread', false);
+        return reply(`Usage: ${prefix}autoread <on/off>\n\nCurrent: ${current ? 'ON ✅' : 'OFF '}`);
+    }
+    
+    const boolValue = mode === 'on';
+    await db.set(botNumber, 'autoread', boolValue);
+    reply(`✅ Auto-read ${boolValue ? 'enabled' : 'disabled'}`);
+    
+  }
+},
     {
         command: ['autoreact'],
-        operate: async ({ kelvin, m, reply, prefix, args, Access, mess, botNumber }) => {
-            if (!Access) return reply(mess.owner);
-            
-            const mode = args[0]?.toLowerCase();
-            if (!mode || !['on', 'off'].includes(mode)) {
-                return reply(`❌ Usage: ${prefix}autoreact <on/off>\nExample: ${prefix}autoreact on`);
-            }
-            
-            const boolValue = mode === 'on';
-            await updateSetting(botNumber, 'autoreact', boolValue);
-            reply(`✅ Auto-react ${boolValue ? 'enabled' : 'disabled'}`);
-        }
-    },
+        operate: async ({ kelvin, m, reply, prefix, args, Access, db, mess, botNumber }) => {
+            if (!Access) return reply(global.mess.owner);
+    
+    const mode = args[0]?.toLowerCase();
+    if (!mode || !['on', 'off'].includes(mode)) {
+        const current = await db.get(botNumber, 'autoreact', false);
+        return reply(`❌ Usage: ${prefix}autoreact <on/off>\n\nCurrent: ${current ? 'ON ✅' : 'OFF ❌'}`);
+    }
+    
+    const boolValue = mode === 'on';
+    await db.set(botNumber, 'autoreact', boolValue);
+    reply(`✅ Auto-react ${boolValue ? 'enabled' : 'disabled'}`);
+    }
+},
     {
         command: ['chatbot'],
-        operate: async ({ kelvin, m, reply, prefix, args, Access, mess, botNumber }) => {
-            if (!Access) return reply(global.mess.owner);
-            
-            const mode = args[0]?.toLowerCase();
-            if (!mode || !['on', 'off'].includes(mode)) {
-                return reply(`❌ Usage: ${prefix}chatbot <on/off>\nExample: ${prefix}chatbot on`);
-            }
-            
-            const boolValue = mode === 'on';
-            await updateSetting(botNumber, 'AI_CHAT', boolValue);
-            reply(`✅ AI Chatbot ${boolValue ? 'enabled' : 'disabled'}`);
-        }
-    },
+        operate: async ({ kelvin, m, reply, prefix, args, db, Access, mess, botNumber }) => {
+             if (!Access) return reply(global.mess.owner);
+    
+    const mode = args[0]?.toLowerCase();
+    if (!mode || !['on', 'off'].includes(mode)) {
+        const current = await db.get(botNumber, 'AI_CHAT', false);
+        return reply(`❌ Usage: ${prefix}aichat <on/off>\n\nCurrent: ${current ? 'ON ✅' : 'OFF ❌'}`);
+    }
+    // Message memory for conversation context
+   let messageMemory = new Map();
+   const MAX_MEMORY = 150; // Maximum messages to remember per chat
+   
+    const boolValue = mode === 'on';
+    await db.set(botNumber, 'AI_CHAT', boolValue);
+    
+    // Clear memory when turning off/on
+    if (boolValue) {
+        // Clear old memory when turning on
+        messageMemory.clear();
+    }
+    
+    reply(`✅ AI Chatbot ${boolValue ? 'enabled' : 'disabled'}`);
+    
+   }
+},
     {
         command: ['anticall'],
-        operate: async ({ kelvin, m, reply, prefix, args, Access, mess, botNumber }) => {
-            if (!Access) return reply(mess.owner);
-            
-            const subcommand = args[0]?.toLowerCase();
-            
-            if (!subcommand) {
-                return reply(`*Anti-Call System*
-                
-Usage:
-• ${prefix}anticall off - Disable anti-call (allow all calls)
-• ${prefix}anticall decline - Decline calls and send message
-• ${prefix}anticall block - Block calls and block callers
-• ${prefix}anticall status - Show current status
-• ${prefix}anticall test - Test the anti-call system
-
-Current Mode: ${getSetting(botNumber, 'anticall', 'off')}
-Enabled: ${getSetting(botNumber, 'anticall', 'off') !== 'off' ? '✅' : '❌'}
-
-📌 *Modes:*
-• off - Allow all calls (disabled)
-• decline - Decline calls + send warning message
-• block - Block calls + block user + send message
-
-📌 *Owner Exceptions:*
-• Bot owner calls are always allowed`);
-            }
-            
-            switch(subcommand) {
-                case 'off': {
-                    await updateSetting(botNumber, 'anticall', 'off');
-                    reply(`✅ Anti-call disabled\nAll calls will be accepted`);
-                    break;
-                }
-                
-                case 'decline': {
-                    await updateSetting(botNumber, 'anticall', 'decline');
-                    reply(`✅ Anti-call set to *decline* mode\nCalls will be declined with warning message`);
-                    break;
-                }
-                
-                case 'block': {
-                    await updateSetting(botNumber, 'anticall', 'block');
-                    reply(`✅ Anti-call set to *block* mode\nCalls will be blocked + users blocked`);
-                    break;
-                }
-                
-                case 'status': {
-                    const mode = getSetting(botNumber, 'anticall', 'off');
-                    const isEnabled = mode !== 'off';
-                    
-                    reply(`*Anti-Call Status*
-                    
-• Status: ${isEnabled ? '✅ Enabled' : '❌ Disabled'}
-• Mode: ${mode}
-• Action: ${mode === 'decline' ? 'Decline call + send message' : 
-                       mode === 'block' ? 'Block call + block user + send message' : 
-                       'Allow all calls'}
-
-📌 Owner calls: Always allowed
-📌 Cooldown: 30 seconds between warnings`);
-                    break;
-                }
-                
-                case 'test': {
-                    const mode = getSetting(botNumber, 'anticall', 'off');
-                    if (mode === 'off') {
-                        reply('❌ Anti-call is disabled. Enable it first with .anticall decline/block');
-                        break;
-                    }
-                    
-                    reply(`🔧 *Anti-Call Test*
-                    
-Anti-call is active in *${mode}* mode
-Next incoming call will be:
-${mode === 'decline' ? '• Declined with warning message' : '• Blocked + user blocked'}
-
-Try calling the bot to test the feature.`);
-                    break;
-                }
-                
-                default: {
-                    reply(`❌ Invalid mode. Use: off, decline, or block`);
-                    break;
-                }
-            }
+        operate: async ({ kelvin, m, reply, prefix, args, db, Access, mess, botNumber }) => {
+            if (!Access) return reply(global.mess.owner);
+    
+    const mode = args[0]?.toLowerCase();
+    const action = args[1]?.toLowerCase();
+    
+    // Show help if no arguments
+    if (!mode) {
+        const current = await db.get(botNumber, 'anticall', 'off');
+        return reply(`*ANTICALL*\n\n` +
+            `• ${prefix}anticall decline on\n` +
+            `• ${prefix}anticall decline off\n` +
+            `• ${prefix}anticall block on\n` +
+            `• ${prefix}anticall block off\n\n` +
+            `Current: ${current}`);
+    }
+    
+    // Handle decline mode
+    if (mode === 'decline') {
+        if (action === 'on') {
+            await db.set(botNumber, 'anticall', 'decline');
+            return reply('✅ Anticall ON (calls will be declined)');
         }
-    },
+        if (action === 'off') {
+            await db.set(botNumber, 'anticall', 'off');
+            return reply('Anticall OFF');
+        }
+    }
+    
+    // Handle block mode
+    if (mode === 'block') {
+        if (action === 'on') {
+            await db.set(botNumber, 'anticall', 'block');
+            return reply('✅ Anticall BLOCK ON (callers will be blocked)');
+        }
+        if (action === 'off') {
+            await db.set(botNumber, 'anticall', 'off');
+            return reply('Anticall OFF');
+        }
+    }
+    
+    // Invalid command
+    reply('Use: .anticall decline on/off or .anticall block on/off');
+  }
+},
     {
     command: ['autoviewstatus'],
-    operate: async ({ kelvin, m, reply, args, prefix, botNumber, getSetting, updateSetting, Access }) => {
-        if (!Access) return reply(global.mess.owner);
-        
-        const subcommand = args[0]?.toLowerCase();
-        
-        if (!subcommand) {
-            return reply(`👀 *Auto-View Status System*
-        
-Usage:
-• ${prefix}autoviewstatus on - Enable auto-view status
-• ${prefix}autoviewstatus off - Disable auto-view status
-• ${prefix}autoviewstatus status - Show current settings
-
-Current Status: ${getSetting(botNumber, 'autoviewstatus', false) ? '✅ Enabled' : '❌ Disabled'}
-
-📌 Feature: Automatically marks status updates as viewed
-📌 Works on: All status updates (stories)
-📌 Note: Privacy-friendly - uses official WhatsApp API`);
-        }
-        
-        switch(subcommand) {
-            case 'on': {
-                await updateSetting(botNumber, 'autoviewstatus', true);
-                reply(`✅ Auto-view status enabled\nAll status updates will be automatically marked as viewed`);
-                break;
-            }
-            
-            case 'off': {
-                await updateSetting(botNumber, 'autoviewstatus', false);
-                reply(`✅ Auto-view status disabled`);
-                break;
-            }
-            
-            case 'status': {
-                const isEnabled = getSetting(botNumber, 'autoviewstatus', false);
-                reply(`👀 *Auto-View Status Status*
-            
-• Status: ${isEnabled ? '✅ Enabled' : '❌ Disabled'}
-• Action: ${isEnabled ? 'Auto marks status as viewed' : 'Disabled'}
-
-Status updates are automatically marked as read when enabled.`);
-                break;
-            }
-            
-            default: {
-                reply(`❌ Invalid subcommand. Use ${prefix}autoviewstatus on/off/status`);
-                break;
-            }
-        }
+    operate: async ({ kelvin, m, reply, args, prefix, botNumber, db,  Access }) => {
+if (!Access) return reply(global.mess.owner);
+    
+    const mode = args[0]?.toLowerCase();
+    if (!mode || !['on', 'off'].includes(mode)) {
+        const current = await db.get(botNumber, 'autoviewstatus', false);
+        return reply(`Usage: ${prefix}autoviewstatus <on/off>\n\nCurrent: ${current ? 'ON ✅' : 'OFF '}`);
+    }
+    
+    const boolValue = mode === 'on';
+    await db.set(botNumber, 'autoviewstatus', boolValue);
+    reply(`✅ Auto-view status ${boolValue ? 'enabled' : 'disabled'}`);
     }
 },
 {
     command: ['autoreactstatus'],
-    operate: async ({ kelvin, m, reply, args, prefix, botNumber, getSetting, updateSetting, Access }) => {
+    operate: async ({ kelvin, m, reply, args, prefix, botNumber, db, Access }) => {
         if (!Access) return reply(global.mess.owner);
-        
-        const subcommand = args[0]?.toLowerCase();
-        
-        if (!subcommand) {
-            return reply(`*Auto-React Status System*
-        
-Usage:
-• ${prefix}autoreactstatus on - Enable auto-react to status
-• ${prefix}autoreactstatus off - Disable auto-react to status
-• ${prefix}autoreactstatus status - Show current settings
-• ${prefix}autoreactstatus emoji <emoji> - Set custom reaction emoji
-
-Current Status: ${getSetting(botNumber, 'autoreactstatus', false) ? '✅ Enabled' : '❌ Disabled'}
-Current Emoji: ${getSetting(botNumber, 'statusemoji', '💚') || '💚'}
-
-📌 Feature: Automatically reacts to status updates
-📌 Works on: All status updates
-📌 Default emoji: 💚 (can be customized)`);
-        }
-        
-        switch(subcommand) {
-            case 'on': {
-                await updateSetting(botNumber, 'autoreactstatus', true);
-                reply(`✅ Auto-react to status enabled\nBot will automatically react to status updates`);
-                break;
-            }
-            
-            case 'off': {
-                await updateSetting(botNumber, 'autoreactstatus', false);
-                reply(`✅ Auto-react to status disabled`);
-                break;
-            }
-            
-            case 'emoji': {
-                const emoji = args[1];
-                if (!emoji) {
-                    return reply(`❌ Please provide an emoji\nUsage: ${prefix}autoreactstatus emoji 😂\nExample: ${prefix}autoreactstatus emoji ❤️`);
-                }
-                
-                await updateSetting(botNumber, 'statusemoji', emoji);
-                reply(`✅ Status reaction emoji set to: ${emoji}\nBot will use this emoji when reacting to status updates`);
-                break;
-            }
-            
-            case 'status': {
-                const isEnabled = getSetting(botNumber, 'autoreactstatus', false);
-                const emoji = getSetting(botNumber, 'statusemoji', '💚');
-                reply(`*Auto-React Status Status*
-            
-• Status: ${isEnabled ? '✅ Enabled' : '❌ Disabled'}
-• Emoji: ${emoji}
-• Action: ${isEnabled ? 'Auto reacts with ' + emoji : 'Disabled'}
-
-Bot automatically reacts to status updates when enabled.`);
-                break;
-            }
-            
-            default: {
-                reply(`❌ Invalid subcommand. Use ${prefix}autoreactstatus on/off/status/emoji`);
-                break;
-            }
-        }
+    
+    const mode = args[0]?.toLowerCase();
+    if (!mode || !['on', 'off'].includes(mode)) {
+        const current = await db.get(botNumber, 'autoreactstatus', false);
+        return reply(`Usage: ${prefix}autoreactstatus <on/off>\n\nCurrent: ${current ? 'ON ✅' : 'OFF '}`);
+    }
+    
+    const boolValue = mode === 'on';
+    await db.set(botNumber, 'autoreactstatus', boolValue);
+    reply(`✅ Auto-react status ${boolValue ? 'enabled' : 'disabled'}`);
+    }
+},
+{
+    command: ['statusemoji'],
+    operate: async ({ kelvin, m, reply, args, prefix, botNumber, db, Access }) => {
+    if (!Access) return reply(mess.owner);
+    
+    const emoji = args[0];
+    if (!emoji) {
+        const current = await db.get(botNumber, 'statusemoji', '💚');
+        return reply(`Usage: ${prefix}statusemoji <emoji>\n\nCurrent: ${current}\nExample: ${prefix}statusemoji ❤️`);
+    }
+    
+    await db.set(botNumber, 'statusemoji', emoji);
+    reply(`✅ Status reaction emoji set to: ${emoji}`);
     }
 },
 {
     command: ['welcome', 'wel'],
-    operate: async ({ m, reply, prefix, args, Access, botNumber, kelvin, mess }) => {
-        if (!m.isGroup) return reply(mess.group);
-        if (!Access) return reply(mess.owner);
-        
-        const action = args[0]?.toLowerCase();
-        const groupId = m.chat;
-        
-        
-        if (!action || !['on', 'off', 'status'].includes(action)) {
-            const isEnabled = global.settingsManager?.isWelcomeEnabledForGroup(botNumber, groupId);
-            return reply(`👋 *Group Welcome Settings*
-            
-Usage:
-• ${prefix}welcome on - Enable welcome/goodbye in this group
-• ${prefix}welcome off - Disable welcome/goodbye in this group
-• ${prefix}welcome status - Show current status
-
-Current Status: ${isEnabled ? '✅ Enabled' : '❌ Disabled'}
-            
-📌 This setting is per-group. Each group can have its own welcome setting.`);
-        }
-        
-        switch(action) {
-            case 'on': {
-                await global.settingsManager?.setGroupSetting(botNumber, groupId, 'welcome', true);
-                reply(`✅ Welcome messages enabled for this group!`);
-                break;
-            }
-            
-            case 'off': {
-                await global.settingsManager?.setGroupSetting(botNumber, groupId, 'welcome', false);
-                reply(`✅ Welcome messages disabled for this group!`);
-                break;
-            }
-            
-            case 'status': {
-                const isEnabled = global.settingsManager?.isWelcomeEnabledForGroup(botNumber, groupId);
-                reply(`📊 *Welcome Status for This Group*
-                
-• Status: ${isEnabled ? '✅ Enabled' : '❌ Disabled'}
-• Group: ${await kelvin.getName(groupId) || groupId}
-• When enabled: Welcome + Goodbye messages will be sent`);
-                break;
-            }
-        }
+    operate: async ({ m, reply, prefix, args, Access, botNumber, db, kelvin, mess }) => {
+        if (!m.isGroup) return reply(global.mess.group);
+    if (!m.isAdmin && !Access) return reply(global.mess.notadmin);
+    
+    const mode = args[0]?.toLowerCase();
+    if (!mode || !['on', 'off'].includes(mode)) {
+        const current = await db.getGroupSetting(botNumber, m.chat, 'welcome', false);
+        return reply(`Usage: ${prefix}welcome <on/off>\n\nCurrent: ${current ? 'ON ✅' : 'OFF '}`);
+    }
+    
+    const boolValue = mode === 'on';
+    await db.setGroupSetting(botNumber, m.chat, 'welcome', boolValue);
+    reply(`✅ Welcome messages ${boolValue ? 'enabled' : 'disabled'} for this group`);
     }
 },
 {
     command: ['adminevent'],
-    operate: async ({ kelvin, m, reply, prefix, args, Access, updateSetting, mess, botNumber }) => {
+    operate: async ({ kelvin, m, reply, prefix, args, Access, db, mess, botNumber }) => {
         if (!Access) return reply(global.mess.owner);
-        
-        const subcommand = args[0]?.toLowerCase();
-        
-        if (!subcommand) {
-            return reply(`👑 *Admin Event Notifications*
-Usage:
-• ${prefix}adminevent on - Enable admin notifications
-• ${prefix}adminevent off - Disable admin notifications`);
-        }
-        
-        if (subcommand === 'on' || subcommand === 'off') {
-            const enabled = subcommand === 'on';
-            
-            
-            if (await updateSetting(botNumber, 'adminevent', enabled)) {
-                return reply(`✅ Admin event notifications ${enabled ? 'enabled' : 'disabled'}!`);
-            } else {
-                return reply('❌ Failed to update admin event setting.');
-            }
-        } else {
-            return reply(`❌ Invalid option. Use: ${prefix}adminevent on/off`);
-        }
+    
+    const mode = args[0]?.toLowerCase();
+    if (!mode || !['on', 'off'].includes(mode)) {
+        const current = await db.get(botNumber, 'adminevent', false);
+        return reply(`Usage: ${prefix}adminevent <on/off>\n\nCurrent: ${current ? 'ON ✅' : 'OFF '}`);
+    }
+    
+    const boolValue = mode === 'on';
+    await db.set(botNumber, 'adminevent', boolValue);
+    reply(`✅ Admin event notifications ${boolValue ? 'enabled' : 'disabled'}`);
     }
 },
 {
     command: ['alwaysonline'],
-    operate: async ({ kelvin, m, reply, prefix, args, Access, from, mess, botNumber }) => {
+    operate: async ({ kelvin, m, reply, prefix, args, Access, from, db, mess, botNumber }) => {
     if (!Access) return reply(global.mess.owner);
     
-    const status = args[0]?.toLowerCase();
-    
-    if (!status || (status !== 'on' && status !== 'off')) {
-        const currentStatus = global.alwaysonline ? '✅ ON' : '❌ OFF';
-        return reply(`*Always Online Mode*\n\n` +
-            `Current Status: ${currentStatus}\n\n` +
-            `Usage: ${prefix}alwaysonline <on/off>\n\n` +
-            `• on - Bot will show as always online (green dot)\n` +
-            `• off - Bot will show as unavailable\n\n` +
-            `Note: This controls the bot's online status indicator in WhatsApp.`);
+    const mode = args[0]?.toLowerCase();
+    if (!mode || !['on', 'off'].includes(mode)) {
+        const current = await db.get(botNumber, 'alwaysonline', false);
+        return reply(`Usage: ${prefix}alwaysonline <on/off>\n\nCurrent: ${current ? 'ON ✅' : 'OFF '}`);
     }
     
-    const isEnabled = status === 'on';
+    const boolValue = mode === 'on';
+    await db.set(botNumber, 'alwaysonline', boolValue);
+    global.alwaysonline = boolValue; // Update global variable
     
-    try {
-        const success = updateSetting(botNumber, 'alwaysonline', isEnabled);
-        
-        if (success) {
-            // Update global variable
-            global.alwaysonline = isEnabled;
-            
-            // Apply presence update immediately
-            if (isEnabled) {
-                await kelvin.sendPresenceUpdate("available", from);
-                reply('✅ Always online mode enabled successfully.');
-            } else {
-                await kelvin.sendPresenceUpdate("unavailable", from);
-                reply('Always online mode disabled');
-            }
-        } else {
-            reply('❌ Failed to save setting to database. Please try again.');
-        }
-    } catch (error) {
-        console.error('Error updating alwaysonline:', error);
-        reply('❌ Error updating always online setting. Please try again.');
-    }
-  }
+    reply(`✅ Always online mode ${boolValue ? 'enabled' : 'disabled'}`);
+   }
 }
 ];
