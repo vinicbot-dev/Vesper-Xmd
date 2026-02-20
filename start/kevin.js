@@ -5,7 +5,7 @@ const readmore = more.repeat(4001);
 
 const fs = require('fs');
 const path = require('path');
-const db = require('../../start/Core/databaseManager');
+const db = require('../start/Core/databaseManager');
 
 function loadStoredMessages() {
     try {
