@@ -57,8 +57,7 @@ async function playCommand(kelvin, chatId, message, args) {
         // Add loading reaction
         await kelvin.sendMessage(chatId, { react: { text: '⏳', key: message.key } });
 
-        // Use the new API
-        const apiUrl = `https://apiskeith.vercel.app/download/audio?url=${encodeURIComponent(videoUrl)}`;
+          const apiUrl = `https://apiskeith.top/download/audio?url=${encodeURIComponent(videoUrl)}`;
         
         // Fetch audio with timeout
         const response = await axios.get(apiUrl, { timeout: 60000 });
