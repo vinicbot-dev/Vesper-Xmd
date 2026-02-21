@@ -5,6 +5,7 @@ getBuffer
  } = require('../start/lib/myfunction');
  const moment = require('moment-timezone');
  const os = require('os');
+ const fs = require('fs');
  const { performance } = require("perf_hooks");
 const fetch = require('node-fetch');
 const axios = require('axios');
@@ -56,10 +57,10 @@ module.exports = [
             
             // Array of image URLs
             const imageUrls = [
-                './start/lib/Media/Images/Vesper1',
-                './start/lib/Media/Images/Vesper2',
-                './start/lib/Media/Images/Vesper3',
-                './start/lib/Media/Images/Vesper4'
+                './start/lib/Media/Images/Vesper1.jpg',
+                './start/lib/Media/Images/Vesper2.jpg',
+                './start/lib/Media/Images/Vesper3.jpg',
+                './start/lib/Media/Images/Vesper4.jpg'
                 
             ];
             
@@ -219,10 +220,10 @@ Start server Enjoy 😉
 ╰─────────────`;
 
             const imageUrl = [
-                './start/lib/Media/Images/Vesper1',
-                './start/lib/Media/Images/Vesper2',
-                './start/lib/Media/Images/Vesper3',
-                './start/lib/Media/Images/Vesper4'
+                './start/lib/Media/Images/Vesper1.jpg',
+                './start/lib/Media/Images/Vesper2.jpg',
+                './start/lib/Media/Images/Vesper3.jpg',
+                './start/lib/Media/Images/Vesper4.jpg'
                 
             ];
             
@@ -339,8 +340,7 @@ https://github.com/${repoOwner}/${repoName}
 ────────────────────────────────
 @${m.sender.split("@")[0]}👋, Don't forget to star and fork my repository!`;
 
-                // Get thumbnail buffer
-                const thumbnailBuffer = await getBuffer('https://files.catbox.moe/0pab6g.jpg');
+               const thumbnailBuffer = fs.readFileSync('./start/lib/Media/Vesper3.jpg');
                 
                 // Send the response with thumbnail
                 await kelvin.sendMessage(
