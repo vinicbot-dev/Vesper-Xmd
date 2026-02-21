@@ -56,19 +56,22 @@ module.exports = [
             
             // Array of image URLs
             const imageUrls = [
-                "https://files.catbox.moe/qhgj50.jpg",
-                "https://files.catbox.moe/0pab6g.jpg"
+                './start/lib/Media/Images/Vesper1',
+                './start/lib/Media/Images/Vesper2',
+                './start/lib/Media/Images/Vesper3',
+                './start/lib/Media/Images/Vesper4'
+                
             ];
             
-            // Array of audio URLs
-            const audioUrls = [
-                "https://files.catbox.moe/ndrrz3.mp3",
-                "https://files.catbox.moe/yny58w.mp3",
-                "https://files.catbox.moe/ckie6b.m4a",
-                 "https://files.catbox.moe/sbaian.mp3",
-                "https://files.catbox.moe/e0dwjw.mp3",
-                "https://files.catbox.moe/zhr5m2.mp3"
-            ];
+           const audioUrls = [
+    './start/lib/Media/JexAudio1.mp3',
+    './start/lib/Media/JexAudio2.mp3',
+    './start/lib/Media/JexAudio3.mp3',
+    './start/lib/Media/JexAudio4.mp3',
+    './start/lib/Media/JexAudio5.mp3',
+    './start/lib/Media/JexAudio6.mp3',
+    './start/lib/Media/JexAudio7.mp3'
+];
             
             // Randomly select an image URL
             const randomImageUrl = imageUrls[Math.floor(Math.random() * imageUrls.length)];
@@ -215,17 +218,23 @@ Start server Enjoy 😉
 │ • Runtime  : ${runtime(process.uptime())}
 ╰─────────────`;
 
-            const imageUrl = "https://files.catbox.moe/xd8cvb.jpg";
-            
-            // Array of audio URLs
-            const audioUrls = [
-                "https://files.catbox.moe/ndrrz3.mp3",
-                "https://files.catbox.moe/yny58w.mp3",
-                "https://files.catbox.moe/ckie6b.m4a",
-                 "https://files.catbox.moe/sbaian.mp3",
-                "https://files.catbox.moe/e0dwjw.mp3",
-                "https://files.catbox.moe/zhr5m2.mp3"
+            const imageUrl = [
+                './start/lib/Media/Images/Vesper1',
+                './start/lib/Media/Images/Vesper2',
+                './start/lib/Media/Images/Vesper3',
+                './start/lib/Media/Images/Vesper4'
+                
             ];
+            
+           const audioUrls = [
+    './start/lib/Media/JexAudio1.mp3',
+    './start/lib/Media/JexAudio2.mp3',
+    './start/lib/Media/JexAudio3.mp3',
+    './start/lib/Media/JexAudio4.mp3',
+    './start/lib/Media/JexAudio5.mp3',
+    './start/lib/Media/JexAudio6.mp3',
+    './start/lib/Media/JexAudio7.mp3'
+];
             
             // Randomly select an audio URL
             const randomAudioUrl = audioUrls[Math.floor(Math.random() * audioUrls.length)];
