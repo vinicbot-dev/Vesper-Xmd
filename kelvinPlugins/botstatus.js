@@ -340,7 +340,7 @@ https://github.com/${repoOwner}/${repoName}
 ────────────────────────────────
 @${m.sender.split("@")[0]}👋, Don't forget to star and fork my repository!`;
 
-               const thumbnailBuffer = fs.readFileSync('./start/lib/Media/Vesper3.jpg');
+               const thumbnailBuffer = fs.readFileSync('./start/lib/Media/Images/Vesper3.jpg');
                 
                 // Send the response with thumbnail
                 await kelvin.sendMessage(
