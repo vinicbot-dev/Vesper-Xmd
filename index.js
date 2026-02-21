@@ -68,7 +68,7 @@ const {
 const settings = require('./settings');
 const PluginManager = require('./start/lib/PluginManager');
 const { color } = require('./start/lib/color')
-const { db } = require('./start/Core/databaseManager');
+const db = require('./start/Core/databaseManager'); 
 const { handleStatusUpdate } = require('./start/kevin');
 const usePairingCode = true;
 
