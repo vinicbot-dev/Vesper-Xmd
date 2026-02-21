@@ -12,59 +12,7 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function createFakeContact(message) {
-    return {
-        key: {
-            participants: "0@s.whatsapp.net",
-            remoteJid: "0@s.whatsapp.net",
-            fromMe: false
-        },
-        message: {
-            contactMessage: {
-                displayName: "Dave",
-                vcard: `BEGIN:VCARD\nVERSION:3.0\nN:Sy;Update;;;\nFN:Davex System Update\nitem1.TEL;waid=${message.key.participant?.split('@')[0] || message.key.remoteJid.split('@')[0]}:${message.key.participant?.split('@')[0] || message.key.remoteJid.split('@')[0]}\nitem1.X-ABLabel:Update Bot\nEND:VCARD`
-            }
-        },
-        participant: "0@s.whatsapp.net"
-    };
-}
-
-function run(cmd) {
-    return new Promise((resolve, reject) => {
-        exec(cmd, { windowsHide: true }, (err, stdout, stderr) => {
-            if (err) return reject(new Error(stderr || stdout || err.message));
-            resolve(stdout.toString().trim());
-        });
-    });
-}
-
-async function hasGitRepo() {
-    const gitDir = path.join(process.cwd(), '.git');
-    if (!fs.existsSync(gitDir)) return false;
-    try {
-        await run('git --version');
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-async function updateViaGit() {
-    const oldRev = await run('git rev-parse HEAD').catch(() => 'unknown');
-    await run('git fetch --all --prune');
-    const newRev = await run('git rev-parse origin/main').catch(() => 'unknown');
-
-    const alreadyUpToDate = oldRev === newRev;
-    const commits = alreadyUpToDate ? '' : await run(`git log --pretty=format:"%h %s (%an)" ${oldRev}..${newRev}`).catch(() => '');
-    const files = alreadyUpToDate ? '' : await run(`git diff --name-status ${oldRev} ${newRev}`).catch(() => '');
-
-    await run(`git reset --hard ${newRev}`);
-    await run('git clean -fd');
-
-    return { oldRev, newRev, alreadyUpToDate, commits, files };
-}
-
-function downloadFile(url, dest, visited = new Set()) {
+async function downloadFile(url, dest, visited = new Set()) {
     return new Promise((resolve, reject) => {
         if (visited.has(url) || visited.size > 5) return reject(new Error('Too many redirects'));
         visited.add(url);
@@ -140,7 +88,7 @@ async function updateViaZip(zipUrl) {
         ? path.join(extractTo, entries[0])
         : extractTo;
 
-    const ignore = ['node_modules', '.git', 'session', 'tmp', 'temp', 'data', 'baileys_store.json'];
+    const ignore = ['node_modules', '.git', 'sessions', 'tmp', 'temp', 'data', 'baileys_store.json', 'creds.json'];
     const copied = [];
     copyRecursive(root, process.cwd(), ignore, '', copied);
 
@@ -150,52 +98,13 @@ async function updateViaZip(zipUrl) {
     return { copiedFiles: copied };
 }
 
-async function restartProcess(kelvin, chatId, message) {
-    const fakeContact = createFakeContact(message);
-    await kelvin.sendMessage(chatId, { text: 'Update finished restarting' }, { quoted: fakeContact }).catch(() => {});
-    try {
-        await run('pm2 restart all');
-    } catch {
-        setTimeout(() => process.exit(0), 500);
-    }
-}
-
-async function updateCommand(kelvin, Access, chatId, message, zipOverride) {
-    const fakeContact = createFakeContact(message);
-    const senderId = message.key.participant || message.key.remoteJid;
-    
-
-    if (!message.key.fromMe && !Access) {
-        return kelvin.sendMessage(chatId, { text: 'System update unauthorized' }, { quoted: fakeContact });
-    }
-
-    let statusMessage;
-    try {
-        statusMessage = await kelvin.sendMessage(chatId, { text: 'System update initialization' }, { quoted: fakeContact });
-
-        if (await hasGitRepo()) {
-            await kelvin.sendMessage(chatId, { text: 'Repository synchronization', edit: statusMessage.key });
-            const { oldRev, newRev, alreadyUpToDate } = await updateViaGit();
-            const summary = alreadyUpToDate ? `System current: ${newRev}` : `Version transition: ${oldRev.slice(0, 7)} to ${newRev.slice(0, 7)}`;
-            await kelvin.sendMessage(chatId, { text: `${summary}\nDependency installation`, edit: statusMessage.key });
-        } else {
-            await kelvin.sendMessage(chatId, { text: 'Archive update download', edit: statusMessage.key });
-            const { copiedFiles } = await updateViaZip(zipOverride || settings.updateZipUrl || process.env.UPDATE_ZIP_URL);
-            await kelvin.sendMessage(chatId, { text: `Archive extraction: ${copiedFiles.length} files\nDependency installation`, edit: statusMessage.key });
-        }
-
-        await run('npm install --no-audit --no-fund');
-        await kelvin.sendMessage(chatId, { text: 'Update finalized system restart', edit: statusMessage.key });
-        await restartProcess(kelvin, chatId, message);
-    } catch (err) {
-        console.error('Update failed:', err);
-        const errorMsg = `Update procedure failure:\n${String(err.message || err).slice(0, 1000)}`;
-        if (statusMessage?.key) {
-            await kelvin.sendMessage(chatId, { text: errorMsg, edit: statusMessage.key });
-        } else {
-            await kelvin.sendMessage(chatId, { text: errorMsg }, { quoted: fakeContact });
-        }
-    }
+function run(cmd) {
+    return new Promise((resolve, reject) => {
+        exec(cmd, { windowsHide: true }, (err, stdout, stderr) => {
+            if (err) return reject(new Error(stderr || stdout || err.message));
+            resolve(stdout.toString().trim());
+        });
+    });
 }
 
 module.exports = [
@@ -1120,42 +1029,51 @@ ${bugReportMsg}
  }
 },
 {
-    command: ['update', 'botupdate', 'updateall'],
-    operate: async ({ kelvin, m, reply, quoted, Access, mess }) => {
+    command: ['update', 'botupdate', 'upgrade'],
+    operate: async ({ kelvin, m, reply, Access }) => {
         try {
             if (!Access) return reply(global.mess.owner);
             
-            
+            // Send initial status message
             let statusMsg = await kelvin.sendMessage(m.chat, { 
-                text: '*Vesper-Xmd update*\n\nUpdating bot...' 
+                text: '🔄 *Vesper-Xmd*\n\nInitializing update process...' 
             }, { quoted: m });
 
-            // BYPASS Git check - use ZIP download directly
+            // GitHub repository URL for your hidden repo
+            const GITHUB_REPO = 'https://github.com/vinicbot-dev/Vesper-Xmd/archive/refs/heads/main.zip';
+            
+            // Update status
             await kelvin.sendMessage(m.chat, { 
-                text: '*Vesper-Xmd update*\n\nDownloading latest version...',
+                text: '*Vesper-Xmd*\n\n📥 Downloading latest files from repository...',
                 edit: statusMsg.key 
             });
             
-            // Use ZIP update from settings
-            const { copiedFiles } = await updateViaZip(`${global.updateZipUrl}`);
+            // Download and extract the latest version
+            const { copiedFiles } = await updateViaZip(GITHUB_REPO);
             
+            // Update status
             await kelvin.sendMessage(m.chat, { 
-                text: `*Vesper-Xmd update*\n\n✅ Downloaded ${copiedFiles.length} files\n📦 Installing dependencies...`,
+                text: `* Vesper-Xmd*\n\n✅ Downloaded ${copiedFiles.length} files\n📦 Installing dependencies...`,
                 edit: statusMsg.key 
             });
             
+            // Install dependencies
             await run('npm install --no-audit --no-fund');
             
+            // Final status and restart
             await kelvin.sendMessage(m.chat, { 
-                text: `✅ *UPDATE COMPLETE!*\n\n📁 Files updated: ${copiedFiles.length}\n\n♻️ Restarting bot in 3 seconds...`,
+                text: `✅ *UPDATE COMPLETE!*\n\n📁 Files updated: ${copiedFiles.length}\n📦 Dependencies installed\n\n♻️ Restarting bot in 3 seconds...`,
                 edit: statusMsg.key 
             });
             
-            setTimeout(() => process.exit(0), 3000);
+            // Wait 3 seconds then restart
+            setTimeout(() => {
+                process.exit(0);
+            }, 3000);
             
         } catch (error) {
             console.error('Update error:', error);
-            reply(`*UPDATE FAILED!*\n\nError: ${error.message}`);
+            reply(`❌ *UPDATE FAILED!*\n\nError: ${error.message}\n\nPlease check your internet connection and try again.`);
         }
     }
 }
