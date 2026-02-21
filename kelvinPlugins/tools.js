@@ -70,7 +70,7 @@ module.exports = [
         }
     },
     {
-        command: ['calculate', 'calc', 'math'],
+        command: ['calculate', 'calc'],
         operate: async ({ reply, text, prefix }) => {
             try {
                 if (!text) return reply(`📝 *Examples:*\n${prefix}calc 5 + 3\n${prefix}calc 10% of 200\n${prefix}calc 2^3\n${prefix}calc sqrt(16)`);
