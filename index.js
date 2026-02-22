@@ -301,7 +301,9 @@ async function clientstart() {
         }
     });
 
-   kelvin.public = global.status; 
+   // Get public/private mode from SQLite
+const mode = await db.get(botNumber, 'mode', 'public');
+kelvin.public = mode === 'public';
 
 
     kelvin.ev.on('connection.update', async (update) => {
