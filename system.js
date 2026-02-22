@@ -648,7 +648,7 @@ const generateMenu = (plugins, ownername, prefixz, modeStatus, versions, latensi
     let menu = `┌─❖ *VESPER-XMD* ❖─\n`;
     menu += `├─• ᴜsᴇʀ: ${ownername}\n`; // ✅ Use the passed parameter
     menu += `├─• ʙᴏᴛ: ${global.botname}\n`;
-    menu += `├─• ᴍᴏᴅᴇ: ${kelvin.public ? 'ᴘᴜʟʙɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ'}\n`;
+    menu += `├─• ᴍᴏᴅᴇ: ${(await db.get(botNumber, 'mode', 'public')) === 'public' ? 'ᴘᴜʟʙɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ'}\n`,
     menu += `├─• ᴘʀᴇғɪx: [ ${prefixz} ]\n`;
     menu += `├─• ᴄᴍᴅs: ${totalCommands}+\n`;
     menu += `├─• ᴠᴇʀsɪᴏɴ: ${versions}\n`;
