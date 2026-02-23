@@ -341,8 +341,6 @@ kelvin.public = mode === 'public';
         console.log('Bot connected successfully');
         
         try {
-            const ownerJid = global.owner[0] + "@s.whatsapp.net";
-            
             const welcomeMessage = `╭─❖ *Vesper-Xmd* ❖─╮
 │
 ├─❖ *Status:* ✅ ONLINE
@@ -358,7 +356,8 @@ kelvin.public = mode === 'public';
 
 > ${global.wm || '© Vesper-Xmd is awesome 🔥'}`;
 
-            await kelvin.sendMessage(ownerJid, { 
+            // Send welcome message to bot's own number
+            await kelvin.sendMessage(kelvin.user.id, { 
                 text: welcomeMessage 
             });
             
