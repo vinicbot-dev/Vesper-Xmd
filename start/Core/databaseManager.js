@@ -58,7 +58,7 @@ class DatabaseManager {
         try {
             return await this.db.getSudo(botNumber);
         } catch (error) {
-            console.error('❌ Get sudo error:', error);
+            console.error('Get sudo error:', error);
             return [];
         }
     }
@@ -182,6 +182,16 @@ async getAntipromote(botNumber, groupId) {
 
 async removeAntipromote(botNumber, groupId) {
     return this.setGroupSetting(botNumber, groupId, 'antipromote', false);
+}
+
+// ==================== MENU STYLE ====================
+
+async getMenuStyle(botNumber, defaultValue = '2') {
+    return await this.get(botNumber, 'menu_style', defaultValue);
+}
+
+async setMenuStyle(botNumber, style) {
+    return await this.set(botNumber, 'menu_style', style);
 }
 
     // ==================== CACHE MANAGEMENT ====================
