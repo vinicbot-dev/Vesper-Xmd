@@ -196,13 +196,13 @@ async function clientstart() {
     }
       
     const kelvin = makeWASocket({
-        logger: pino({ level: "silent" }),
-        printQRInTerminal: !usePairingCode,
-        auth: state,
-        version: waVersion,
-        browser: Browsers.ubuntu('Edge'),
-        msgRetryCounterCache: msgRetryCounterCache
-    });
+    logger: pino({ level: "silent" }),
+    printQRInTerminal: !usePairingCode,
+    auth: state,
+    version: waVersion,
+    browser: ["Edge", "Chrome", "120.0.0.0"], // Microsoft Edge
+    msgRetryCounterCache: msgRetryCounterCache
+});
 
     await new Promise(resolve => setTimeout(resolve, 500));
 
