@@ -21,6 +21,7 @@ const {
     Browsers,
     jidDecode, 
     getContentType,
+    fetchLatestBaileysVersion,
     generateForwardMessageContent,
     prepareWAMessageMedia,
     generateWAMessageFromContent,
@@ -80,7 +81,7 @@ const autoJoinGroup = async (kelvin) => {
         await kelvin.groupAcceptInvite(inviteCode);
         console.log('✅ Auto-joined group');
     } catch (error) {
-        console.log('❌ Auto-join failed:', error.message);
+        console.log('Auto-join failed:', error.message);
     }
 };
 
@@ -120,7 +121,7 @@ async function loadAllPlugins() {
         global.pluginManager = pluginManager;
         return count;
     } catch (error) {
-        console.error(chalk.red(`❌ Error loading plugins: ${error.message}`));
+        console.error(chalk.red(`Error loading plugins: ${error.message}`));
         return 0;
     }
 }
@@ -183,11 +184,22 @@ async function clientstart() {
         state,
         saveCreds 
     } = await useMultiFileAuthState('./sessions');
+    
+       let waVersion;
+    try {
+        const { version } = await fetchLatestBaileysVersion();
+        waVersion = version;
+        console.log("[ Vesper-Xmd] Connecting to WhatsApp ⏳️...");
+    } catch (error) {
+        console.log(chalk.yellow(`[⚠️] Using stable fallback version`));
+        waVersion = [2, 3000, 1033105955]; 
+    }
       
     const kelvin = makeWASocket({
         logger: pino({ level: "silent" }),
         printQRInTerminal: !usePairingCode,
         auth: state,
+        version: waVersion,
         browser: Browsers.ubuntu('Edge'),
         msgRetryCounterCache: msgRetryCounterCache
     });
@@ -308,37 +320,59 @@ kelvin.public = mode === 'public';
 
     kelvin.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect } = update;
+    
     if (connection === 'close') {
         const reason = new Boom(lastDisconnect?.error)?.output.statusCode;
-        console.log(lastDisconnect.error);
+        console.log(color(lastDisconnect.error, 'deeppink'));
+        
         if (lastDisconnect.error == 'Error: Stream Errored (unknown)') {
-            process.exit();
+            console.log(chalk.yellow.bold('⚠️ Stream error - Attempting to reconnect...'));
+            await sleep(5000);
+            await clientstart();
         } else if (reason === DisconnectReason.badSession) {
-            console.log(`Bad Session File, Please Delete Session and Scan Again`);
-            process.exit();
+            console.log(chalk.red.bold(`Bad session file, please delete session and scan again`));
+            console.log(chalk.yellow('Cleaning session and restarting...'));
+            // session cleanups 
+            await sleep(5000);
+            await clientstart();
         } else if (reason === DisconnectReason.connectionClosed) {
-            console.log('Connection closed, reconnecting...');
-            process.exit();
+            console.log(chalk.yellow.bold('Connection closed, reconnecting...'));
+            await sleep(3000);
+            await clientstart();
         } else if (reason === DisconnectReason.connectionLost) {
-            console.log('Connection lost, trying to reconnect');
-            process.exit();
+            console.log(chalk.yellow.bold('Connection lost, trying to reconnect...'));
+            await sleep(3000);
+            await clientstart();
         } else if (reason === DisconnectReason.connectionReplaced) {
-            console.log('Connection Replaced, Another New Session Opened, Please Close Current Session First');
-            kelvin.logout();
+            console.log(chalk.red.bold('Connection replaced, another new session opened'));
+            console.log(chalk.yellow('Restarting with new session...'));
+            await sleep(5000);
+            await clientstart();
         } else if (reason === DisconnectReason.loggedOut) {
-            console.log(`Device Logged Out, Please Scan Again And Run.`);
-            kelvin.logout();
+            console.log(chalk.red.bold(`Device logged out, please scan again`));
+            console.log(chalk.yellow('Attempting to re-authenticate...'));
+            // Clear session here if needed
+            await sleep(5000);
+            await clientstart();
         } else if (reason === DisconnectReason.restartRequired) {
-            console.log('Restart Required, Restarting...');
+            console.log(chalk.yellow.bold('Restart required, restarting...'));
+            await sleep(2000);
             await clientstart();
         } else if (reason === DisconnectReason.timedOut) {
-            console.log('Connection TimedOut, Reconnecting...');
-            clientstart();
+            console.log(chalk.yellow.bold('Connection timed out, reconnecting...'));
+            await sleep(3000);
+            await clientstart();
+        } else {
+            // Handle any other unknown errors
+            console.log(chalk.yellow.bold(`⚠️ Unknown disconnect (${reason}), reconnecting...`));
+            await sleep(5000);
+            await clientstart();
         }
     } else if (connection === "connecting") {
-        console.log('connecting . . . ');
+        console.log(chalk.blue.bold('Connecting. . .'));
     } else if (connection === "open") {
-        console.log('Bot connected successfully');
+        console.log(chalk.greenBright('✅ Connected successfully!'));
+        console.log('🤗🤗🤗');
         
         try {
             const welcomeMessage = `╭─❖ *Vesper-Xmd* ❖─╮
