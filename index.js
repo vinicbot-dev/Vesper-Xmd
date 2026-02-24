@@ -200,7 +200,7 @@ async function clientstart() {
     printQRInTerminal: !usePairingCode,
     auth: state,
     version: waVersion,
-    browser: ["Edge", "Chrome", "120.0.0.0"], // Microsoft Edge
+    browser: ["Ubuntu", "Chrome", "120.0.0.0"],
     msgRetryCounterCache: msgRetryCounterCache
 });
 
