@@ -1,4 +1,4 @@
-    /*
+/*
  * Give credits to Kevindev
  Contact me on +256742932677
  Coding sounds lounder 
@@ -26,8 +26,7 @@ const {
 } = require('child_process');
 
 const { 
-  default:
-  baileys,
+  default: baileys,
   proto, 
   generateWAMessage,
   getDevice,
@@ -35,6 +34,7 @@ const {
   getContentType, 
   prepareWAMessageMedia
 } = require("@whiskeysockets/baileys");
+
 const { 
       smsg,
       formatSize,
@@ -66,7 +66,6 @@ const { handleAutoRead } = require('./start/kelvinCmds/autoread');
 const { handleAutoRecording } = require('./start/kelvinCmds/autorecord');
 const { handleAutoTyping } = require('./start/kelvinCmds/autotyping');
 const { handleAIChatbot } = require('./start/kelvinCmds/chatbot');
-
 
 // Menu Images - KelvinTech Style
 let kelvinkid1, kelvinkid2, kelvinkid3, kelvinkid4, kelvinkid5;   
@@ -133,6 +132,8 @@ async function ephoto(url, texk) {
       );
       return build_server + data.image;
  }
+
+ // Function to save status message
  async function saveStatusMessage(m) {
   try {
     if (!m.quoted || m.quoted.chat !== 'status@broadcast') {
@@ -147,6 +148,7 @@ async function ephoto(url, texk) {
     reply(`Error: ${error.message}`);
   }
 }
+
 // Function to fetch MP3 download URL
 async function fetchMp3DownloadUrl(link) {
   const fetchDownloadUrl1 = async (videoUrl) => {
@@ -175,13 +177,9 @@ async function fetchMp3DownloadUrl(link) {
 // Active Users Tracking Functions
 async function addUserMessage(kelvin, groupJid, userJid) {
     try {
-        // Get bot number from connection
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
-        
-        // Get current active users from SQLite
         let activeUsers = await db.get(botNumber, `active_${groupJid}`, {});
         
-        // Initialize or update user
         if (!activeUsers[userJid]) {
             activeUsers[userJid] = {
                 count: 0,
@@ -189,13 +187,10 @@ async function addUserMessage(kelvin, groupJid, userJid) {
             };
         }
         
-        // Increment count
         activeUsers[userJid].count++;
         activeUsers[userJid].lastActive = Date.now();
         
-        // Save back to SQLite
         await db.set(botNumber, `active_${groupJid}`, activeUsers);
-        
         return true;
     } catch (error) {
         console.error('Error in addUserMessage:', error);
@@ -203,7 +198,6 @@ async function addUserMessage(kelvin, groupJid, userJid) {
     }
 }
 
-// Update other functions too
 async function getActiveUsers(kelvin, groupJid, limit = 10) {
     try {
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
@@ -228,11 +222,8 @@ async function clearActiveUsers(kelvin, groupJid = null) {
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
         
         if (groupJid) {
-            // Clear specific group
             await db.set(botNumber, `active_${groupJid}`, {});
         } else {
-            // This would need to clear all groups - you'd need to get all keys
-            // For now, we'll just log that this operation isn't supported
             console.log('Clearing all groups not supported - would need key enumeration');
         }
         return true;
@@ -245,8 +236,6 @@ async function clearActiveUsers(kelvin, groupJid = null) {
 async function getInactiveUsers(kelvin, groupJid, allParticipants) {
     try {
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
-        
-        // Get active users from database
         const activeUsers = await db.get(botNumber, `active_${groupJid}`, {});
         
         const activeJids = Object.keys(activeUsers);
@@ -259,6 +248,85 @@ async function getInactiveUsers(kelvin, groupJid, allParticipants) {
     }
 }
 
+function generateMenuText(plugins, ownername, prefix, mode, versions, latensie, readmore) {
+    const memoryUsage = process.memoryUsage();
+    const totalMemory = os.totalmem();
+    const systemUsedMemory = totalMemory - os.freemem();
+
+    const progressBar = (used, total, size = 6) => {
+        let percentage = Math.round((used / total) * size);
+        let bar = '█'.repeat(percentage) + '░'.repeat(size - percentage);
+        return `[${bar}] ${Math.round((used / total) * 100)}%`;
+    };
+
+    let totalCommands = 0;
+    const uniqueCommands = new Set();
+    for (const category in plugins) {
+        plugins[category].forEach(plugin => {
+            if (plugin.command && plugin.command.length > 0) {
+                uniqueCommands.add(plugin.command[0]);
+            }
+        });
+    }
+    totalCommands = uniqueCommands.size;
+
+    let menu = `┌─❖ *VESPER-XMD* ❖─\n`;
+    menu += `├─• ᴜsᴇʀ: ${ownername}\n`;
+    menu += `├─• ʙᴏᴛ: ${global.botname || 'Vesper-XMD'}\n`;
+    menu += `├─• ᴍᴏᴅᴇ: ${mode === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ'}\n`;
+    menu += `├─• ᴘʀᴇғɪx: [ ${prefix} ]\n`;
+    menu += `├─• ᴄᴍᴅs: ${totalCommands}+\n`;
+    menu += `├─• ᴠᴇʀsɪᴏɴ: ${versions}\n`;
+    menu += `├─• sᴘᴇᴇᴅ: ${latensie.toFixed(4)} ms\n`;
+    menu += `├─• 𝚁𝙰𝙼: ${progressBar(systemUsedMemory, totalMemory)}\n`;
+    menu += `└─• ᴅᴇᴠ: ☘ ᴋᴇʟᴠɪɴ ᴛᴇᴄʜ ☘\n`;
+    menu += `${readmore || ''}\n`;
+    
+    for (const category in plugins) {
+        menu += `┏▦  *${category.toUpperCase()} MENU* ▦\n`;
+        plugins[category].forEach(plugin => {
+            if (plugin.command && plugin.command.length > 0) {
+                menu += `┃❖ ${plugin.command[0]}\n`;
+            }
+        });
+        menu += `┗▦\n\n`;
+    }
+    
+    return menu;
+}
+
+function loadMenuPlugins(directory) {
+    const plugins = {};
+    
+    if (!fs.existsSync(directory)) {
+        console.error(`Directory ${directory} does not exist`);
+        return plugins;
+    }
+
+    const files = fs.readdirSync(directory);
+    files.forEach(file => {
+        if (file.endsWith('.js')) {
+            const filePath = path.join(directory, file);
+            try {
+                delete require.cache[require.resolve(filePath)];
+                const pluginModule = require(filePath);
+                
+                const pluginArray = Array.isArray(pluginModule) ? pluginModule : [pluginModule];
+                const category = path.basename(file, '.js');
+                
+                if (!plugins[category]) {
+                    plugins[category] = [];
+                }
+                
+                plugins[category].push(...pluginArray);
+            } catch (error) {
+                console.error(`Error loading plugin at ${filePath}:`, error);
+            }
+        }
+    });
+
+    return plugins;
+}
 
 module.exports = client = async (kelvin, m, chatUpdate, store) => {
   try {
@@ -282,27 +350,25 @@ const botNumber = await kelvin.decodeJid(kelvin.user.id);
 let prefix = "."; // Default prefix
 
 try {
-    // Get prefix from SQLite
     prefix = await db.get(botNumber, 'prefix', '.');
 } catch (error) {
     console.error('Error loading prefix from database:', error);
-    prefix = "."; // Fallback to default
+    prefix = ".";
 }
 
 try {
     const alwaysonlineSetting = await db.get(botNumber, 'alwaysonline', false);
     
-    // Handle different possible values
     if (typeof alwaysonlineSetting === 'boolean') {
         global.alwaysonline = alwaysonlineSetting;
     } else if (typeof alwaysonlineSetting === 'string') {
         global.alwaysonline = alwaysonlineSetting.toLowerCase() === 'true';
     } else {
-        global.alwaysonline = false; // Fallback
+        global.alwaysonline = false;
     }
 } catch (error) {
     console.error('Error loading alwaysonline from database:', error);
-    global.alwaysonline = false; // Default fallback
+    global.alwaysonline = false;
 }
 
 const isCmd = body && typeof body === 'string' && body.startsWith(prefix);
@@ -316,37 +382,31 @@ const text = args.join(" ");
     const budy = (typeof m.text === 'string' ? m.text : '');
     
     const from = m.key.remoteJid;
-    const senderId = m.key.participant || from; // gets the actual sender JID
-// database 
+    const senderId = m.key.participant || from;
     const isGroup = from.endsWith("@g.us");
     
 
 async function checkAccess(sender) {
     try {
-        // Normalize the sender number
         const normalizedSender = sender.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
         
         const sudoUsers = await db.getSudo(botNumber) || [];
-        
-        // Get owners from database (you can store owners in db too)
         const owners = await db.get(botNumber, 'owners', []);
         
-        // Create array of all authorized numbers (normalized)
         const authorizedNumbers = [
             botNumber,
             devKelvin,
             ...owners,
             ...sudoUsers
         ]
-        .filter(num => num) // Remove null/undefined
+        .filter(num => num)
         .map(num => {
             if (!num) return null;
             const cleanNum = num.replace(/[^0-9]/g, "");
             return cleanNum ? cleanNum + "@s.whatsapp.net" : null;
         })
-        .filter(num => num); // Remove any nulls
+        .filter(num => num);
         
-        // Check if sender is in authorized list
         return authorizedNumbers.includes(normalizedSender);
     } catch (error) {
         console.error('Error in checkAccess:', error);
@@ -391,13 +451,12 @@ const Access = await checkAccess(m.sender);
             return { isSenderAdmin: false, isBotAdmin: false };
         }
 }
-// calculate amdim status 
+ 
 let isSenderAdmin = false;
 let isBotAdmin = false;
 
 if (isGroup && m.sender) {
     try {
-        // Call isAdminKelvin to get actual boolean values
         const adminResult = await isAdminKelvin(kelvin, from, senderId);
         isSenderAdmin = adminResult.isSenderAdmin;
         isBotAdmin = adminResult.isBotAdmin;
@@ -408,7 +467,7 @@ if (isGroup && m.sender) {
         isBotAdmin = false;
     }
 }
-// ============================================
+
     let groupMetadata = null
 if (isGroup) {
   try {
@@ -474,7 +533,6 @@ if (m.message && !m.message.protocolMessage) {
 }
 
 if (m.isGroup && m.message && !m.key.fromMe) {
-    // Check if message has mentions
     const mentionedUsers = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     if (mentionedUsers.length > 0) {
         await handleAntiTag(m, kelvin);
@@ -510,25 +568,20 @@ if (m.isGroup && body) {
         }
     }
 }
-// Apply alwaysonline setting
+
 if (global.alwaysonline === true || global.alwaysonline === 'true') {
     if (m.message && !m.key.fromMe) {
         try {
             await kelvin.sendPresenceUpdate("available", from);
-            await delay(1000); // 1-second delay
-        } catch (error) {
-            // Silently handle error - don't spam console
-        }
+            await sleep(1000);
+        } catch (error) {}
     }
 } else {
-    // Default behavior - send unavailable presence
     if (m.message && !m.key.fromMe) {
         try {
             await kelvin.sendPresenceUpdate("unavailable", from);
-            await delay(1000); // 1-second delay
-        } catch (error) {
-            // Silently handle error
-        }
+            await sleep(1000);
+        } catch (error) {}
     }
 }
     await handleAIChatbot(m, kelvin, body, from, isGroup, botNumber, isCmd, prefix);
@@ -615,95 +668,8 @@ const context = {
     pluginManager: global.pluginManager
 };
     
-const formatMemory = (memory) => {
-    return memory < 1024 * 1024 * 1024
-        ? Math.round(memory / 1024 / 1024) + ' MB'
-        : Math.round(memory / 1024 / 1024 / 1024) + ' GB';
-};
-
-const progressBar = (used, total, size = 6) => {
-    let percentage = Math.round((used / total) * size);
-    let bar = '█'.repeat(percentage) + '░'.repeat(size - percentage);
-    return `[${bar}] ${Math.round((used / total) * 100)}%`;
-};
-
 const mode = await db.get(botNumber, 'mode', 'public');
 
-const generateMenu = (plugins, ownername, prefixz, modeStatus, versions, latensie, readmore) => {
-    const memoryUsage = process.memoryUsage();
-    const botUsedMemory = memoryUsage.heapUsed;
-    const totalMemory = os.totalmem();
-    const systemUsedMemory = totalMemory - os.freemem();
-
-    // Count total unique commands across all plugins
-    let totalCommands = 0;
-    const uniqueCommands = new Set();
-    for (const category in plugins) {
-        plugins[category].forEach(plugin => {
-            if (plugin.command && plugin.command.length > 0) {
-                uniqueCommands.add(plugin.command[0]); 
-            }
-        });
-    }
-    totalCommands = uniqueCommands.size;
-
-    let menu = `┌─❖ *VESPER-XMD* ❖─\n`;
-    menu += `├─• ᴜsᴇʀ: ${ownername}\n`; // ✅ Use the passed parameter
-    menu += `├─• ʙᴏᴛ: ${global.botname}\n`;
-    menu += `├─• ᴍᴏᴅᴇ: ${mode === 'public' ? 'ᴘᴜʟʙɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ'}\n`;
-    menu += `├─• ᴘʀᴇғɪx: [ ${prefixz} ]\n`;
-    menu += `├─• ᴄᴍᴅs: ${totalCommands}+\n`;
-    menu += `├─• ᴠᴇʀsɪᴏɴ: ${versions}\n`;
-    menu += `├─• sᴘᴇᴇᴅ: ${latensie.toFixed(4)} ms\n`;
-    menu += `├─• 𝚁𝙰𝙼: ${progressBar(systemUsedMemory, totalMemory)}\n`;
-    menu += `└─• ᴅᴇᴠ: ☘ ᴋᴇʟᴠɪɴ ᴛᴇᴄʜ ☘\n`;
-    menu += `${readmore}\n`;
-    
-    for (const category in plugins) {
-        menu += `┏▦  *${category.toUpperCase()} MENU* ▦\n`;
-        plugins[category].forEach(plugin => {
-            if (plugin.command && plugin.command.length > 0) {
-                menu += `┃❖ ${plugin.command[0]}\n`;
-            }
-        });
-        menu += `┗▦\n\n`;
-    }
-    return menu;
-};
-
-const loadMenuPlugins = (directory) => {
-    const plugins = {};
-    
-    if (!fs.existsSync(directory)) {
-        console.error(`Directory ${directory} does not exist`);
-        return plugins;
-    }
-
-    const files = fs.readdirSync(directory);
-    files.forEach(file => {
-        if (file.endsWith('.js')) {
-            const filePath = path.join(directory, file);
-            try {
-                delete require.cache[require.resolve(filePath)];
-                const pluginModule = require(filePath);
-                
-                // Handle both array and object exports
-                const pluginArray = Array.isArray(pluginModule) ? pluginModule : [pluginModule];
-                
-                const category = path.basename(file, '.js'); // Extract filename without extension
-                if (!plugins[category]) {
-                    plugins[category] = [];
-                }
-                
-                plugins[category].push(...pluginArray); // Spread array to push each plugin individually
-            } catch (error) {
-                console.error(`Error loading plugin at ${filePath}:`, error);
-            }
-        }
-    });
-
-    return plugins;
-};
     // Handle commands via plugin system
     if (isCmd && command) {
         const result = await global.pluginManager.executeCommand(context, command);
@@ -713,44 +679,34 @@ const loadMenuPlugins = (directory) => {
                 case 'menu': {
     const startTime = performance.now();
     await m.reply("*Loading menu*...");
+    
+    // Get menu style from database - this will load from DB every time
+    let menuStyle = await db.getMenuStyle(botNumber, '2'); // '2' is default if not set
+    menuStyle = String(menuStyle || '2'); // Ensure it's a string
+    
+    console.log(`📊 Menu style loaded from DB: ${menuStyle}`); // Debug log
+    
     const endTime = performance.now();
     const latensie = endTime - startTime;
     
-    // ✅ Get ownername here (with await)
     const ownername = await db.get(botNumber, 'ownername', 'Not set');
     const prefixz = prefix;  
-    const modeStatus = "online";
-    const versions = `${global.versions}`; 
+    const modeStatus = mode;
+    const versions = `${global.versions || '1.0.0'}`; 
     
-    // Load plugins
     const pluginsDir = path.join(__dirname, 'kelvinPlugins'); 
     const plugins = loadMenuPlugins(pluginsDir);
     
-    // ✅ Pass ownername as parameter (no await inside generateMenu)
-    const menulist = generateMenu(plugins, ownername, prefixz, modeStatus, versions, latensie, readmore);
+    const menulist = generateMenuText(plugins, ownername, prefixz, modeStatus, versions, latensie, readmore);
     
-    // Get random menu image
     const menuImages = [kelvinkid1, kelvinkid2, kelvinkid3, kelvinkid4, kelvinkid5];
-    const kelvinkids = menuImages[Math.floor(Math.random() * menuImages.length)];
     
-    // Send menu
-    if (kelvinkids) {
-        await kelvin.sendMessage(m.chat, {
-            image: kelvinkids,
-            caption: menulist,
-        }, { quoted: m });
-    } else {
-        // Fallback
-        await kelvin.sendMessage(m.chat, {
-            image: { url: "https://i.ibb.co/2W0H9Jq/avatar-contact.png" },
-            caption: menulist,
-        }, { quoted: m });
-    }
+    // Send menu with selected style
+    await sendMenuWithStyle(kelvin, m, menuStyle, menulist, menuImages);
     break;
 }
-                
-                case 'reloadplugins': {
-                    if (!Access) return reply('Owner only command!');
+case 'reloadplugins': {
+    if (!Access) return reply('Owner only command!');
                     try {
                         const pluginsDir = path.join(__dirname, 'kelvinPlugins');
                         const count = global.pluginManager.reloadPlugins(pluginsDir);
@@ -830,6 +786,116 @@ const loadMenuPlugins = (directory) => {
     console.log(util.format(err));
   }
 };
+
+
+// Menu style functions - MOVED BELOW THE MAIN FUNCTION
+async function sendMenuWithStyle(kelvin, m, style, menuText, menuImages) {
+    const randomImage = menuImages ? menuImages[Math.floor(Math.random() * menuImages.length)] : null;
+    
+    switch(style) {
+        case '1': // Document with thumbnail
+            await kelvin.sendMessage(m.chat, {
+                document: kelvinkid1 || Buffer.from(' '),
+                mimetype: 'image/jpeg',
+                fileName: '✦ ᴋᴇʟᴠɪɴ ᴍᴇɴᴜ ✦',
+                fileLength: 99999999999,
+                pageCount: 9999999,
+                caption: menuText,
+                contextInfo: {
+                    externalAdReply: {
+                        title: 'VESPER',
+                        body: '✦ ᴋᴇʟᴠɪɴ ᴍᴇɴᴜ ✦',
+                        mediaType: 2,
+                        thumbnail: randomImage,
+                        mediaUrl: 'https://youtu.be/-',
+                        sourceUrl: 'https://whatsapp.com/channel/0029Vb0JX0VfXx3R5X5X5X5X'
+                    }
+                }
+            }, { quoted: m });
+            break;
+            
+        case '2': // Simple text reply
+            await m.reply(menuText);
+            break;
+            
+        case '3': // Text with external ad reply
+            await kelvin.sendMessage(m.chat, {
+                text: menuText,
+                contextInfo: {
+                    externalAdReply: {
+                        title: '⚡ VESPER-XMD ⚡',
+                        body: 'ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴋᴇʟᴠɪɴ ᴛᴇᴄʜ',
+                        thumbnail: randomImage,
+                        sourceUrl: 'https://wa.me/256742932677',
+                        mediaType: 1,
+                        renderLargerThumbnail: true
+                    }
+                }
+            }, { quoted: m });
+            break;
+            
+        case '4': // Image with caption
+            if (randomImage) {
+                await kelvin.sendMessage(m.chat, {
+                    image: randomImage,
+                    caption: menuText
+                }, { quoted: m });
+            } else {
+                await kelvin.sendMessage(m.chat, {
+                    image: { url: "https://i.ibb.co/2W0H9Jq/avatar-contact.png" },
+                    caption: menuText
+                }, { quoted: m });
+            }
+            break;
+            
+        case '5': // Interactive message - Using your specific format
+            const interactiveMsg = generateWAMessageFromContent(m.chat, {
+                viewOnceMessage: {
+                    message: {
+                        interactiveMessage: {
+                            body: {
+                                text: null,            
+                            },
+                            footer: {
+                                text: menuText, 
+                            },
+                            nativeFlowMessage: {
+                                buttons: [{
+                                    text: null
+                                }], 
+                            },
+                        },
+                    },
+                },
+            }, { quoted: m });
+            await kelvin.relayMessage(m.chat, interactiveMsg.message, { messageId: interactiveMsg.key.id });
+            break;
+            
+        case '6': // Payment request format 
+            await kelvin.relayMessage(m.chat, {
+                requestPaymentMessage: {
+                    currencyCodeIso4217: 'USD',
+                    requestFrom: '0@s.whatsapp.net',
+                    amount1000: '1000',
+                    noteMessage: {
+                        extendedTextMessage: {
+                            text: menuText,
+                            contextInfo: {
+                                mentionedJid: [m.sender],
+                                externalAdReply: {
+                                    showAdAttribution: false,
+                                },
+                            },
+                        },
+                    },
+                },
+            }, {});
+            break;
+            
+        default: // Default to style 2
+            await m.reply(menuText);
+    }
+}
 
 let file = require.resolve(__filename);
 require('fs').watchFile(file, () => {
