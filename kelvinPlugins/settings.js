@@ -1,3 +1,13 @@
+// MENU STYLES CONSTANT
+const MENU_STYLES = {
+    '1': 'Document with thumbnail',
+    '2': 'Simple text reply',
+    '3': 'Text with external ad reply',
+    '4': 'Image with caption',
+    '5': 'Interactive message',
+    '6': 'Payment request format'
+};
+
 module.exports = [
     {
         command: ['antidelete', 'antidel', 'deletealert'],
@@ -396,5 +406,44 @@ if (!Access) return reply(global.mess.owner);
     
     reply(`✅ Always online mode ${boolValue ? 'enabled' : 'disabled'}`);
    }
+},
+{
+    command: ['setmenu'],
+    operate: async ({ kelvin, m, reply, args, prefix, db, botNumber, Access, mess }) => {
+        if (!Access) return reply(global.mess.owner);
+        
+        if (!args[0]) {
+            let styleList = '*╔══❖ MENU STYLES ❖══╗*\n\n';
+            const currentStyle = await db.getMenuStyle(botNumber, '2');
+            
+            for (let i = 1; i <= 6; i++) {
+                const isCurrent = currentStyle === i.toString() ? '✅ ' : '   ';
+                styleList += `${isCurrent}*${i}.* ${MENU_STYLES[i]}\n`;
+            }
+            styleList += `\n*╚══❖ Usage: ${prefix}setmenu 1-6 ❖══╝*`;
+            return reply(styleList);
+        }
+
+        const style = args[0];
+        if (!MENU_STYLES[style]) {
+            return reply('*Invalid style! Please choose 1-6*');
+        }
+        await db.setMenuStyle(botNumber, style);
+        
+        // Verify it was saved
+        const verify = await db.getMenuStyle(botNumber, '2');
+        console.log(`✅ Menu style set to ${style}, verified: ${verify}`);
+        
+        reply(`*✅ Menu style set to:*\n*${MENU_STYLES[style]}*\n\n`);
+    }
+},
+{
+    command: ['checkmenu'],
+    operate: async ({ kelvin, m, reply, args, prefix, db, botNumber, Access, mess }) => {
+    if (!Access) return;
+    const saved = await db.getMenuStyle(botNumber, '2');
+    const raw = await db.get(botNumber, 'menu_style', '2'); // Direct DB check
+    reply(`*📊 Menu style in database:* ${saved}\n*Raw value:* ${raw}\n*Style name:* ${MENU_STYLES[saved] || 'Unknown'}`);
+    }
 }
 ];
