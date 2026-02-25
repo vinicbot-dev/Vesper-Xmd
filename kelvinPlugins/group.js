@@ -1,5 +1,13 @@
 /*Kelvin Tech*/
 
+const { downloadContentFromMessage,getContentType,
+generateWAMessageContent } = require('@whiskeysockets/baileys');
+const crypto = require('crypto')
+const {
+antidemoteCommand,
+antipromoteCommand
+} = require('../start/kevin');
+
 // Helper functions
 async function buildPayloadFromQuoted(quotedMessage, kelvin) {
     if (quotedMessage.videoMessage) {
@@ -127,12 +135,6 @@ Usage:
 ✦ Add caption after command`;
 }
 
-const { downloadContentFromMessage,getContentType,
-generateWAMessageContent } = require('@whiskeysockets/baileys');
-const {
-antidemoteCommand,
-antipromoteCommand
-} = require('../start/kevin');
 module.exports = [
 {
     command: ['listactive', 'activeusers'],
