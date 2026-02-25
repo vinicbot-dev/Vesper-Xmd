@@ -1,4 +1,5 @@
-// KelvinPlugins/owner.js
+/*Kelvin Tech*/
+
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment-timezone');
@@ -855,7 +856,7 @@ ${bugReportMsg}
 },
 {
     command: ['addowner', 'addsudo'],
-    operate: async ({ kelvin, m, reply, text, mentionedJid, db, quoted, botNumber, Access, mess, }) => {
+    operate: async ({ kelvin, m, args, reply, text, mentionedJid, db, quoted, botNumber, Access, mess, }) => {
         if (!Access) return reply(mess.owner);
     
     const user = m.mentionedJid[0] || args[0];
