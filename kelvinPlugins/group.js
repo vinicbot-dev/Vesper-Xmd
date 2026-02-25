@@ -1,12 +1,14 @@
 /*Kelvin Tech*/
 
 const { downloadContentFromMessage,getContentType,
+generateWAMessageFromContent,
 generateWAMessageContent } = require('@whiskeysockets/baileys');
 const crypto = require('crypto')
 const {
 antidemoteCommand,
 antipromoteCommand
 } = require('../start/kevin');
+ 
 
 // Helper functions
 async function buildPayloadFromQuoted(quotedMessage, kelvin) {
