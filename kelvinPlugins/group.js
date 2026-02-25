@@ -1247,7 +1247,7 @@ module.exports = [
     }
 },
     {
-        command: ['kick2'],
+        command: ['kick'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, text, mentionedJid, quoted }) => {
             if (!isGroup) return reply(global.mess.notgroup);
             if (!m.isAdmin) return reply(global.mess.notadmin);
@@ -1263,7 +1263,7 @@ module.exports = [
         }
     },
     {
-        command: ['kick'],
+        command: ['kick2'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, mentionedJid, quoted, from }) => {
             try {
                 if (!isGroup) return reply(global.mess.notgroup);
