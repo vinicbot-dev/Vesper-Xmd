@@ -4,7 +4,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 // Create a separate database connection for group messages
-const dbPath = path.join(__dirname, '../../src/group.db');
+const dbPath = path.join(__dirname, '../../start/src/group.db');
 const groupDb = new sqlite3.Database(dbPath, (err) => {
   if (err) console.error('Group database connection error:', err);
   else console.log('[Vesper-Xmd] Connected to group database');
