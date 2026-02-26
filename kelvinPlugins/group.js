@@ -140,7 +140,7 @@ Usage:
 module.exports = [
 {
     command: ['listactive', 'activeusers'],
-    operate: async ({ kelvin, m, reply, isGroup, getActiveUsers, db, from, groupName }) => {
+    operate: async ({ kelvin, m, reply, isGroup, getActiveUsers, from, groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
         const activeUsers = await getActiveUsers(from, 15);
@@ -166,7 +166,7 @@ module.exports = [
 },
 {
     command: ['listinactive', 'inactiveusers'],
-    operate: async ({ kelvin, m, reply, db, isGroup, from, getInactiveUsers, text,  groupName }) => {
+    operate: async ({ kelvin, m, reply,isGroup, from, getInactiveUsers, text,  groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
         try {
@@ -196,7 +196,7 @@ module.exports = [
 },
 {
     command: ['groupactivity', 'activity'],
-    operate: async ({ kelvin, m, reply, text, isGroup, getActiveUsers, from, db, groupName }) => {
+    operate: async ({ kelvin, m, reply, text, isGroup, getActiveUsers, from,groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
         try {
