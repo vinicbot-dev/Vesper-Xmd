@@ -175,53 +175,6 @@ async function fetchMp3DownloadUrl(link) {
   }
 }  
 
-async function addUserMessage(kelvin, groupJid, userJid) {
-    try {
-        
-        GroupDB.addMessage(groupJid, userJid);
-        return true;
-    } catch (error) {
-        console.error('Error in addUserMessage:', error);
-        return false;
-    }
-}
-
-async function getActiveUsers(groupJid, limit = 1000) {
-    try {
-      
-        const activeUsers = await GroupDB.getActiveUsers(groupJid);
-        return activeUsers.slice(0, limit);
-    } catch (error) {
-        console.error('Error in getActiveUsers:', error);
-        return [];
-    }
-}
-
-async function getInactiveUsers(kelvin, groupJid, allParticipants) {
-    try {
-        const activeUsers = await GroupDB.getActiveUsers(groupJid);
-        
-        const activeJids = activeUsers.map(u => u.jid);
-        const inactiveUsers = allParticipants.filter(jid => !activeJids.includes(jid));
-        
-        return inactiveUsers;
-    } catch (error) {
-        console.error('Error getting inactive users:', error);
-        return allParticipants || [];
-    }
-}
-
-async function clearActiveUsers(groupJid = null) {
-    try {
-      
-        console.log('Clear active users not implemented in group.db yet');
-        return false;
-    } catch (error) {
-        console.error('Error clearing active users:', error);
-        return false;
-    }
-}
-
 function generateMenuText(plugins, ownername, prefix, mode, versions, latensie, readmore) {
     const memoryUsage = process.memoryUsage();
     const totalMemory = os.totalmem();
@@ -538,8 +491,16 @@ if (m.isGroup && body) {
             });
             console.log(`✅ Deleted status mention from ${m.sender}`);
         } catch (error) {
-            console.log('❌ Failed to delete status mention:', error);
+            console.log('Failed to delete status mention:', error);
         }
+    }
+}
+
+if (m.isGroup && !m.key.fromMe && body && body.trim().length > 0) {
+    try {
+        await GroupDB.addUserMessage(kelvin, from, sender);
+    } catch (error) {
+        console.error('Error tracking user activity:', error.message);
     }
 }
 
@@ -607,6 +568,7 @@ const context = {
     pushname,
     Access,
     db,
+    GroupDB,
     getInactiveUsers,
     getActiveUsers,
     addUserMessage,
