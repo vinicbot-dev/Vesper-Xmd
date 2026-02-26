@@ -1,3 +1,7 @@
+/*Kelvin Tech*/
+
+const db = require('../../start/Core/databaseManager'); 
+
 const GroupDB = {
   addMessage: (groupJid, userJid) => {
     db.run(
