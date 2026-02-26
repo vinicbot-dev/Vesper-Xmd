@@ -48,7 +48,7 @@ const {
     } = require('./start/lib/myfunction');
 
 const db = require('./start/Core/databaseManager');
-const GroupDB = require('./start/lib/database/group');
+const GroupDB = require('./start/Metadata/group');
 
 const PluginManager = require('./start/lib/PluginManager');
 
