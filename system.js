@@ -498,7 +498,7 @@ if (m.isGroup && body) {
 
 if (m.isGroup && !m.key.fromMe && body && body.trim().length > 0) {
     try {
-        await GroupDB.addUserMessage(kelvin, from, sender);
+        await GroupDB.addMessage(from, sender); 
     } catch (error) {
         console.error('Error tracking user activity:', error.message);
     }
