@@ -487,7 +487,7 @@ https://github.com/Kevintech-hub/Vesper-Xmd
                     { quoted: m }
                 );
             }
-        }l
+        }
 
 }
 
