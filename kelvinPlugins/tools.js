@@ -1,8 +1,11 @@
+/*Kelvin Tech*/
+
 const moment = require('moment-timezone');
 const {translate} = require('@vitalets/google-translate-api')
 const googleTTS = require('google-tts-api')
 const PDFDocument = require('pdfkit')
 const fs = require('fs');
+const axios = require('axios');
 const fetch = require("node-fetch")
 const { exec } = require('child_process');
 const {styletext, remini, Wikimedia, wallpaper} = require('../start/lib/scraper')
