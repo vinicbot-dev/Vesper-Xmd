@@ -140,11 +140,10 @@ Usage:
 module.exports = [
 {
     command: ['listactive', 'activeusers'],
-    operate: async ({ kelvin, m, reply, isGroup, getInactiveUsers, getActiveUsers,  from, groupName }) => {
+    operate: async ({ kelvin, m, reply, isGroup, getActiveUsers, from, groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
-            
         
-        const activeUsers = getActiveUsers(from, 15);
+        const activeUsers = await getActiveUsers(from, 15);
         
         if (!activeUsers.length) {
             return reply('*📊 No active users found in this group.*\n\nSend some messages first to track activity!');
@@ -167,13 +166,13 @@ module.exports = [
 },
 {
     command: ['listinactive', 'inactiveusers'],
-    operate: async ({ kelvin, m, reply, isGroup, getActiveUsers, getInactiveUsers, from, groupName }) => {
+    operate: async ({ kelvin, m, reply, isGroup, from, getInactiveUsers,  groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
         try {
             const metadata = await kelvin.groupMetadata(from);
             const allParticipants = metadata.participants.map(p => p.id);
-            const inactiveUsers = getInactiveUsers(from, allParticipants);
+            const inactiveUsers = await getInactiveUsers(kelvin, from, allParticipants);
             
             if (!inactiveUsers.length) {
                 return reply('*✅ No inactive users found in this group!*\n\nAll participants have sent messages.');
@@ -191,25 +190,25 @@ module.exports = [
             
         } catch (error) {
             console.error('Error in listinactive command:', error);
-            reply('❌ *Error fetching group data!*');
+            reply('*Error fetching group data!*');
         }
     }
 },
 {
     command: ['groupactivity', 'activity'],
-    operate: async ({ kelvin, m, reply, isGroup, from, getActiveUsers, getInactiveUsers, groupName }) => {
+    operate: async ({ kelvin, m, reply, isGroup, getActiveUsers, from, groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
         try {
             const metadata = await kelvin.groupMetadata(from);
             const allParticipants = metadata.participants.map(p => p.id);
-            const activeUsers = getActiveUsers(from, 1000);
-            const inactiveUsers = getInactiveUsers(from, allParticipants);
+            const activeUsers = await getActiveUsers(from, 1000);
+            const inactiveUsers = await getInactiveUsers(kelvin, from, allParticipants);
             
             let message = `📊 *GROUP ACTIVITY - ${groupName || 'This Group'}*\n\n`;
             message += `*Total Members:* ${allParticipants.length}\n`;
             message += `✅ *Active Users:* ${activeUsers.length}\n`;
-            message += `*Inactive Users:* ${inactiveUsers.length}\n\n`;
+            message += `⚠️ *Inactive Users:* ${inactiveUsers.length}\n\n`;
             
             if (activeUsers.length > 0) {
                 message += `🏆 *Top 3 Active Users:*\n`;
@@ -242,7 +241,7 @@ module.exports = [
             
         } catch (error) {
             console.error('Error in groupactivity command:', error);
-            reply('❌ *Error fetching group activity!*');
+            reply('*Error fetching group activity!*');
         }
     }
 },
