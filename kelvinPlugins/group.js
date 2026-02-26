@@ -248,7 +248,7 @@ module.exports = [
 },
 {
     command: ['kickinactive', 'removeinactive'],
-    operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, GroupDB, , from, prefix }) => {
+    operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, GroupDB, from, prefix }) => {
         if (!isGroup) return reply(global.mess.notgroup);
       if (!m.isAdmin) return reply(global.mess.notadmin);
       if (!m.isBotAdmin) return reply(global.mess.botadmin);
