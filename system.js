@@ -48,6 +48,7 @@ const {
     } = require('./start/lib/myfunction');
 
 const db = require('./start/Core/databaseManager');
+const GroupDB = require('./start/lib/database/group');
 
 const PluginManager = require('./start/lib/PluginManager');
 
@@ -174,23 +175,10 @@ async function fetchMp3DownloadUrl(link) {
   }
 }  
 
-// Active Users Tracking Functions
 async function addUserMessage(kelvin, groupJid, userJid) {
     try {
-        const botNumber = await kelvin.decodeJid(kelvin.user.id);
-        let activeUsers = await db.get(botNumber, `active_${groupJid}`, {});
         
-        if (!activeUsers[userJid]) {
-            activeUsers[userJid] = {
-                count: 0,
-                lastActive: Date.now()
-            };
-        }
-        
-        activeUsers[userJid].count++;
-        activeUsers[userJid].lastActive = Date.now();
-        
-        await db.set(botNumber, `active_${groupJid}`, activeUsers);
+        GroupDB.addMessage(groupJid, userJid);
         return true;
     } catch (error) {
         console.error('Error in addUserMessage:', error);
@@ -198,53 +186,39 @@ async function addUserMessage(kelvin, groupJid, userJid) {
     }
 }
 
-async function getActiveUsers(kelvin, groupJid, limit = 10) {
+async function getActiveUsers(groupJid, limit = 1000) {
     try {
-        const botNumber = await kelvin.decodeJid(kelvin.user.id);
-        const activeUsers = await db.get(botNumber, `active_${groupJid}`, {});
-        
-        return Object.entries(activeUsers)
-            .map(([jid, data]) => ({
-                jid: jid,
-                count: data.count,
-                lastActive: data.lastActive
-            }))
-            .sort((a, b) => b.count - a.count)
-            .slice(0, limit);
+      
+        const activeUsers = await GroupDB.getActiveUsers(groupJid);
+        return activeUsers.slice(0, limit);
     } catch (error) {
         console.error('Error in getActiveUsers:', error);
         return [];
     }
 }
 
-async function clearActiveUsers(kelvin, groupJid = null) {
-    try {
-        const botNumber = await kelvin.decodeJid(kelvin.user.id);
-        
-        if (groupJid) {
-            await db.set(botNumber, `active_${groupJid}`, {});
-        } else {
-            console.log('Clearing all groups not supported - would need key enumeration');
-        }
-        return true;
-    } catch (error) {
-        console.error('Error clearing active users:', error);
-        return false;
-    }
-}
-
 async function getInactiveUsers(kelvin, groupJid, allParticipants) {
     try {
-        const botNumber = await kelvin.decodeJid(kelvin.user.id);
-        const activeUsers = await db.get(botNumber, `active_${groupJid}`, {});
+        const activeUsers = await GroupDB.getActiveUsers(groupJid);
         
-        const activeJids = Object.keys(activeUsers);
+        const activeJids = activeUsers.map(u => u.jid);
         const inactiveUsers = allParticipants.filter(jid => !activeJids.includes(jid));
         
         return inactiveUsers;
     } catch (error) {
         console.error('Error getting inactive users:', error);
         return allParticipants || [];
+    }
+}
+
+async function clearActiveUsers(groupJid = null) {
+    try {
+      
+        console.log('Clear active users not implemented in group.db yet');
+        return false;
+    } catch (error) {
+        console.error('Error clearing active users:', error);
+        return false;
     }
 }
 
