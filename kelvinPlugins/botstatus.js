@@ -1,6 +1,9 @@
+/*Kelvin Tech*/
+
 
 const { runtime,
 formatSize,
+sleep,
 getBuffer
  } = require('../start/lib/myfunction');
  const moment = require('moment-timezone');
@@ -203,6 +206,105 @@ Start server Enjoy 😉
             }
         }
     },
+    {
+    command: ['pair', 'pairing', 'getcode'],
+    operate: async ({ kelvin, m, reply, text, prefix, command, args }) => {
+        if (!text) {
+            return reply(
+                `Oops! You forgot the number.\n\nExample:\n${prefix + command} 25674293XXXX`
+            );
+        }
+
+        // Normalize and validate numbers
+        const numbers = text.split(",")
+            .map(v => v.replace(/[^0-9]/g, "")) // keep only digits
+            .filter(v => v.length >= 6 && v.length <= 20);
+
+        if (numbers.length === 0) {
+            await kelvin.sendMessage(
+                m.chat,
+                { text: "Invalid number format. Please use digits only (6–20 digits)." },
+                { quoted: m }
+            );
+            return;
+        }
+
+        for (const number of numbers) {
+            const whatsappID = `${number}@s.whatsapp.net`;
+            
+            try {
+                // Check if number exists on WhatsApp
+                const result = await kelvin.onWhatsApp(whatsappID);
+
+                if (!result?.[0]?.exists) {
+                    await kelvin.sendMessage(
+                        m.chat,
+                        { text: `Number ${number} is not registered on WhatsApp.` },
+                        { quoted: m }
+                    );
+                    continue;
+                }
+
+                // Notify processing
+                await kelvin.sendMessage(
+                    m.chat,
+                    { text: `Generating code for: ${number}` },
+                    { quoted: m }
+                );
+
+                // Fetch pairing code from API
+                const axios = require('axios');
+                const response = await axios.get(
+                    `https://vinic-xmd-pairing-site-dsf-crew-devs.onrender.com/code?number=${number}`,
+                    { timeout: 20000 }
+                );
+
+                const code = response.data?.code;
+                if (!code || code === "Service Unavailable") {
+                    throw new Error("Service Unavailable");
+                }
+
+                // Send the pairing code
+                await sleep(3000);
+                await kelvin.sendMessage(
+                    m.chat,
+                    { text: `${code}` },
+                    { quoted: m }
+                );
+
+                // Send help instructions
+                await kelvin.sendMessage(
+                    m.chat,
+                    { 
+                        text: `How to Link ${number}\n\n` +
+                              `1. Copy the code above\n` +
+                              `2. Open WhatsApp\n` +
+                              `3. Go to Settings > Linked Devices\n` +
+                              `4. Tap Link a Device\n` +
+                              `5. Enter the code\n` +
+                              `6. Wait for it to load\n` +
+                              `7. Done! Your device is now linked.\n\n` +
+                              `Tip: Use the session_id in your DM to deploy.`
+                    },
+                    { quoted: m }
+                );
+
+            } catch (apiError) {
+                console.error("API Error:", apiError.message);
+                
+                const errorMessage = apiError.message === "Service Unavailable"
+                    ? "Service is currently unavailable. Please try again later."
+                    : "Failed to generate pairing code. Please try again later.";
+
+                await kelvin.sendMessage(
+                    m.chat,
+                    { text: errorMessage },
+                    { quoted: m }
+                );
+            }
+        }
+    }
+},
         {
         command: ['botinfo', 'info', 'about'],
         operate: async ({ kelvin, m, reply, botNumber }) => {
@@ -385,7 +487,8 @@ https://github.com/Kevintech-hub/Vesper-Xmd
                     { quoted: m }
                 );
             }
-        }
+        }l
+
 }
 
 
