@@ -166,7 +166,7 @@ module.exports = [
 },
 {
     command: ['listinactive', 'inactiveusers'],
-    operate: async ({ kelvin, m, reply, isGroup, from, getInactiveUsers,  groupName }) => {
+    operate: async ({ kelvin, m, reply, isGroup, from, getInactiveUsers, text,  groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
         try {
@@ -196,7 +196,7 @@ module.exports = [
 },
 {
     command: ['groupactivity', 'activity'],
-    operate: async ({ kelvin, m, reply, isGroup, getActiveUsers, from, groupName }) => {
+    operate: async ({ kelvin, m, reply, text, isGroup, getActiveUsers, from, groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
         try {
