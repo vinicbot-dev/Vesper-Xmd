@@ -196,7 +196,7 @@ module.exports = [
 },
 {
     command: ['groupactivity', 'activity'],
-    operate: async ({ kelvin, m, reply, text, isGroup, getActiveUsers, from, db groupName }) => {
+    operate: async ({ kelvin, m, reply, text, isGroup, getActiveUsers, from, db, groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
         try {
