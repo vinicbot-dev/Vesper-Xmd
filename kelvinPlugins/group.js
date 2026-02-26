@@ -140,10 +140,10 @@ Usage:
 module.exports = [
 {
     command: ['listactive', 'activeusers'],
-    operate: async ({ kelvin, m, reply, isGroup, getActiveUsers, from, groupName }) => {
+    operate: async ({ kelvin, m, reply, isGroup, from, GroupDB, groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
-        const activeUsers = await getActiveUsers(from, 15);
+        const activeUsers = await GroupDB.getActiveUsers(from, 15);
         
         if (!activeUsers.length) {
             return reply('*📊 No active users found in this group.*\n\nSend some messages first to track activity!');
@@ -166,13 +166,13 @@ module.exports = [
 },
 {
     command: ['listinactive', 'inactiveusers'],
-    operate: async ({ kelvin, m, reply,isGroup, from, getInactiveUsers, text,  groupName }) => {
+    operate: async ({ kelvin, m, reply,isGroup, from, GroupDB, text,  groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
         try {
             const metadata = await kelvin.groupMetadata(from);
             const allParticipants = metadata.participants.map(p => p.id);
-            const inactiveUsers = await getInactiveUsers(kelvin, from, allParticipants);
+            const inactiveUsers = await GroupDB.getInactiveUsers(kelvin, from, allParticipants);
             
             if (!inactiveUsers.length) {
                 return reply('*✅ No inactive users found in this group!*\n\nAll participants have sent messages.');
@@ -196,14 +196,14 @@ module.exports = [
 },
 {
     command: ['groupactivity', 'activity'],
-    operate: async ({ kelvin, m, reply, text, isGroup, getActiveUsers, from,groupName }) => {
+    operate: async ({ kelvin, m, reply, text, isGroup, GroupDB, from,groupName }) => {
         if (!isGroup) return reply(global.mess.notgroup);
         
         try {
             const metadata = await kelvin.groupMetadata(from);
             const allParticipants = metadata.participants.map(p => p.id);
-            const activeUsers = await getActiveUsers(from, 1000);
-            const inactiveUsers = await getInactiveUsers(kelvin, from, allParticipants);
+            const activeUsers = await GroupDB.getActiveUsers(from, 1000);
+            const inactiveUsers = await GroupDB.getInactiveUsers(kelvin, from, allParticipants);
             
             let message = `📊 *GROUP ACTIVITY - ${groupName || 'This Group'}*\n\n`;
             message += `*Total Members:* ${allParticipants.length}\n`;
