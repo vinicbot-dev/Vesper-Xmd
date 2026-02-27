@@ -1,3 +1,6 @@
+/*Kelvin Tech*/
+
+
 // MENU STYLES CONSTANT
 const MENU_STYLES = {
     '1': 'Document with thumbnail',
@@ -6,6 +9,18 @@ const MENU_STYLES = {
     '4': 'Image with caption',
     '5': 'Interactive message',
     '6': 'Payment request format'
+};
+
+const AVAILABLE_FONTS = {
+    '1': { name: 'Normal', style: 'normal' },
+    '2': { name: 'Bold', style: 'bold' },
+    '3': { name: 'Italic', style: 'italic' },
+    '4': { name: 'Monospace', style: 'monospace' },
+    '5': { name: 'Sans Serif', style: 'sans' },
+    '6': { name: 'Serif', style: 'serif' },
+    '7': { name: 'Cursive', style: 'cursive' },
+    '8': { name: 'Fancy', style: 'fancy' },
+    '9': { name: 'Small Caps', style: 'smallcaps' }
 };
 
 module.exports = [
@@ -444,6 +459,37 @@ if (!Access) return reply(global.mess.owner);
     const saved = await db.getMenuStyle(botNumber, '2');
     const raw = await db.get(botNumber, 'menu_style', '2'); // Direct DB check
     reply(`*📊 Menu style in database:* ${saved}\n*Raw value:* ${raw}\n*Style name:* ${MENU_STYLES[saved] || 'Unknown'}`);
+    }
+},
+{
+    command: ['setfont', 'font'],
+    operate: async ({ kelvin, m, reply, args, prefix, db, botNumber, Access, mess }) => {
+        if (!Access) return reply(mess.owner);
+
+        if (!args[0]) {
+            let fontList = '*╔══❖ AVAILABLE FONTS ❖══╗*\n\n';
+            const currentFont = await db.get(botNumber, 'bot_font', 'normal');
+            
+            for (let i = 1; i <= 9; i++) {
+                const font = AVAILABLE_FONTS[i];
+                const isCurrent = currentFont === font.style ? '✅ ' : '   ';
+                fontList += `${isCurrent}*${i}.* ${font.name}\n`;
+            }
+            fontList += `\n*╚══❖ Usage: ${prefix}setfont 1-9 ❖══╝*`;
+            return reply(fontList);
+        }
+
+        const fontNumber = args[0];
+        if (!AVAILABLE_FONTS[fontNumber]) {
+            return reply('*Invalid font! Please choose 1-9*');
+        }
+
+        const selectedFont = AVAILABLE_FONTS[fontNumber];
+        
+        // Save to database
+        await db.set(botNumber, 'bot_font', selectedFont.style);
+        
+        reply(`*✅ Font set to:* *${selectedFont.name}*\n\n*All bot responses will now use this font!*`);
     }
 }
 ];
