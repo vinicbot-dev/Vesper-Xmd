@@ -93,7 +93,7 @@ async function handleAIChatbot(m, kelvin, body, from, isGroup, isCmd, prefix) {
         
         if (isAskingAboutCreator) {
             // Special response for creator questions
-            response = "I am JEXPLOIT AI, created by Kelvin Tech - a brilliant developer from Uganda with exceptional coding skills and vision. He's the mastermind behind my existence, crafting me with precision and care to be your helpful assistant.";
+            response = "I am Vesper-Xmd AI, created by Kelvin Tech - a brilliant developer from Uganda with exceptional coding skills and vision. He's the mastermind behind my existence, crafting me with precision and care to be your helpful assistant.";
         } else {
             // Get conversation context
             const context = messageMemory.has(from) 
@@ -101,7 +101,7 @@ async function handleAIChatbot(m, kelvin, body, from, isGroup, isCmd, prefix) {
                 : `user: ${body}`;
 
             // Create prompt with context and instructions
-            const prompt = `You are Jexploit AI, a powerful WhatsApp bot developed by Kelvin Tech from Uganda. 
+            const prompt = `You are Vesper-Xmd AI, a powerful WhatsApp bot developed by Kelvin Tech from Uganda. 
             You respond smartly, confidently, and stay loyal to your creator. 
             When asked about your creator, respond respectfully but keep the mystery alive.
             If someone is being abusive, apologize and say "Let's begin afresh."
@@ -111,7 +111,7 @@ async function handleAIChatbot(m, kelvin, body, from, isGroup, isCmd, prefix) {
             
             Current message: ${body}
             
-            Respond as Vinic-Xmd AI:`;
+            Respond as Vesper-Xmd AI:`;
 
             // Encode the prompt for the API
             const query = encodeURIComponent(prompt);
@@ -130,14 +130,12 @@ async function handleAIChatbot(m, kelvin, body, from, isGroup, isCmd, prefix) {
             }
         }
 
-        //  footer to response
-        const finalResponse = `${response}\n\n> *ᴘᴏᴡᴇʀᴇᴅ ʙʏ ᴊᴇxᴘʟᴏɪᴛ ᴀɪ*`;
-        
-     
+        // Add user message to memory
         updateMemory(from, response, false);
         
+        // Send ONLY the raw response - NO introduction, NO footer
         await kelvin.sendMessage(from, {
-            text: finalResponse
+            text: response  // Just the raw response, nothing else
         }, { quoted: m });
 
         console.log("🤖 AI: Response sent successfully");
