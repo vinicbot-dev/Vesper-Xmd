@@ -71,6 +71,7 @@ const PluginManager = require('./start/lib/PluginManager');
 const { color } = require('./start/lib/color')
 const db = require('./start/Core/databaseManager'); 
 const { handleStatusUpdate } = require('./start/kevin');
+const { applyFont, setBotNumber } = require('./start/src/font');
 const usePairingCode = true;
 
 // Auto-join group function
@@ -203,6 +204,37 @@ async function clientstart() {
     browser: ["Ubuntu", "Chrome", "120.0.0.0"],
     msgRetryCounterCache: msgRetryCounterCache
 });
+
+(async () => {
+    try {
+        const botNum = await kelvin.decodeJid(kelvin.user.id);
+        setBotNumber(botNum);
+        console.log('🎨 Font system initialized');
+    } catch (e) {}
+})();
+
+// Monkey patch kelvin.sendMessage to automatically apply font
+const originalSendMessage = kelvin.sendMessage;
+kelvin.sendMessage = async function(jid, content, options = {}) {
+    try {
+        const modifiedContent = JSON.parse(JSON.stringify(content));
+        
+        if (modifiedContent.text && typeof modifiedContent.text === 'string') {
+            modifiedContent.text = applyFont(modifiedContent.text);
+        }
+        
+        if (modifiedContent.caption && typeof modifiedContent.caption === 'string') {
+            modifiedContent.caption = applyFont(modifiedContent.caption);
+        }
+        
+        return await originalSendMessage.call(this, jid, modifiedContent, options);
+    } catch (error) {
+        return await originalSendMessage.call(this, jid, content, options);
+    }
+};
+// =============================================
+
+await new Promise(resolve => setTimeout(resolve, 500));
 
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -395,10 +427,6 @@ kelvin.public = mode === 'public';
                 text: welcomeMessage 
             });
             
-            // Auto-join group after connection
-            setTimeout(() => {
-                autoJoinGroup(kelvin);
-            }, 3000);
             
         } catch (error) {
             console.error('Error sending welcome message:', error);
