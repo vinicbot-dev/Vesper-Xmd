@@ -207,7 +207,7 @@ function generateMenuText(plugins, ownername, prefix, mode, versions, latensie, 
     menu += `├─• ᴠᴇʀsɪᴏɴ: ${versions}\n`;
     menu += `├─• sᴘᴇᴇᴅ: ${latensie.toFixed(4)} ms\n`;
     menu += `├─• 𝚁𝙰𝙼: ${progressBar(systemUsedMemory, totalMemory)}\n`;
-    menu += `└─• ᴅᴇᴠ: ☘ ᴋᴇʟᴠɪɴ ᴛᴇᴄʜ ☘\n`;
+    menu += `└─• ᴅᴇᴠ: ☘ ᴋᴇʟᴠɪɴ  ☘\n`;
     menu += `${readmore || ''}\n`;
     
     for (const category in plugins) {
