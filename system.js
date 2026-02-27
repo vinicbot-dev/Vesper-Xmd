@@ -622,8 +622,8 @@ const mode = await db.get(botNumber, 'mode', 'public');
     await m.reply("*Loading menu*...");
     
     // Get menu style from database - this will load from DB every time
-    let menuStyle = await db.getMenuStyle(botNumber, '4'); // '4' is default if not set
-    menuStyle = String(menuStyle || '4'); // Ensure it's a string
+    let menuStyle = await db.getMenuStyle(botNumber, '2'); // '2' is default if not set
+    menuStyle = String(menuStyle || '2'); // Ensure it's a string
     
     console.log(`📊 Menu style loaded from DB: ${menuStyle}`); // Debug log
     
