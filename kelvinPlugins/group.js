@@ -1412,7 +1412,7 @@ module.exports = [
 },
  {
         command: ['allowlink'],
-        operate: async ({ kelvin, m, args, reply, Access, isGroup, db, text, botNumber, mentionedJid, quoted }) => {
+        operate: async ({ kelvin, m, args, reply, Access, isGroup, prefix, db, text, botNumber, mentionedJid, quoted }) => {
         if (!m.isGroup) return reply(mess.group);
     if (!m.isAdmin && !Access) return reply(mess.notadmin);
     if (!m.isBotAdmin) return reply(mess.botadmin);
