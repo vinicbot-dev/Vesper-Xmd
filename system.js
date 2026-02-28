@@ -153,28 +153,79 @@ async function ephoto(url, texk) {
 
 // Function to fetch MP3 download URL
 async function fetchMp3DownloadUrl(link) {
-  const fetchDownloadUrl1 = async (videoUrl) => {
-    const apiUrl = `https://api.nekolabs.my.id/downloader/youtube/play/v1?q=${encodeURIComponent(videoUrl)}`;
+  
+  // XWOLF API (primary)
+  const fetchFromXWolf = async (videoUrl) => {
     try {
-      const response = await axios.get(apiUrl);
-      if (response.status !== 200 || !response.data.success) {
-        throw new Error('Failed to fetch from NekoLabs API');
+      // Extract video ID from URL
+      let videoId = '';
+      const idMatch = videoUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
+      videoId = idMatch ? idMatch[1] : '';
+      
+      if (!videoId) {
+        throw new Error('Could not extract video ID');
       }
-      return response.data.result.downloadUrl;
+      
+      // Try XWolf API
+      const wolfUrl = `https://apis.xwolf.space/download/mp3?url=${encodeURIComponent(videoUrl)}`;
+      const response = await axios.get(wolfUrl, { timeout: 15000 });
+      
+      if (response.data && response.data.success) {
+        if (response.data.downloadUrl) {
+          console.log('✅ XWolf API successful (downloadUrl)');
+          return response.data.downloadUrl;
+        } else if (response.data.streamUrl) {
+          console.log('✅ XWolf API successful (streamUrl)');
+          return response.data.streamUrl;
+        }
+      }
+      
+      throw new Error('XWolf API returned invalid response');
     } catch (error) {
-      console.error('Error with NekoLabs API:', error.message);
+      console.error('Error with XWolf API:', error.message);
+      throw error;
+    }
+  };
+  
+  // KEITH API (fallback)
+  const fetchFromKeith = async (videoUrl) => {
+    try {
+      const apiUrl = `https://apiskeith.top/download/audio?url=${encodeURIComponent(videoUrl)}`;
+      const response = await axios.get(apiUrl, { timeout: 15000 });
+      
+      if (response.status !== 200 || !response.data?.status) {
+        throw new Error('Failed to fetch from Keith API');
+      }
+      
+      if (response.data.result) {
+        console.log('✅ Keith API successful');
+        return response.data.result;
+      }
+      
+      throw new Error('Keith API returned invalid response');
+    } catch (error) {
+      console.error('Error with Keith API:', error.message);
       throw error;
     }
   };
  
+  // Try XWolf first, then Keith as fallback
   try {
-    const downloadUrl = await fetchDownloadUrl1(link);
+    console.log('🎵 Trying XWolf API...');
+    const downloadUrl = await fetchFromXWolf(link);
     return downloadUrl;
-  } catch (error) {
-    console.error('Failed to fetch MP3 download URL:', error);
-    throw error;
+  } catch (xwolfError) {
+    console.log('⚠️ XWolf failed, trying Keith API...');
+    
+    try {
+      const keithDownloadUrl = await fetchFromKeith(link);
+      return keithDownloadUrl;
+    } catch (keithError) {
+      console.error('❌ Both APIs failed');
+      throw new Error('Unable to download audio. Please try again later.');
+    }
   }
-}  
+}
 
 function generateMenuText(plugins, ownername, prefix, mode, versions, latensie, readmore) {
     const memoryUsage = process.memoryUsage();
