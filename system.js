@@ -504,29 +504,22 @@ if (m.message && !m.message.protocolMessage) {
     await handleAntiEdit(m, kelvin);
 } 
 
-   if (m.isGroup && body && !m.key.fromMe) {
+ if (m.isGroup && body && !m.key.fromMe) {
     await checkAndHandleLinks(kelvin, {
         key: m.key,
         message: m.message
-    },  botNumber); 
+    }, m, botNumber);  
 }
 
 if (m.isGroup && m.message && !m.key.fromMe) {
     const mentionedUsers = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
     if (mentionedUsers.length > 0) {
-        await handleAntiTag(m, kelvin);
+        await handleAntiTag(kelvin, m, botNumber);  
     }
 } 
 
 if (m.isGroup && body) {
-    await handleAntiTagAdmin(kelvin, {
-        chat: m.chat,
-        sender: m.sender,
-        message: m.message,
-        key: m.key,
-        isGroup: true,
-        pushName: m.pushName || ''
-    });
+    await handleAntiTagAdmin(kelvin, m);
 }
 
  if ((m.mtype || '').includes("groupStatusMentionMessage") && m.isGroup) {
