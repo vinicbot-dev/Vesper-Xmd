@@ -1412,7 +1412,7 @@ module.exports = [
 },
  {
         command: ['allowlink'],
-        operate: async ({ kelvin, m, reply, Access, isGroup, db, text, botNumber, mentionedJid, quoted }) => {
+        operate: async ({ kelvin, m, args, reply, Access, isGroup, db, text, botNumber, mentionedJid, quoted }) => {
         if (!m.isGroup) return reply(mess.group);
     if (!m.isAdmin && !Access) return reply(mess.notadmin);
     if (!m.isBotAdmin) return reply(mess.botadmin);
@@ -1432,13 +1432,13 @@ module.exports = [
     
     // ADD USER
     if (action === 'add') {
-        if (!target) return reply('❌ Please mention the user, reply to their message, or provide their number!\nExample: .allowlink add @user');
+        if (!target) return reply('Please mention the user, reply to their message, or provide their number!\nExample: .allowlink add @user');
         
         const jid = target.includes('@s.whatsapp.net') ? target : target + '@s.whatsapp.net';
         let allowed = await db.getGroupSetting(botNumber, m.chat, 'allowlink', []);
         
         if (allowed.includes(jid)) {
-            return reply(`❌ @${jid.split('@')[0]} is already in allowlist`, { mentions: [jid] });
+            return reply(`@${jid.split('@')[0]} is already in allowlist`, { mentions: [jid] });
         }
         
         allowed.push(jid);
