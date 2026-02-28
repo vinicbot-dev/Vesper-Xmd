@@ -26,7 +26,7 @@ module.exports = [
 
 {
     command: ['song', 'mp3'],
-    operate: async ({ kelvin, m, reply, text, prefix, command, axios }) => {
+    operate: async ({ kelvin, m, reply, text, prefix, command }) => {
         
         if (!text) return reply(`📌 Example: ${prefix + command} shape of you`);
         
