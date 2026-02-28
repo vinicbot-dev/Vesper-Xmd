@@ -1,3 +1,5 @@
+/*Kelvin Tech*/
+
 const timezones = global.timezones || "Africa/Kampala";
 const moment = require("moment-timezone")
 const more = String.fromCharCode(8206);
@@ -87,6 +89,22 @@ function storeMessage(chatId, messageId, messageData) {
     } catch (error) {
         console.error("Error storing message:", error);
     }
+}
+
+// Helper function to extract message text
+function extractMessageText(message) {
+    if (!message) return '';
+    
+    if (message.conversation) {
+        return message.conversation;
+    } else if (message.extendedTextMessage && message.extendedTextMessage.text) {
+        return message.extendedTextMessage.text;
+    } else if (message.imageMessage && message.imageMessage.caption) {
+        return message.imageMessage.caption;
+    } else if (message.videoMessage && message.videoMessage.caption) {
+        return message.videoMessage.caption;
+    }
+    return '';
 }
 
 async function handleAntiDelete(m, kelvin) {
@@ -405,7 +423,7 @@ async function handleLinkViolation(kelvin, m, message, botNumber) {
         }
         
         const isEnabled = await db.getGroupSetting(botNumber, chatId, 'antilink', false);
-        const mode = await db.getGroupSetting(botNumber, chatId, 'antilinkmode', 'delete'); // Changed to antilinkmode
+        const mode = await db.getGroupSetting(botNumber, chatId, 'antilinkmode', 'delete');
         const allowlink = await db.getGroupSetting(botNumber, chatId, 'allowlink', []); 
         
         // Check if sender is allowed to post links
@@ -419,6 +437,8 @@ async function handleLinkViolation(kelvin, m, message, botNumber) {
         // Detect URLs in the message
         const urls = detectUrls(message.message);
         if (urls.length === 0) return;
+
+        console.log(`🔗 Link detected from ${sender} in ${chatId} - Mode: ${mode}`);
 
         // Delete the message
         try {
@@ -464,7 +484,7 @@ async function handleLinkViolation(kelvin, m, message, botNumber) {
                     }
                 }
                 
-                await delay(1000);
+                await sleep(1000);
                 await kelvin.sendMessage(chatId, {
                     text: responseMessage,
                     mentions: [sender]
@@ -475,13 +495,13 @@ async function handleLinkViolation(kelvin, m, message, botNumber) {
             case 'kick': {
                 try {
                     await kelvin.groupParticipantsUpdate(chatId, [sender], "remove");
-                    await delay(1000);
+                    await sleep(1000);
                     await kelvin.sendMessage(chatId, {
                         text: `🚫 @${sender.split('@')[0]} *has been removed for posting links*.`,
                         mentions: [sender]
                     });
                 } catch (kickError) {
-                    await delay(1000);
+                    await sleep(1000);
                     await kelvin.sendMessage(chatId, {
                         text: `⚠️ @${sender.split('@')[0]}, links are not allowed! (Failed to remove - check bot permissions)`,
                         mentions: [sender]
@@ -517,11 +537,10 @@ async function checkAndHandleLinks(kelvin, message, m, botNumber) {
         const urls = detectUrls(message.message);
         if (urls.length === 0) return;
         
-        await handleLinkViolation(kelvin, message,  botNumber);
+        await handleLinkViolation(kelvin, m, message, botNumber);
         
-       
     } catch (error) {
-        // Silently handle errors
+        console.error('Error in checkAndHandleLinks:', error);
     }
 }
 
@@ -541,7 +560,7 @@ async function handleAntiTag(kelvin, m, botNumber) {
             return;
         }
         
-        // Get antitag settings - NO ALLOWLIST
+        // Get antitag settings
         const isEnabled = await db.getGroupSetting(botNumber, chatId, 'antitag', false);
         const mode = await db.getGroupSetting(botNumber, chatId, 'antitagmode', 'delete');
         
@@ -551,6 +570,8 @@ async function handleAntiTag(kelvin, m, botNumber) {
         const mentionedUsers = m.message?.extendedTextMessage?.contextInfo?.mentionedJid || [];
         
         if (mentionedUsers.length > 0) {
+            console.log(`👥 Tag detected from ${sender} in ${chatId} - Mode: ${mode}`);
+            
             // Delete the message
             try {
                 await kelvin.sendMessage(chatId, { delete: m.key });
@@ -634,7 +655,7 @@ async function handleAntiTagAdmin(kelvin, m) {
         const sender = m.sender;
         const message = m.message;
         
-        // Get antitag admin settings - NO ALLOWLIST
+        // Get antitag admin settings
         const isEnabled = await db.getGroupSetting(botNumber, chatId, 'antitagadmin', false);
         const action = await db.getGroupSetting(botNumber, chatId, 'antitagadminaction', 'warn');
         
@@ -661,6 +682,8 @@ async function handleAntiTagAdmin(kelvin, m) {
         const isTaggingAdmin = mentionedUsers.some(user => admins.includes(user));
         
         if (hasAdminMention || isTaggingAdmin) {
+            console.log(`👑 Admin tag detected from ${sender} in ${chatId} - Action: ${action}`);
+            
             // Delete the message
             try {
                 await kelvin.sendMessage(chatId, { delete: m.key });
@@ -927,13 +950,13 @@ async function handleAntipromote(kelvin, chatId, participants, author) {
         return false;
     }
 }
+
 // Function to handle status updates
 async function handleStatusUpdate(kelvin, status) {
     try {
         // Get bot number
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
         
-        // ✅ GET SETTINGS FROM SQLITE
         const autoviewstatus = await db.get(botNumber, 'autoviewstatus', false);
         const autoreactstatus = await db.get(botNumber, 'autoreactstatus', false);
         const statusemoji = await db.get(botNumber, 'statusemoji', '💚');
