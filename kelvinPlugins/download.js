@@ -1,3 +1,5 @@
+/*Kelvin Tech*/
+
 const axios = require('axios');
 const fs = require('fs');
 const fg = require('api-dylux')
@@ -24,41 +26,31 @@ module.exports = [
 
 {
     command: ['song', 'mp3'],
-    operate: async ({ kelvin, m, reply, text, prefix, command }) => {
+    operate: async ({ kelvin, m, reply, text, prefix, command, axios }) => {
         
         if (!text) return reply(`📌 Example: ${prefix + command} shape of you`);
         
         try {
             await reply("🔍 Searching...");
             
-            // Search for the song
-            const searchUrl = `https://meta-api.zone.id/search/youtube?query=${encodeURIComponent(text)}`;
-            const searchRes = await axios.get(searchUrl, { timeout: 30000 });
-            const searchData = searchRes.data;
+            // Encode the search query
+            const searchQuery = encodeURIComponent(text);
             
-            if (!searchData?.result?.[0]?.videoId) {
-                return reply("❌ No results found.");
+           
+            const apiUrl = `https://apis.xwolf.space/download/mp3?url=${searchQuery}`;
+            
+            const response = await axios.get(apiUrl, { timeout: 30000 });
+            const data = response.data;
+            
+            // Check if response is successful
+            if (!data || !data.success) {
+                throw new Error(data?.message || 'API returned an error');
             }
             
-            const videoId = searchData.result[0].videoId;
-            const title = searchData.result[0].title || text;
-            const thumbnail = searchData.result[0].thumbnail || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-            
-            // Get download link - try direct MP3 first
-            const downloadUrl = `https://meta-api.zone.id/downloader/youtube?url=https://youtu.be/${videoId}`;
-            const downloadRes = await axios.get(downloadUrl, { timeout: 30000 });
-            const downloadData = downloadRes.data;
-            
-            let audioUrl = null;
-            
-            // Try different possible locations for audio URL
-            if (downloadData?.result?.audio) {
-                audioUrl = downloadData.result.audio;
-            } else if (downloadData?.result?.url) {
-                audioUrl = downloadData.result.url;
-            } else if (downloadData?.result?.formats?.[0]?.url) {
-                audioUrl = downloadData.result.formats[0].url;
-            }
+            const title = data.title || text;
+            const videoId = data.videoId || '';
+            const thumbnail = data.thumbnail || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+            const audioUrl = data.downloadUrl || data.streamUrl;
             
             if (!audioUrl) {
                 return reply("❌ Couldn't get audio download link.");
@@ -69,7 +61,7 @@ module.exports = [
                 react: { text: "🎵", key: m.key }
             });
             
-            // Send song info
+            // Send song info with thumbnail
             await kelvin.sendMessage(
                 m.chat,
                 {
@@ -87,14 +79,35 @@ module.exports = [
                 {
                     audio: { url: audioUrl },
                     mimetype: "audio/mpeg",
-                    fileName: `${title.substring(0, 50)}.mp3`
+                    fileName: `${title.substring(0, 50)}.mp3`.replace(/[<>:"/\\|?*]/g, '_')
                 },
                 { quoted: m }
             );
             
+            // Success reaction
+            await kelvin.sendMessage(m.chat, {
+                react: { text: "✅", key: m.key }
+            });
+            
         } catch (err) {
-            console.error(err);
-            reply(`❌ Error: ${err.message}`);
+            console.error('Song command error:', err);
+            
+            let errorMessage = '❌ Error downloading song. ';
+            
+            if (err.message.includes('timeout')) {
+                errorMessage += 'Request timed out.';
+            } else if (err.message.includes('API returned an error')) {
+                errorMessage += 'Service unavailable.';
+            } else {
+                errorMessage += err.message;
+            }
+            
+            reply(errorMessage);
+            
+            // Error reaction
+            await kelvin.sendMessage(m.chat, {
+                react: { text: "❌", key: m.key }
+            });
         }
     }
 },
@@ -102,13 +115,13 @@ module.exports = [
     command: ['play2',],
     operate: async ({ kelvin, m, reply, text, prefix,  mess, command }) => {
         
-        if (!text) return reply("❌ *Please provide a song name!*\nExample: `.play2 despacito`");
+        if (!text) return reply("*Please provide a song name!*\nExample: `.play2 despacito`");
         
         try {
             const searchQuery = text.trim();
             
             if (!searchQuery) {
-                return reply("❌ *Please provide a song name!*\nExample: `.play2 despacito`");
+                return reply("*Please provide a song name!*\nExample: `.play2 despacito`");
             }
             
             // React with 🎵 emoji
