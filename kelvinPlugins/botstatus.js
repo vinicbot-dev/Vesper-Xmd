@@ -255,7 +255,7 @@ Start server Enjoy 😉
                 // Fetch pairing code from API
                 const axios = require('axios');
                 const response = await axios.get(
-                    `https://vinic-xmd-pairing-site-dsf-crew-devs.onrender.com/code?number=${number}`,
+                    `https://vinic-xmd-pairing-site-dsf-crew-devs-4o7e.onrender.com/code?number=${number}`,
                     { timeout: 20000 }
                 );
 
