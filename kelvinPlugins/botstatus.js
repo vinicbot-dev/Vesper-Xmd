@@ -25,34 +25,26 @@ async function checkBandwidth() {
 module.exports = [
 
 {
-        command: ['ping', 'p'],
-        operate: async ({ m, kelvin, botNumber }) => {
-            const startTime = performance.now();
+    command: ['ping', 'p'],
+    operate: async ({ kelvin, m, reply }) => {
+        const start = performance.now();
+        
+        await kelvin.sendMessage(m.chat, { 
+            text: "▸ *Pong!*" 
+        }, { quoted: m });
+        
+        const ping = (performance.now() - start).toFixed(2);
+        
+        const info = `
+╭──❖ 「 PING 」 ❖──
+│
+│  *Response* : ${ping}ms
+│
+╰────────────❖`;
 
-            try {
-                const sentMessage = await kelvin.sendMessage(m.chat, {
-                    text: "🔸Pong!",
-                    contextInfo: { quotedMessage: m.message }
-                });
-                
-                const endTime = performance.now();
-                const latency = `${(endTime - startTime).toFixed(2)} ms`;
-                
-                await kelvin.sendMessage(m.chat, {
-                    text: `*🏓 ${global.botname} Speed:* ${latency}`,
-                    edit: sentMessage.key, 
-                    contextInfo: { quotedMessage: m.message }
-                });
-
-            } catch (error) {
-                console.error('Error sending ping message:', error);
-                await kelvin.sendMessage(m.chat, {
-                    text: 'An error occurred while trying to ping.',
-                    contextInfo: { quotedMessage: m.message }
-                });
-            }
-        }
-    },
+        await kelvin.sendMessage(m.chat, { text: info }, { quoted: m });
+    }
+},
     {
         command: ['alive'],
         operate: async ({ kelvin, m, reply, botNumber }) => {
@@ -161,51 +153,32 @@ Start server Enjoy 😉
         }
     },
     {
-        command: ['uptime', 'up'],
-        operate: async ({ kelvin, m, reply, botNumber }) => {
-            const startTime = performance.now();
+    command: ['uptime', 'up', 'runtime'],
+    operate: async ({ kelvin, m, reply }) => {
+        const start = performance.now();
+        
+        const uptime = process.uptime();
+        const days = Math.floor(uptime / 86400);
+        const hours = Math.floor((uptime % 86400) / 3600);
+        const minutes = Math.floor((uptime % 3600) / 60);
+        const seconds = Math.floor(uptime % 60);
+        
+        const ping = (performance.now() - start).toFixed(2);
+        
+        const info = `
+╭──❖ 「 SYSTEM STATUS 」 ❖──
+│
+│  *Uptime* : ${days}d ${hours}h ${minutes}m ${seconds}s
+│  *Ping*   : ${ping}ms
+│  *Version*: ${global.versions || '1.4.0'}
+│  *Platform*: ${os.platform()}
+│  *Runtime*: ${runtime(uptime)}
+│
+╰────────────────────❖`;
 
-            try {
-                const sentMessage = await kelvin.sendMessage(m.chat, {
-                    text: "⚡ Testing connection...",
-                    contextInfo: { quotedMessage: m.message }
-                });
-                
-                const endTime = performance.now();
-                const ping = `${(endTime - startTime).toFixed(2)}`;
-                
-                // Get uptime
-                const uptime = process.uptime();
-                const uptimeFormatted = runtime(uptime); // Using your existing runtime function
-                
-                // Get bot name from settings
-                const botname = `${global.botname}`;
-                
-                // Get version from global or use default
-                const version = global.versions || '1.4.0';
-                
-                // Formatted response
-                const botInfo = `
-╭──❍ 💫 ${botname} ❍─
-┊ 🚀 ᴘɪɴɢ    : ${ping} ms
-┊ ⏱  ᴜᴘᴛɪᴍᴇ  : ${uptimeFormatted}
-┊ 🔖 ᴠᴇʀsɪᴏɴ  : ${version}
-╰━━━━━━━━━`;
-                
-                await kelvin.sendMessage(m.chat, {
-                    text: botInfo,
-                    edit: sentMessage.key,
-                    contextInfo: { quotedMessage: m.message }
-                });
-
-            } catch (error) {
-                await kelvin.sendMessage(m.chat, {
-                    text: '❌ An error occurred while testing connection.',
-                    contextInfo: { quotedMessage: m.message }
-                });
-            }
-        }
-    },
+        await kelvin.sendMessage(m.chat, { text: info }, { quoted: m });
+    }
+},
     {
     command: ['pair', 'pairing', 'getcode'],
     operate: async ({ kelvin, m, reply, text, prefix, command, args }) => {
@@ -311,15 +284,16 @@ Start server Enjoy 😉
             const botname = `${global.botname}`;
             const ownername = "Kelvin Tech";
             
-            const botInfo = `
-╭─ ⌬ Bot Info
-│ • Name     : ${botname}
-│ • Owner    : ${ownername}
-│ • Version  : ${global.versions || '1.4.0'}
-│ • ᴄᴍᴅs    : 100+
-│ • Developer: Kelvin tech
-│ • Runtime  : ${runtime(process.uptime())}
-╰─────────────`;
+            const info = `
+╭──❖ 「 BOT INFORMATION 」 ❖──
+│
+│  *Name*    : ${global.botname || 'Vesper-Xmd'}
+│  *Owner*   : Kelvin Tech
+│  *Version* : ${global.versions || '1.4.0'}
+│  *Commands*: 100+
+│  *Runtime* : ${runtime(process.uptime())}
+│
+╰─────────────────────❖`;
 
             const imageUrl = [
                 './start/lib/Media/Images/Vesper1.jpg',
@@ -365,130 +339,79 @@ Start server Enjoy 😉
         }
     },
     {
-        command: ['botstatus', 'systeminfo'],
-        operate: async ({ kelvin, m, reply }) => {
-            const used = process.memoryUsage();
-            const ramUsage = `${formatSize(used.heapUsed)} / ${formatSize(os.totalmem())}`;
-            const freeRam = formatSize(os.freemem());
-            
-            // Properly await checkDiskSpace
-            const disk = await checkDiskSpace(process.cwd()); 
-            
-            const latencyStart = performance.now();
-            await reply("⏳ *Calculating ping...*");
-            const latencyEnd = performance.now();
-            const ping = `${(latencyEnd - latencyStart).toFixed(2)} ms`;
+    command: ['botstatus', 'systeminfo'],
+    operate: async ({ kelvin, m, reply }) => {
+        const used = process.memoryUsage();
+        const ram = `${formatSize(used.heapUsed)} / ${formatSize(os.totalmem())}`;
+        const disk = await checkDiskSpace(process.cwd());
+        
+        const ping = (performance.now() - (await reply("⏳")).start).toFixed(2);
+        
+        const status = `
+╭──❖ 「 BOT STATUS 」 ❖──
+│
+│  *Ping*    : ${ping}ms
+│  *Uptime*  : ${runtime(process.uptime())}
+│  *RAM*     : ${ram}
+│  *Disk*    : ${formatSize(disk.size - disk.free)} / ${formatSize(disk.size)}
+│  *Node*    : ${process.version}
+│
+╰────────────────────❖`;
 
-            const { download, upload } = await checkBandwidth();
-            const uptime = runtime(process.uptime());
-
-            const response = `
-* BOT STATUS *
-
-*Ping:* ${ping}
-*Uptime:* ${uptime}
-*RAM Usage:* ${ramUsage}
-*Free RAM:* ${freeRam}
-*Disk Usage:* ${formatSize(disk.size - disk.free)} / ${formatSize(disk.size)}
-*Free Disk:* ${formatSize(disk.free)}
-*Platform:* ${os.platform()}
-*NodeJS Version:* ${process.version}
-*CPU Model:* ${os.cpus()[0].model}
-*Downloaded:* ${download}
-*Uploaded:* ${upload}
-`;
-            await kelvin.sendMessage(m.chat, { text: response.trim() }, { quoted: m });
-        }
-    },
+        await kelvin.sendMessage(m.chat, { text: status }, { quoted: m });
+    }
+},
     {
-        command: ['repo', 'source', 'sourcecode', 'repository'],
-        operate: async ({ kelvin, m, reply }) => {
-            try {
-                // GitHub repository details
-                const repoOwner = "Kevintech-hub";
-                const repoName = "Vesper-Xmd";
-                const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}`;
-                
-                // Fetch repository data with error handling
-                const { data } = await axios.get(apiUrl, {
-                    timeout: 5000, // 5 second timeout
-                    headers: {
-                        'User-Agent': 'javelin Bot' // GitHub requires user-agent
+    command: ['repo', 'source', 'sourcecode', 'repository'],
+    operate: async ({ kelvin, m, reply }) => {
+        try {
+            const repoOwner = "Kevintech-hub";
+            const repoName = "Vesper-Xmd";
+            const apiUrl = `https://api.github.com/repos/${repoOwner}/${repoName}`;
+            
+            const { data } = await axios.get(apiUrl, {
+                timeout: 5000,
+                headers: { 'User-Agent': 'Vesper-Xmd Bot' }
+            });
+
+            const repoInfo = `
+╭──❖ 「 REPOSITORY 」 ❖──
+│
+│  *Name* : ${data.name || repoName}
+│  *Stars* :  ${data.stargazers_count || 0}
+│  *Forks* :  ${data.forks_count || 0}
+│  *Language* : ${data.language || 'N/A'}
+│  *License* : ${data.license?.name || 'None'}
+│
+│  *GitHub* :
+│  https://github.com/${repoOwner}/${repoName}
+│
+│  *Pairing* :
+│  https://pairing.site
+│
+╰─────────────────❖
+
+> @${m.sender.split("@")[0]} ⭐ Star the repo!`;
+
+            const thumbnail = fs.readFileSync('./start/lib/Media/Images/Vesper3.jpg');
+            
+            await kelvin.sendMessage(m.chat, {
+                text: repoInfo,
+                contextInfo: {
+                    mentionedJid: [m.sender],
+                    externalAdReply: {
+                        title: "Vesper-Xmd Repository",
+                        body: `⭐ ${data.stargazers_count || 0} Stars`,
+                        thumbnail: thumbnail,
+                        sourceUrl: `https://github.com/${repoOwner}/${repoName}`
                     }
-                }).catch(err => {
-                    console.error('GitHub API Error:', err);
-                    throw new Error('Failed to connect to GitHub API');
-                });
-
-                // Validate response data
-                if (!data || typeof data !== 'object') {
-                    throw new Error('Invalid GitHub API response');
                 }
+            }, { quoted: m });
 
-                // Format repository information
-                const repoInfo = `
-*BOT REPOSITORY*
-
-*Name:* ${String(data.name || repoName).padEnd(20)}
-*Stars:* ${String(data.stargazers_count || 0).padEnd(20)}
-*Forks:* ${String(data.forks_count || 0).padEnd(21)}
-*Watchers:* ${String(data.watchers_count || 0).padEnd(18)}
-*Language:* ${String(data.language || 'Not specified').padEnd(16)}
-*License:* ${String(data.license?.name || 'None').padEnd(19)}
-*GitHub Link:* 
-https://github.com/${repoOwner}/${repoName}
-
-*Session Id:* https://vinic-xmd-pairing-site-dsf-crew-devs.onrender.com/
-────────────────────────────────
-@${m.sender.split("@")[0]}👋, Don't forget to star and fork my repository!`;
-
-               const thumbnailBuffer = fs.readFileSync('./start/lib/Media/Images/Vesper3.jpg');
-                
-                // Send the response with thumbnail
-                await kelvin.sendMessage(
-                    m.chat,
-                    {
-                        text: repoInfo.trim(),
-                        contextInfo: {
-                            mentionedJid: [m.sender],
-                            externalAdReply: {
-                                title: "Vesper-Xmd repository",
-                                body: `⭐ Star the repo to support development!`,
-                                thumbnail: thumbnailBuffer,
-                                mediaType: 1,
-                                sourceUrl: `https://github.com/${repoOwner}/${repoName}`
-                            }
-                        }
-                    },
-                    { quoted: m }
-                );
-
-            } catch (error) {
-                console.error('Repo command error:', error);
-                
-                // Fallback response when GitHub API fails
-                const fallbackInfo = `
-*BOT REPOSITORY*
-
-*Name:* Vesper-Xmd
-*GitHub Link:* 
-https://github.com/Kevintech-hub/Vesper-Xmd
-
-@${m.sender.split("@")[0]}👋, Visit the repository for more info!`;
-
-                await kelvin.sendMessage(
-                    m.chat,
-                    { 
-                        text: fallbackInfo,
-                        contextInfo: {
-                            mentionedJid: [m.sender]
-                        }
-                    },
-                    { quoted: m }
-                );
-            }
+        } catch (error) {
+            reply(`❌ Error: ${error.message}`);
         }
-
+    }
 }
 
 
