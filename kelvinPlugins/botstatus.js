@@ -27,22 +27,36 @@ module.exports = [
 {
     command: ['ping', 'p'],
     operate: async ({ kelvin, m, reply }) => {
-        const start = performance.now();
+        const start = Date.now();
         
-        await kelvin.sendMessage(m.chat, { 
-            text: "▸ *Pong!*" 
+        const sent = await kelvin.sendMessage(m.chat, { 
+            text: "⚡ *Pinging...*" 
         }, { quoted: m });
         
-        const ping = (performance.now() - start).toFixed(2);
+        const ping = Date.now() - start;
         
-        const info = `
-╭──❖ 「 PING 」 ❖──
-│
-│  *Response* : ${ping}ms
-│
-╰────────────❖`;
+        // Status indicator based on ping
+        let status, emoji;
+        if (ping < 200) { status = "Excellent"; emoji = "🚀"; }
+        else if (ping < 400) { status = "Good"; emoji = "⚡"; }
+        else if (ping < 600) { status = "Average"; emoji = "🌐"; }
+        else { status = "Slow"; emoji = "🐢"; }
+        
+        const response = `
+┏━━❖ *PING TEST* ❖━━
+┃
+┃  ${emoji} *${ping}ms*
+┃  📊 *${status}*
+┃
+┃  • Server: ${os.hostname()}
+┃  • Time: ${moment().format('HH:mm:ss')}
+┃
+┗━━━━━━━━━━━━━━━━`;
 
-        await kelvin.sendMessage(m.chat, { text: info }, { quoted: m });
+        await kelvin.sendMessage(m.chat, {
+            text: response,
+            edit: sent.key
+        });
     }
 },
     {
