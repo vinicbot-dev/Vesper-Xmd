@@ -193,6 +193,76 @@ async getMenuStyle(botNumber, defaultValue = '2') {
 async setMenuStyle(botNumber, style) {
     return await this.set(botNumber, 'menu_style', style);
 }
+// ==================== FONT SETTINGS ====================
+
+async getFont(botNumber, defaultValue = 'normal') {
+    return await this.get(botNumber, 'bot_font', defaultValue);
+}
+
+async setFont(botNumber, fontStyle) {
+    return await this.set(botNumber, 'bot_font', fontStyle);
+}
+
+// ==================== ANTIBADWORD SETTINGS ====================
+
+async function setBadword(botNumber, groupId, word) {
+    let badwords = await this.getGroupSetting(botNumber, groupId, 'badwords', []);
+    if (!badwords.includes(word)) {
+        badwords.push(word);
+        await this.setGroupSetting(botNumber, groupId, 'badwords', badwords);
+        return true;
+    }
+    return false;
+}
+
+async function removeBadword(botNumber, groupId, word) {
+    let badwords = await this.getGroupSetting(botNumber, groupId, 'badwords', []);
+    const index = badwords.indexOf(word);
+    if (index > -1) {
+        badwords.splice(index, 1);
+        await this.setGroupSetting(botNumber, groupId, 'badwords', badwords);
+        return true;
+    }
+    return false;
+}
+
+async function getBadwords(botNumber, groupId) {
+    return await this.getGroupSetting(botNumber, groupId, 'badwords', []);
+}
+
+async function setBadwordAction(botNumber, groupId, action) {
+    return await this.setGroupSetting(botNumber, groupId, 'badwordaction', action);
+}
+
+async function getBadwordAction(botNumber, groupId) {
+    return await this.getGroupSetting(botNumber, groupId, 'badwordaction', 'delete');
+}
+
+async function setBadwordStatus(botNumber, groupId, enabled) {
+    return await this.setGroupSetting(botNumber, groupId, 'antibadword', enabled);
+}
+
+async function getBadwordStatus(botNumber, groupId) {
+    return await this.getGroupSetting(botNumber, groupId, 'antibadword', false);
+}
+
+// ==================== ANTISTICKER SETTINGS ====================
+
+async function setAntistickerStatus(botNumber, groupId, enabled) {
+    return await this.setGroupSetting(botNumber, groupId, 'antisticker', enabled);
+}
+
+async function getAntistickerStatus(botNumber, groupId) {
+    return await this.getGroupSetting(botNumber, groupId, 'antisticker', false);
+}
+
+async function setAntistickerAction(botNumber, groupId, action) {
+    return await this.setGroupSetting(botNumber, groupId, 'antistickeraction', action);
+}
+
+async function getAntistickerAction(botNumber, groupId) {
+    return await this.getGroupSetting(botNumber, groupId, 'antistickeraction', 'delete');
+}
 
     // ==================== CACHE MANAGEMENT ====================
 
