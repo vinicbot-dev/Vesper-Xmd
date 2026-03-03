@@ -58,6 +58,8 @@ const {
     checkAndHandleLinks,
     handleAntiTag,
     handleAntiTagAdmin,
+    handleBadword,
+    handleAntisticker,
     handleAntiEdit,
     handleMessageStore 
 } = require('./start/kevin');
@@ -547,6 +549,14 @@ if (m.isGroup && !m.key.fromMe && body && body.trim().length > 0) {
     } catch (error) {
         console.error('Error tracking user activity:', error.message);
     }
+}
+
+if (m.isGroup && body && !m.key.fromMe) {
+    await handleBadword(kelvin, m, botNumber);
+}
+
+if (m.isGroup && !m.key.fromMe) {
+    await handleAntisticker(kelvin, m, botNumber);
 }
 
 if (global.alwaysonline === true || global.alwaysonline === 'true') {
