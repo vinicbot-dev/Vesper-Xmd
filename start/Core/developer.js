@@ -8,7 +8,7 @@ const fs = require('fs');
 
 global.owner = ["Kelvin Tech"];  
 global.status = false; // true = public, false = private
-global.versions = "v1.2.2";
+global.versions = "v1.2.0";
 global.botname = "Vesper-Xmd"; 
 
 // ========= Other Global Settings ========= //
@@ -45,7 +45,7 @@ global.mess = {
   done: "Mission complete ✅",
   notext: "Please provide the necessary text",
   premium: "*First become a premium user*",
-  botadmin: "Please bot needs admin privileges to use this command!",
+  botadmin: "The bot needs admin permission to perform this command!",
   botnotadmin: "Please first make bot admin to use this command!",
   limited: "*Limit reached*",
   helpersList: [
