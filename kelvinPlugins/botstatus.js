@@ -347,7 +347,9 @@ Start server Enjoy 😉
         const ram = `${formatSize(used.heapUsed)} / ${formatSize(os.totalmem())}`;
         const disk = await checkDiskSpace(process.cwd());
         
-        const ping = (performance.now() - (await reply("⏳")).start).toFixed(2);
+        const start = performance.now();
+        await reply("⏳ *Calculating...*");
+        const ping = (performance.now() - start).toFixed(2);
         
         const status = `
 ╭──❖ 「 BOT STATUS 」 ❖──
