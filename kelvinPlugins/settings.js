@@ -143,13 +143,13 @@ Current Mode: ${currentMode}
         
         case 'chat': {
             await db.set(botNumber, 'antiedit', 'chat');
-            reply(`✅ Anti-edit set to chat mode (alerts sent to same chat)`);
+            reply(`✅ *Successfully enabled antiedit chat mode*`);
             break;
         }
         
         case 'private': {
             await db.set(botNumber, 'antiedit', 'private');
-            reply(`✅ Anti-edit set to private mode (alerts sent to bot owner)`);
+            reply(`✅ *Successfully enabled antiedit private mode*`);
             break;
         }
         
@@ -300,7 +300,7 @@ Current Mode: ${currentMode}
     if (mode === 'decline') {
         if (action === 'on') {
             await db.set(botNumber, 'anticall', 'decline');
-            return reply('✅ Anticall ON (calls will be declined)');
+            return reply('✅ *Successfully enabled anticall decline mode*)');
         }
         if (action === 'off') {
             await db.set(botNumber, 'anticall', 'off');
@@ -312,7 +312,7 @@ Current Mode: ${currentMode}
     if (mode === 'block') {
         if (action === 'on') {
             await db.set(botNumber, 'anticall', 'block');
-            return reply('✅ Anticall BLOCK ON (callers will be blocked)');
+            return reply('✅ *Successfully enabled anticall block mode*');
         }
         if (action === 'off') {
             await db.set(botNumber, 'anticall', 'off');
