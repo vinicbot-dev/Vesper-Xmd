@@ -48,57 +48,54 @@ module.exports = [
     }
 },
     {
-        command: ['alive'],
-        operate: async ({ kelvin, m, reply, botNumber }) => {
-            const botUptime = runtime(process.uptime());
-            
-            // Array of image URLs
-            const imageUrls = [
-                './start/lib/Media/Images/Vesper1.jpg',
-                './start/lib/Media/Images/Vesper2.jpg',
-                './start/lib/Media/Images/Vesper3.jpg',
-                './start/lib/Media/Images/Vesper4.jpg'
-                
-            ];
-            
-           const audioUrls = [
-    './start/lib/Media/JexAudio1.mp3',
-    './start/lib/Media/JexAudio2.mp3',
-    './start/lib/Media/JexAudio3.mp3',
-    './start/lib/Media/JexAudio4.mp3',
-    './start/lib/Media/JexAudio5.mp3',
-    './start/lib/Media/JexAudio6.mp3',
-    './start/lib/Media/JexAudio7.mp3'
-];
-            
-            // Randomly select an image URL
-            const randomImageUrl = imageUrls[Math.floor(Math.random() * imageUrls.length)];
-            
-            // Randomly select an audio URL
-            const randomAudioUrl = audioUrls[Math.floor(Math.random() * audioUrls.length)];
-            
-            // Send the randomly selected image with caption
-            await kelvin.sendMessage(
-                m.chat, 
-                { 
-                    image: { url: randomImageUrl },
-                    caption: `*🌹Hi. I am 👑 ${global.botname}, a friendly advanced WhatsApp bot.  Don't worry, I'm still Alive☺🚀*\n\n*⏰ Uptime: ${botUptime}*`
-                },
-                { quoted: m }
-            );
-            
-            // Send the randomly selected audio as PTT
-            await kelvin.sendMessage(
-                m.chat,
-                {
-                    audio: { url: randomAudioUrl },
-                    mp3: true,
-                    mimetype: 'audio/mp4'
-                },
-                { quoted: m }
-            );
-        }
-    },
+    command: ['alive'],
+    operate: async ({ kelvin, m, reply, getServerUptime }) => { 
+        const serverUptime = getServerUptime();
+        
+        // Array of image URLs
+        const imageUrls = [
+            './start/lib/Media/Images/Vesper1.jpg',
+            './start/lib/Media/Images/Vesper2.jpg',
+            './start/lib/Media/Images/Vesper3.jpg',
+            './start/lib/Media/Images/Vesper4.jpg'
+        ];
+        
+        const audioUrls = [
+            './start/lib/Media/JexAudio1.mp3',
+            './start/lib/Media/JexAudio2.mp3',
+            './start/lib/Media/JexAudio3.mp3',
+            './start/lib/Media/JexAudio4.mp3',
+            './start/lib/Media/JexAudio5.mp3',
+            './start/lib/Media/JexAudio6.mp3',
+            './start/lib/Media/JexAudio7.mp3'
+        ];
+        
+        // Randomly select an image and audio
+        const randomImageUrl = imageUrls[Math.floor(Math.random() * imageUrls.length)];
+        const randomAudioUrl = audioUrls[Math.floor(Math.random() * audioUrls.length)];
+        
+        // Send the randomly selected image with caption (using server uptime)
+        await kelvin.sendMessage(
+            m.chat, 
+            { 
+                image: { url: randomImageUrl },
+                caption: `*🌹Hi. I am 👑 ${global.botname}, a friendly advanced WhatsApp bot. Don't worry, I'm still Alive☺🚀*\n\n*⏰ Server Uptime: ${serverUptime}*`
+            },
+            { quoted: m }
+        );
+        
+        // Send the randomly selected audio as PTT
+        await kelvin.sendMessage(
+            m.chat,
+            {
+                audio: { url: randomAudioUrl },
+                mp3: true,
+                mimetype: 'audio/mp4'
+            },
+            { quoted: m }
+        );
+    }
+},
     {
         command: ['bothosting', 'deploy', 'hosting', 'deploybot'],
         operate: async ({ kelvin, m, reply, from }) => {
@@ -156,25 +153,20 @@ Start server Enjoy 😉
     },
     {
     command: ['uptime', 'up', 'runtime'],
-    operate: async ({ kelvin, m, reply }) => {
+    operate: async ({ kelvin, m, reply, getServerUptime }) => { 
         const start = performance.now();
         
-        const uptime = process.uptime();
-        const days = Math.floor(uptime / 86400);
-        const hours = Math.floor((uptime % 86400) / 3600);
-        const minutes = Math.floor((uptime % 3600) / 60);
-        const seconds = Math.floor(uptime % 60);
+        const serverUptime = getServerUptime();
         
         const ping = (performance.now() - start).toFixed(2);
         
         const info = `
 ╭──❖ 「 SYSTEM STATUS 」 ❖──
 │
-│  *Uptime* : ${days}d ${hours}h ${minutes}m ${seconds}s
-│  *Ping*   : ${ping}ms
-│  *Version*: ${global.versions || '1.4.0'}
-│  *Platform*: ${os.platform()}
-│  *Runtime*: ${runtime(uptime)}
+│  *Server Uptime* : ${serverUptime}
+│  *Ping*         : ${ping}ms
+│  *Version*      : ${global.versions || '1.4.0'}
+│  *Platform*     : ${os.platform()}
 │
 ╰────────────────────❖`;
 
@@ -342,7 +334,7 @@ Start server Enjoy 😉
     },
     {
     command: ['botstatus', 'systeminfo'],
-    operate: async ({ kelvin, m, reply }) => {
+    operate: async ({ kelvin, m, reply, getServerUptime }) => {
         const used = process.memoryUsage();
         const ram = `${formatSize(used.heapUsed)} / ${formatSize(os.totalmem())}`;
         const disk = await checkDiskSpace(process.cwd());
@@ -351,14 +343,16 @@ Start server Enjoy 😉
         await reply("⏳ *Calculating...*");
         const ping = (performance.now() - start).toFixed(2);
         
+        const serverUptime = getServerUptime();
+        
         const status = `
 ╭──❖ 「 BOT STATUS 」 ❖──
 │
-│  *Ping*    : ${ping}ms
-│  *Uptime*  : ${runtime(process.uptime())}
-│  *RAM*     : ${ram}
-│  *Disk*    : ${formatSize(disk.size - disk.free)} / ${formatSize(disk.size)}
-│  *Node*    : ${process.version}
+│  *Ping*       : ${ping}ms
+│  *Server Uptime* : ${serverUptime}
+│  *RAM*        : ${ram}
+│  *Disk*       : ${formatSize(disk.size - disk.free)} / ${formatSize(disk.size)}
+│  *Node*       : ${process.version}
 │
 ╰────────────────────❖`;
 
@@ -390,8 +384,6 @@ Start server Enjoy 😉
 │  *GitHub* :
 │  https://github.com/${repoOwner}/${repoName}
 │
-│  *Pairing* :
-│  https://pairing.site
 │
 ╰─────────────────❖
 
