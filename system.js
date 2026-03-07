@@ -88,6 +88,40 @@ const acr = new acrcloud({
     access_secret: 'qVvKAxknV7bUdtxjXS22b5ssvWYxpnVndhy2isXP'
 });
 
+const UPTIME_FILE = path.join(__dirname, 'data', 'server_uptime.json');
+
+// Create data folder if it doesn't exist
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// Get or create server start time
+function getServerStartTime() {
+    try {
+        if (fs.existsSync(UPTIME_FILE)) {
+            const data = JSON.parse(fs.readFileSync(UPTIME_FILE, 'utf8'));
+            return data.startTime;
+        }
+    } catch (e) {
+        console.log('Creating new uptime file in data folder...');
+    }
+    
+    // Create new uptime file with current time
+    const startTime = Date.now();
+    fs.writeFileSync(UPTIME_FILE, JSON.stringify({ startTime, createdAt: new Date().toISOString() }));
+    return startTime;
+}
+
+const SERVER_START_TIME = getServerStartTime();
+
+// Function to get server uptime
+function getServerUptime() {
+    const uptimeMs = Date.now() - SERVER_START_TIME;
+    const uptimeSeconds = Math.floor(uptimeMs / 1000);
+    return runtime(uptimeSeconds);
+}
+
 // ephoto function 
 async function ephoto(url, texk) {
       let form = new FormData();
@@ -648,6 +682,8 @@ const context = {
     botNumber,
     from,
     ephoto,
+    getServerUptime,
+    getServerStartTime,
     sleep,
     fetchJson,
     getBuffer,
