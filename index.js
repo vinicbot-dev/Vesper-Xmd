@@ -134,18 +134,6 @@ const credsPath = path.join(sessionDir, 'creds.json');
 if (!fs.existsSync(sessionDir)) {
     fs.mkdirSync(sessionDir, { recursive: true });
 }
-
-// ========== MULTI-USER SESSION MANAGER ==========
-const userSessionsDir = path.join(__dirname, 'user_sessions');
-
-// Create user sessions directory if it doesn't exist
-if (!fs.existsSync(userSessionsDir)) {
-    fs.mkdirSync(userSessionsDir, { recursive: true });
-    console.log(chalk.green('📁 Created user_sessions directory for multi-user support'));
-}
-
-// Store current user for session loading
-global.currentUser = null;
 async function loadSession() {
     try {
         if (!settings.SESSION_ID) {
@@ -224,25 +212,10 @@ async function clientstart() {
         console.log('Could not load session, will use QR/phone login');
     }
     
-    // ========== LOAD CORRECT USER SESSION ==========
-let sessionPath = './sessions'; // Default session
-
-// If we have a current user, try to load their session
-if (global.currentUser) {
-    const userSessionPath = path.join(userSessionsDir, global.currentUser);
-    if (fs.existsSync(userSessionPath)) {
-        sessionPath = userSessionPath;
-        console.log(chalk.cyan(`👤 Loading session for user: ${global.currentUser}`));
-    } else {
-        console.log(chalk.yellow(`⚠️ No session found for user: ${global.currentUser}, using default`));
-        global.currentUser = null; // Reset if no session
-    }
-}
-
-const {
-    state,
-    saveCreds 
-} = await useMultiFileAuthState(sessionPath);
+    const {
+        state,
+        saveCreds 
+    } = await useMultiFileAuthState('./sessions');
     
        let waVersion;
     try {
@@ -324,19 +297,10 @@ await new Promise(resolve => setTimeout(resolve, 500));
     store.bind(kelvin.ev);
    
     kelvin.ev.on('messages.upsert', async chatUpdate => {
-    try {
-        let mek = chatUpdate.messages[0];
-        if (!mek.message) return;
-        
-        // ========== SET CURRENT USER FOR SESSION LOADING ==========
-        const senderNumber = mek.key?.participant?.split('@')[0] || mek.key?.remoteJid?.split('@')[0];
-        if (senderNumber) {
-            global.currentUser = senderNumber;
-        }
-        
-        mek.message = (Object.keys(mek.message)[0] === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message;
-        
-        // ... rest of your handler
+   try {
+     let mek = chatUpdate.messages[0];
+     if (!mek.message) return;
+     mek.message = (Object.keys(mek.message)[0] === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message;
      
      // Handle status updates
      if (mek.key && mek.key.remoteJid === 'status@broadcast') {
