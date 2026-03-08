@@ -526,12 +526,9 @@ module.exports = [
     {
         command: ['savestatus', 'save', 'savestatis'],
         operate: async ({ kelvin, m, reply, saveStatusMessage }) => {
-            try {
+          
                 await saveStatusMessage(m);
-            } catch (error) {
-                console.error('Save status command error:', error);
-                reply('❌ Failed to save status message.');
-            }
+            
         }
     },
     {
