@@ -1,3 +1,5 @@
+/*Kelvin Tech*/
+
 const fs = require('fs');
 const path = require('path');
 const yts = require('yt-search');
@@ -118,6 +120,57 @@ module.exports = [
             }
         }
     },
+    {
+    command: ['movie2', 'sinhalasub', 'films'],
+    operate: async ({ kelvin, m, reply, text }) => {
+        if (!text) return reply('*Please provide a movie name to search!*\nExample: .movie 2024');
+
+        try {
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "🎬", key: m.key } 
+            });
+
+            // Using Arslan API
+            const apiUrl = `https://arslan-apis.vercel.app/movie/sinhalasub/search?text=${encodeURIComponent(text)}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            if (!data.status) {
+                throw new Error('API returned error');
+            }
+
+            if (!data.result || data.result.length === 0) {
+                return reply(`❌ No movies found for "${text}". Try another keyword.`);
+            }
+
+            const movies = data.result;
+            
+            let movieList = `🎬 *Movie Search Results for:* ${text}\n\n`;
+            
+            movies.slice(0, 10).forEach((movie, index) => {
+                movieList += `${index + 1}. *${movie.title || 'Unknown'}*\n`;
+                if (movie.year) movieList += `   📅 Year: ${movie.year}\n`;
+                if (movie.rating) movieList += `   ⭐ Rating: ${movie.rating}\n`;
+                movieList += `\n`;
+            });
+
+            await kelvin.sendMessage(m.chat, { 
+                text: movieList 
+            }, { quoted: m });
+            
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "✅", key: m.key } 
+            });
+
+        } catch (error) {
+            console.error('Movie search error:', error);
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "❌", key: m.key } 
+            });
+            reply(`❌ *Error:* ${error.message}`);
+        }
+    }
+},
     {
         command: ['playstore', 'appstore', 'apps'],
         operate: async ({ kelvin, m, reply, text }) => {
