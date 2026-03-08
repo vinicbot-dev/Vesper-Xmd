@@ -187,6 +187,86 @@ module.exports = [
             await playCommand(kelvin, m.chat, m, args);
         }
     },
+    {
+    command: ['play3', 'song3', 'ytmp3'],
+    operate: async ({ kelvin, m, reply, text, prefix, command }) => {
+        
+        if (!text) return reply(`Please Provide Me A song Query or Link\n\nExample: ${prefix + command} shape of you`);
+
+        try {
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "⏳", key: m.key } 
+            });
+
+            // Search YouTube
+            const search = await yts(text);
+            
+            if (!search.videos || !search.videos.length) {
+                return reply("No result Found");
+            }
+
+            const video = search.videos[0];
+            
+            // MP3 API using Arslan
+            const apiUrl = `https://arslan-apis.vercel.app/download/ytmp3?url=${video.url}`;
+            const res = await axios.get(apiUrl, { timeout: 60000 });
+
+            if (!res.data || !res.data.status || !res.data.result || !res.data.result.download || !res.data.result.download.url) {
+                return reply("❌ Audio Not Generated");
+            }
+
+            const dlUrl = res.data.result.download.url;
+            const meta = res.data.result.metadata;
+            const quality = res.data.result.download.quality || "128kbps";
+
+            // Send song info with thumbnail
+            await kelvin.sendMessage(
+                m.chat,
+                {
+                    image: { url: video.thumbnail },
+                    caption: `🎵 *${meta.title || video.title}*\n` +
+                             `🎚️ Quality: ${quality}\n\n` +
+                             `⬇️ Downloading audio...`
+                },
+                { quoted: m }
+            );
+
+            // Send audio
+            await kelvin.sendMessage(
+                m.chat,
+                {
+                    audio: { url: dlUrl },
+                    mimetype: "audio/mpeg",
+                    ptt: false,
+                    fileName: `${meta.title || video.title}.mp3`.replace(/[<>:"/\\|?*]/g, '_'),
+                    caption: `> ${global.wm || ''}`,
+                    contextInfo: {
+                        externalAdReply: {
+                            title: meta.title ? meta.title.substring(0, 40) : "YouTube Song",
+                            body: "YouTube MP3",
+                            thumbnailUrl: video.thumbnail,
+                            sourceUrl: video.url,
+                            mediaType: 1,
+                            renderLargerThumbnail: true
+                        }
+                    }
+                },
+                { quoted: m }
+            );
+
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "✅", key: m.key } 
+            });
+
+        } catch (err) {
+            console.error("PLAY ERROR:", err);
+            reply("❌ Error Found Please Try Later");
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "❌", key: m.key } 
+            });
+        }
+    }
+},
     
     // Instagram command
     {
@@ -196,13 +276,50 @@ module.exports = [
         }
     },
     
-    // MediaFire command
     {
-        command: ['mediafire', 'mf', 'mfire'],
-        operate: async ({ kelvin, m, reply, args, text }) => {
-            await handleMediafireDownload(kelvin, m.chat, m);
+    command: ['mediafire', 'mf', 'mfire'],
+    operate: async ({ kelvin, m, reply, text }) => {
+        if (!text) return reply('*Please provide a MediaFire url!*');
+
+        try {
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "⏳", key: m.key } 
+            });
+
+            const apiUrl = `https://arslan-apis.vercel.app/download/mfire?url=${encodeURIComponent(text)}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            if (!data.status || !data.result?.dl_link) {
+                throw new Error('Failed to fetch file');
+            }
+
+            const file = data.result;
+
+            await kelvin.sendMessage(
+                m.chat,
+                {
+                    document: { url: file.dl_link },
+                    fileName: file.fileName,
+                    mimetype: file.fileType || 'application/octet-stream',
+                    caption: `> ${global.wm || ''}`
+                },
+                { quoted: m }
+            );
+            
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "✅", key: m.key } 
+            });
+
+        } catch (error) {
+            console.error('MediaFire error:', error);
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "❌", key: m.key } 
+            });
+            reply(`❌ *Error:* ${error.message}`);
         }
-    },
+    }
+},
     
     // YTPlay command
     {
@@ -563,61 +680,118 @@ module.exports = [
         try {
             await reply('📥 Downloading...');
             
-            const apiUrl = `https://api.giftedtech.co.ke/api/download/facebook?apikey=gifted&url=${encodeURIComponent(text)}`;
+            // Using Arslan API
+            const apiUrl = `https://arslan-apis.vercel.app/download/fbdown?url=${encodeURIComponent(text)}`;
             const res = await fetch(apiUrl);
             const data = await res.json();
             
-            if (data.result?.hd_video) {
+            if (data.status && data.result?.download) {
+                const download = data.result.download;
+                const metadata = data.result.metadata || {};
+                
+                // Try HD first, fallback to SD
+                const videoUrl = download.hd || download.sd;
+                
+                if (!videoUrl) {
+                    return reply('❌ No download link found');
+                }
+                
+                const caption = `*Facebook Video*\n\n` +
+                               `*Title:* ${metadata.title || 'N/A'}\n` +
+                               `*Duration:* ${metadata.duration || 'N/A'}\n` +
+                               `\n> ${global.wm || ''}`;
+                
                 await kelvin.sendMessage(m.chat, {
-                    video: { url: data.result.hd_video },
-                    caption: `> ${global.wm || ''}`
+                    video: { url: videoUrl },
+                    caption: caption,
+                    contextInfo: {
+                        externalAdReply: {
+                            title: "Facebook Video",
+                            body: metadata.title || "Downloaded",
+                            thumbnailUrl: metadata.thumbnail,
+                            mediaType: 1,
+                            sourceUrl: text
+                        }
+                    }
                 }, { quoted: m });
+                
+                await kelvin.sendMessage(m.chat, { 
+                    react: { text: "✅", key: m.key } 
+                });
+                
             } else {
-                reply('Download failed');
+                reply('❌ Download failed: Invalid response');
             }
-        } catch {
-            reply('Error downloading');
+            
+        } catch (error) {
+            console.error('Facebook error:', error);
+            reply(`❌ Error: ${error.message}`);
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "❌", key: m.key } 
+            });
         }
     }
 },
-    // Twitter/X command
     {
-        command: ['twitter', 'x'],
-        operate: async ({ kelvin, m, reply, text }) => {
-            if (!text) return reply(`*Please provide Twitter link or url!*`);
+    command: ['twitter', 'x', 'tw'],
+    operate: async ({ kelvin, m, reply, text }) => {
+        if (!text) return reply('*Please provide Twitter/X link or url!*');
 
-            try {
-                await kelvin.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
+        try {
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "⏳", key: m.key } 
+            });
 
-                const apiUrl = `https://api.siputzx.my.id/api/d/twitter?url=${encodeURIComponent(text)}`;
-                const response = await fetch(apiUrl);
-                const data = await response.json();
+            // Using Arslan API
+            const apiUrl = `https://arslan-apis.vercel.app/download/twitter?url=${encodeURIComponent(text)}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
 
-                if (data.status && data.data && data.data.downloadLink) {
-                    await kelvin.sendMessage(
-                        m.chat,
-                        {
-                            video: { url: data.data.downloadLink },
-                            mimetype: 'video/mp4',
-                            caption: `*${data.data.videoTitle || 'Twitter Video'}*\n\n${global.wm || ''}`
-                        },
-                        { quoted: m }
-                    );
-                    
-                    await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
-                } else {
-                    throw new Error('No video found');
-                }
-                
-            } catch (error) {
-                console.error('Twitter command error:', error);
-                await kelvin.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
-                reply('❌ *Failed to download Twitter video. Check the URL.*');
+            if (!data.status || !data.result) {
+                throw new Error('Invalid response');
             }
-        }
-    },
 
-    // TikTok version 2
+            const result = data.result;
+            
+            // Choose video quality (HD preferred, fallback to SD)
+            const videoUrl = result.video_hd || result.video_sd;
+            
+            if (!videoUrl) {
+                throw new Error('No video found');
+            }
+
+            // Send video with ONLY global.wm as caption
+            await kelvin.sendMessage(
+                m.chat,
+                {
+                    video: { url: videoUrl },
+                    caption: `${global.wm || ''}`,
+                    contextInfo: {
+                        externalAdReply: {
+                            title: "Twitter Video",
+                            body: result.desc?.substring(0, 50) || "Downloaded",
+                            thumbnailUrl: result.thumb,
+                            mediaType: 1,
+                            sourceUrl: text
+                        }
+                    }
+                },
+                { quoted: m }
+            );
+            
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "✅", key: m.key } 
+            });
+
+        } catch (error) {
+            console.error('Twitter command error:', error);
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "❌", key: m.key } 
+            });
+            reply(`❌ *Failed to download:* ${error.message}`);
+        }
+    }
+},
     {
         command: ['tiktok2', 'tt2'],
         operate: async ({ kelvin, m, reply, args, fetchJson }) => {
@@ -705,6 +879,136 @@ module.exports = [
             reply('Error: ' + error.message);
         }
     }
-}   
+},
+{
+    command: ['pinterest', 'pini', 'pint'],
+    operate: async ({ kelvin, m, reply, text }) => {
+        if (!text) return reply('*Please provide a search query!*\nExample: .pinterest car');
+
+        try {
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "🔍", key: m.key } 
+            });
+
+            // Using Arslan API
+            const apiUrl = `https://arslan-apis.vercel.app/download/piniimg?text=${encodeURIComponent(text)}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            if (!data.status) {
+                throw new Error('API returned error');
+            }
+
+            // Check if results exist
+            if (!data.result || data.result.length === 0) {
+                return reply(`❌ No images found for "${text}". Try another keyword.`);
+            }
+
+            // Get random image from results
+            const randomIndex = Math.floor(Math.random() * data.result.length);
+            const imageUrl = data.result[randomIndex];
+
+            // Send the image
+            await kelvin.sendMessage(
+                m.chat,
+                {
+                    image: { url: imageUrl },
+                    caption: `🖼️ *Pinterest Result*\n\n🔍 *Query:* ${text}\n\n> ${global.wm || ''}`
+                },
+                { quoted: m }
+            );
+            
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "✅", key: m.key } 
+            });
+
+        } catch (error) {
+            console.error('Pinterest error:', error);
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "❌", key: m.key } 
+            });
+            reply(`❌ *Error:* ${error.message}`);
+        }
+    }
+},
+{
+    command: ['spotify', 'sp', 'spotifydl'],
+    operate: async ({ kelvin, m, reply, text }) => {
+        if (!text) return reply('*Please provide a Spotify track URL!*\nExample: .spotify https://open.spotify.com/track/0RX5UmW4ID0NtobeGupa6x');
+
+        try {
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "🎵", key: m.key } 
+            });
+
+            // Using Arslan API
+            const apiUrl = `https://arslan-apis.vercel.app/download/spotifydl?url=${encodeURIComponent(text)}`;
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            if (!data.status || !data.result) {
+                throw new Error('Failed to fetch track info');
+            }
+
+            const track = data.result;
+            
+            // Check if download URL is valid
+            if (!track.download || track.download.includes('undefined')) {
+                return reply('❌ Download link not available. The API might be having issues.');
+            }
+
+            // Format duration (convert from milliseconds)
+            const duration = Math.floor(track.durasi / 1000);
+            const minutes = Math.floor(duration / 60);
+            const seconds = duration % 60;
+            const durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+            // Send track info with thumbnail
+            await kelvin.sendMessage(
+                m.chat,
+                {
+                    image: { url: track.image },
+                    caption: `🎵 *Spotify Track*\n\n` +
+                             `*Title:* ${track.title}\n` +
+                             `*Artist:* ${track.artis}\n` +
+                             `*Duration:* ${durationStr}\n\n` +
+                             `⬇️ Downloading audio...`
+                },
+                { quoted: m }
+            );
+
+            // Download and send audio
+            try {
+                await kelvin.sendMessage(
+                    m.chat,
+                    {
+                        audio: { url: track.download },
+                        mimetype: 'audio/mpeg',
+                        fileName: `${track.title} - ${track.artis}.mp3`.replace(/[<>:"/\\|?*]/g, '_')
+                    },
+                    { quoted: m }
+                );
+                
+                await kelvin.sendMessage(m.chat, { 
+                    react: { text: "✅", key: m.key } 
+                });
+                
+            } catch (audioError) {
+                console.error('Audio download error:', audioError);
+                reply('❌ Failed to download audio. The download link may be invalid.');
+                await kelvin.sendMessage(m.chat, { 
+                    react: { text: "❌", key: m.key } 
+                });
+            }
+
+        } catch (error) {
+            console.error('Spotify error:', error);
+            await kelvin.sendMessage(m.chat, { 
+                react: { text: "❌", key: m.key } 
+            });
+            reply(`❌ *Error:* ${error.message}`);
+        }
+    }
+}
     
 ];
