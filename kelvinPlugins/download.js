@@ -188,7 +188,7 @@ module.exports = [
         }
     },
     {
-    command: ['play3', 'song3', 'ytmp3'],
+    command: ['play3', 'song3', 'ytmp3', 'Robertplay'],
     operate: async ({ kelvin, m, reply, text, prefix, command }) => {
         
         if (!text) return reply(`Please Provide Me A song Query or Link\n\nExample: ${prefix + command} shape of you`);
