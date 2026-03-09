@@ -1075,14 +1075,16 @@ module.exports = [
             if (!m.isBotAdmin) return reply(global.mess.botadmin);
             
             const mode = args[0]?.toLowerCase();
+    const action = args[1]?.toLowerCase(); // Get second argument (on/off)
     
+    // Show help if no arguments
     if (!mode) {
         const status = await db.getGroupSetting(botNumber, m.chat, 'antilink', false);
         const currentMode = await db.getGroupSetting(botNumber, m.chat, 'antilinkmode', 'delete');
-        return reply(`*ANTILINK SETTINGS*\n\nStatus: ${status ? '✅ ON' : '❌ OFF'}\nMode: ${currentMode}\n\nOptions:\n• ${prefix}antilink on\n• ${prefix}antilink off\n• ${prefix}antilink delete\n• ${prefix}antilink warn\n• ${prefix}antilink kick`);
+        return reply(`*ANTILINK SETTINGS*\n\nStatus: ${status ? '✅ ON' : '❌ OFF'}\nMode: ${currentMode}\n\nOptions:\n• ${prefix}antilink on\n• ${prefix}antilink off\n• ${prefix}antilink delete\n• ${prefix}antilink warn\n• ${prefix}antilink kick\n• ${prefix}antilink delete off\n• ${prefix}antilink warn off\n• ${prefix}antilink kick off`);
     }
     
-    // Handle on/off
+    // Handle on/off (global toggle)
     if (mode === 'on') {
         await db.setGroupSetting(botNumber, m.chat, 'antilink', true);
         return reply('✅ Antilink has been enabled');
@@ -1093,27 +1095,42 @@ module.exports = [
         return reply('✅ Antilink has been disabled');
     }
     
-    // Handle mode settings
-    if (mode === 'delete') {
-        await db.setGroupSetting(botNumber, m.chat, 'antilinkmode', 'delete');
-        await db.setGroupSetting(botNumber, m.chat, 'antilink', true); // Auto-enable
-        return reply('✅ *Successfully enabled antilink delete mode*');
+    // Handle mode settings with on/off action
+    if (mode === 'delete' || mode === 'warn' || mode === 'kick') {
+        
+        // If user wants to turn this specific mode ON
+        if (action === 'on') {
+            await db.setGroupSetting(botNumber, m.chat, 'antilinkmode', mode);
+            await db.setGroupSetting(botNumber, m.chat, 'antilink', true);
+            return reply(`✅ *Successfully enabled antilink ${mode} mode*`);
+        }
+        
+        // If user wants to turn this specific mode OFF
+        if (action === 'off') {
+            // Check what the current mode is
+            const currentMode = await db.getGroupSetting(botNumber, m.chat, 'antilinkmode', 'delete');
+            
+            // If the current mode matches what they're trying to turn off
+            if (currentMode === mode) {
+                // Disable antilink completely
+                await db.setGroupSetting(botNumber, m.chat, 'antilink', false);
+                return reply(`✅ *Antilink has been disabled*`);
+            } else {
+                // They're trying to turn off a mode that's not active
+                return reply(`⚠️ *Antilink is currently in ${currentMode} mode, not ${mode} mode*\n\nUse .antilink off to disable completely.`);
+            }
+        }
+        
+        // If no action specified (just ".antilink delete" without on/off)
+        if (!action) {
+            await db.setGroupSetting(botNumber, m.chat, 'antilinkmode', mode);
+            await db.setGroupSetting(botNumber, m.chat, 'antilink', true);
+            return reply(`✅ *Successfully enabled antilink ${mode} mode*`);
+        }
     }
     
-    if (mode === 'warn') {
-        await db.setGroupSetting(botNumber, m.chat, 'antilinkmode', 'warn');
-        await db.setGroupSetting(botNumber, m.chat, 'antilink', true); // Auto-enable
-        return reply('✅ *Successfully enabled antilink warn mode*');
+    reply(`Invalid option! Use: on, off, delete, warn, kick, or [mode] on/off`);
     }
-    
-    if (mode === 'kick') {
-        await db.setGroupSetting(botNumber, m.chat, 'antilinkmode', 'kick');
-        await db.setGroupSetting(botNumber, m.chat, 'antilink', true); // Auto-enable
-        return reply('✅ *Successfully enabled antilink kick mode*');
-    }
-    
-    reply(`Invalid option! Use: on, off, delete, warn, kick`);
-  }
 },
 {
     command: ['antibadword', 'antiword', 'filter'],
