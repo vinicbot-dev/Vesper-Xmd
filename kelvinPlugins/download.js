@@ -525,7 +525,7 @@ module.exports = [
     },
     {
         command: ['savestatus', 'save', 'savestatis'],
-        operate: async ({ kelvin, m, reply, saveStatusMessage }) => {
+        operate: async ({ kelvin, m, saveStatusMessage }) => {
           
                 await saveStatusMessage(m);
             
