@@ -12,6 +12,7 @@ const path = require('path');
 const axios = require('axios')
 const devKelvin = '256742932677';
 const cheerio = require('cheerio')
+const chalk = require('chalk');
 const os = require('os');
 const { performance } = require("perf_hooks");
 const acrcloud = require ('acrcloud');
@@ -612,29 +613,21 @@ if (global.alwaysonline === true || global.alwaysonline === 'true') {
     
     const time = moment.tz("Asia/Makassar").format("HH:mm:ss");
     
-    //================== [ CONSOLE LOG] ==================//
-    const timezones = "Asia/Makassar"; 
-    const dayz = moment(Date.now()).tz(timezones).locale('en').format('dddd');
-    const timez = moment(Date.now()).tz(timezones).locale('en').format('HH:mm:ss z');
-    const datez = moment(Date.now()).tz(timezones).format("DD/MM/YYYY");
+//================== [ CONSOLE LOG] ==================//
+const dayz = moment(Date.now()).tz(`${timezones}`).locale('en').format('dddd');
+const timez = moment(Date.now()).tz(`${timezones}`).locale('en').format('HH:mm:ss z');
+const datez = moment(Date.now()).tz(`${timezones}`).format("DD/MM/YYYY");
 
-    if (m.message) {
-      lolcatjs.fromString(`┏━━━━━━━━━━━━━『  VESPER-XMD  』━━━━━━━━━━━━━─`);
-      lolcatjs.fromString(`»  Sent Time: ${dayz}, ${timez}`);
-      lolcatjs.fromString(`»  Date: ${datez}`);
-      lolcatjs.fromString(`»  Message Type: ${m.mtype || 'N/A'}`);
-      lolcatjs.fromString(`»  Sender Name: ${pushname || 'N/A'}`);
-      lolcatjs.fromString(`»  Chat ID: ${m.chat?.split('@')[0] || 'N/A'}`);
-      
-      if (isGroup) {
-        lolcatjs.fromString(`»  Group: ${groupName || 'N/A'}`);
-        lolcatjs.fromString(`»  Group JID: ${m.chat?.split('@')[0] || 'N/A'}`);
-      }
-      
-      lolcatjs.fromString(`»  Message: ${budy || 'N/A'}`);
-      lolcatjs.fromString('┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━─ ⳹\n\n');
-    }
-    //<================================================>//
+if (m.message) {
+  lolcatjs.fromString(`┏━━━━━━━━━━━━━『 VESPER-XMD 』━━━━━━━━━━━━━─`);
+  lolcatjs.fromString(`├─⏱️ ${dayz}, ${timez}`);
+  lolcatjs.fromString(`├─📨 ${m.mtype || 'N/A'}`);
+  lolcatjs.fromString(`├─👤 ${pushname || 'N/A'}`);
+  lolcatjs.fromString(`├─🆔 ${m.chat?.split('@')[0] || 'N/A'}`);
+  lolcatjs.fromString(`├─💬 ${budy || 'N/A'}`);
+  lolcatjs.fromString(`┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━─ ⳹\n`);
+}
+//<================================================>//
   
 // Initialize font system with bot number
 (async () => {
