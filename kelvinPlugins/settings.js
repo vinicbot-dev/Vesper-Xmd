@@ -27,155 +27,109 @@ module.exports = [
     {
         command: ['antidelete', 'antidel', 'deletealert'],
         operate: async ({ kelvin, m, reply, prefix, args, Access, db, mess, botNumber }) => {
-            if (!Access) return reply(global.mess.owner);
+           if (!Access) return reply(global.mess.owner);
     
-    const subcommand = args[0]?.toLowerCase();
-    const value = args[1]?.toLowerCase();
+    const mode = args[0]?.toLowerCase();
     
-    if (!subcommand) {
+    if (!mode) {
         const currentMode = await db.get(botNumber, 'antidelete', 'off');
         
-        return reply(`*Anti-Delete System*
-        
-Usage:
-• ${prefix}antidelete on - Enable anti-delete (default: chat mode)
-• ${prefix}antidelete off - Disable anti-delete
-• ${prefix}antidelete chat - Send alerts to same chat
-• ${prefix}antidelete private - Send alerts to bot owner's inbox
-• ${prefix}antidelete status - Show current settings
+        return reply(`*ANTI-DELETE SETTINGS*
 
 Current Mode: ${currentMode}
-Enabled: ${currentMode !== 'off' ? '✅' : '❌'}
 
-📌 *Modes:*
-• chat - Alerts sent to same chat where deletion happened
-• private - Alerts sent to bot owner's private inbox
-• off - Anti-delete disabled`);
+📌 *Commands:*
+• ${prefix}antidelete on - Enable (chat mode)
+• ${prefix}antidelete off - Disable
+• ${prefix}antidelete chat - Set to chat mode
+• ${prefix}antidelete private - Set to private mode
+• ${prefix}antidelete status - Show settings`);
     }
     
-    switch(subcommand) {
-        case 'on': {
-            // ✅ Default to chat mode when turning on
-            await db.set(botNumber, 'antidelete', 'chat');
-            reply(`*Successfully enabled antidelete chat mode*`);
-            break;
-        }
-        
-        case 'off': {
-            // ✅ Save to SQLite
-            await db.set(botNumber, 'antidelete', 'off');
-            reply(`*Successfully disabled antidelete*`);
-            break;
-        }
-        
-        case 'chat': {
-            // ✅ Save to SQLite
-            await db.set(botNumber, 'antidelete', 'chat');
-            reply(`*Successfully enabled antidelete chat mode*`);
-            break;
-        }
-        
-        case 'private': {
-            // ✅ Save to SQLite
-            await db.set(botNumber, 'antidelete', 'private');
-            reply(`*Successfully enabled antidelete private mode*`);
-            break;
-        }
-        
-        case 'status': {
-            // ✅ Get current status from SQLite
-            const currentMode = await db.get(botNumber, 'antidelete', 'off');
-            reply(`*Anti-Delete Status*
-            
-Mode: ${currentMode}
-Enabled: ${currentMode !== 'off' ? '✅' : '❌'}
-
-Chat Mode: Sends alerts to the same chat
-Private Mode: Sends alerts to bot owner's inbox`);
-            break;
-        }
-        
-        default: {
-            reply(`Invalid subcommand. Use: on, off, chat, private, status`);
-        }
+    // Handle on/off
+    if (mode === 'on') {
+        await db.set(botNumber, 'antidelete', 'chat');
+        return reply(`✅*Successfully enabled antidelete chat mode*`);
     }
-  }
+    
+    if (mode === 'off') {
+        await db.set(botNumber, 'antidelete', 'off');
+        return reply(`✅*Successfully disabled antidelete*`);
+    }
+    
+    // Handle mode settings
+    if (mode === 'chat') {
+        await db.set(botNumber, 'antidelete', 'chat');
+        return reply(`✅*Successfully enabled antidelete chat mode*`);
+    }
+    
+    if (mode === 'private') {
+        await db.set(botNumber, 'antidelete', 'private');
+        return reply(`✅*Successfully enabled antidelete private mode*`);
+    }
+    
+    // Handle status
+    if (mode === 'status') {
+        const currentMode = await db.get(botNumber, 'antidelete', 'off');
+        return reply(`*ANTI-DELETE STATUS*
+
+Mode: ${currentMode}
+Status: ${currentMode !== 'off' ? '✅ Enabled' : '❌ Disabled'}
+
+📌 *Modes:*
+• chat - Alerts sent to same chat
+• private - Alerts sent to bot owner's inbox`);
+    }
+    
+    reply('❌ Invalid option! Use: on, off, chat, private, status');
+    break;
+   }
 },
     {
         command: ['antiedit', 'editalert'],
         operate: async ({ kelvin, m, reply, prefix, args, db, Access, mess, botNumber }) => {
              if (!Access) return reply(mess.owner);
     
-    const subcommand = args[0]?.toLowerCase();
+    const mode = args[0]?.toLowerCase();
     
-    if (!subcommand) {
+    // Show help if no arguments
+    if (!mode) {
         const currentMode = await db.get(botNumber, 'antiedit', 'off');
         return reply(`*ANTI-EDIT SETTINGS*
 
 Current Mode: ${currentMode}
 
 📌 *Commands:*
-• ${prefix}antiedit on - Enable anti-edit (default: chat mode)
-• ${prefix}antiedit off - Disable anti-edit
-• ${prefix}antiedit chat - Send alerts to same chat
-• ${prefix}antiedit private - Send alerts to bot owner's inbox
-• ${prefix}antiedit status - Show current settings
-
-*Modes:*
-• chat - Alerts sent to same chat where editing happened
-• private - Alerts sent to bot owner's private inbox
-• off - Anti-edit disabled`);
+• ${prefix}antiedit on - Enable (chat mode)
+• ${prefix}antiedit off - Disable
+• ${prefix}antiedit chat - Set to chat mode
+• ${prefix}antiedit private - Set to private mode`);
     }
     
-    switch(subcommand) {
-        case 'on': {
-            // Default to chat mode when turning on
-            await db.set(botNumber, 'antiedit', 'chat');
-            reply(`✅ Anti-edit enabled (chat mode)`);
-            break;
-        }
-        
-        case 'off': {
-            await db.set(botNumber, 'antiedit', 'off');
-            reply(`✅ Anti-edit disabled`);
-            break;
-        }
-        
-        case 'chat': {
-            await db.set(botNumber, 'antiedit', 'chat');
-            reply(`✅ *Successfully enabled antiedit chat mode*`);
-            break;
-        }
-        
-        case 'private': {
-            await db.set(botNumber, 'antiedit', 'private');
-            reply(`✅ *Successfully enabled antiedit private mode*`);
-            break;
-        }
-        
-        case 'status': {
-            const currentMode = await db.get(botNumber, 'antiedit', 'off');
-            let statusMsg = `*📊 ANTI-EDIT STATUS*\n\n`;
-            statusMsg += `Mode: *${currentMode}*\n`;
-            statusMsg += `Status: ${currentMode !== 'off' ? '✅ ENABLED' : '❌ DISABLED'}\n\n`;
-            
-            if (currentMode === 'chat') {
-                statusMsg += `📍 Alerts will be sent to the same chat where editing occurred.`;
-            } else if (currentMode === 'private') {
-                statusMsg += `📍 Alerts will be sent to bot owner's private inbox.`;
-            } else {
-                statusMsg += `📍 Anti-edit is currently disabled.`;
-            }
-            
-            reply(statusMsg);
-            break;
-        }
-        
-        default: {
-            reply(`Invalid option! Use: on, off, chat, private, status`);
-        }
+    // Handle on/off
+    if (mode === 'on') {
+        await db.set(botNumber, 'antiedit', 'chat');
+        return reply(`✅*Successfully enabled antiedit chat mode*`);
     }
-  }
+    
+    if (mode === 'off') {
+        await db.set(botNumber, 'antiedit', 'off');
+        return reply(`✅*Successfully disabled antiedit*`);
+    }
+    
+    // Handle mode settings
+    if (mode === 'chat') {
+        await db.set(botNumber, 'antiedit', 'chat');
+        return reply(`✅*Successfully enabled antiedit chat mode*`);
+    }
+    
+    if (mode === 'private') {
+        await db.set(botNumber, 'antiedit', 'private');
+        return reply(`✅*Successfully enabled antiedit private mode*`);
+    }
+    
+    reply('❌ Invalid option! Use: on, off, chat, private');
+    }
 },
     {
         command: ['autorecording'],
