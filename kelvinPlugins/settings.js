@@ -82,7 +82,6 @@ Status: ${currentMode !== 'off' ? '✅ Enabled' : '❌ Disabled'}
     }
     
     reply('❌ Invalid option! Use: on, off, chat, private, status');
-    break;
    }
 },
     {
