@@ -20,7 +20,17 @@ const AVAILABLE_FONTS = {
     '6': { name: 'Serif', style: 'serif' },
     '7': { name: 'Cursive', style: 'cursive' },
     '8': { name: 'Fancy', style: 'fancy' },
-    '9': { name: 'Small Caps', style: 'smallcaps' }
+    '9': { name: 'Small Caps', style: 'smallcaps' },
+    '10': { name: 'Double Struck', style: 'double' },
+    '11': { name: 'Squared', style: 'square' },
+    '12': { name: 'Circled', style: 'circled' },
+    '13': { name: 'Script', style: 'script' },
+    '14': { name: 'Fraktur', style: 'fraktur' },
+    '15': { name: 'Superscript', style: 'superscript' },
+    '16': { name: 'Subscript', style: 'subscript' },
+    '17': { name: 'Full Width', style: 'fullwidth' },
+    '18': { name: 'Upside Down', style: 'upsidedown' },
+    '19': { name: 'Zalgo', style: 'zalgo' }
 };
 
 module.exports = [
@@ -420,29 +430,27 @@ if (!Access) return reply(global.mess.owner);
         if (!Access) return reply(mess.owner);
 
         if (!args[0]) {
-            let fontList = '*╔══❖ AVAILABLE FONTS ❖══╗*\n\n';
+            let fontList = '';
             const currentFont = await db.get(botNumber, 'bot_font', 'normal');
             
             for (let i = 1; i <= 9; i++) {
                 const font = AVAILABLE_FONTS[i];
-                const isCurrent = currentFont === font.style ? '✅ ' : '   ';
-                fontList += `${isCurrent}*${i}.* ${font.name}\n`;
+                const check = currentFont === font.style ? '✅' : '  ';
+                fontList += `🔸 ${check} ${i}. ${font.name}\n`;
             }
-            fontList += `\n*╚══❖ Usage: ${prefix}setfont 1-9 ❖══╝*`;
+            fontList += `\n📌 *Usage:* ${prefix}setfont 1-9`;
             return reply(fontList);
         }
 
         const fontNumber = args[0];
         if (!AVAILABLE_FONTS[fontNumber]) {
-            return reply('*Invalid font! Please choose 1-9*');
+            return reply(`*Invalid font!* Choose 1-9`);
         }
 
         const selectedFont = AVAILABLE_FONTS[fontNumber];
-        
-        // Save to database
         await db.set(botNumber, 'bot_font', selectedFont.style);
         
-        reply(`*✅ Font set to:* *${selectedFont.name}*\n\n*All bot responses will now use this font!*`);
+        reply(`✅ *Font changed to ${selectedFont.name}*\n\n_All responses will now use this font_`);
     }
 }
 ];
