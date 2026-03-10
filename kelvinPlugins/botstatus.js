@@ -386,21 +386,28 @@ Start server Enjoy 😉
             });
 
             const repoInfo = `
-╭──❖ 「 REPOSITORY 」 ❖──
+╭──❖ 「 GITHUB REPOSITORY 」 ❖──
 │
-│  *Name* : ${data.name || repoName}
-│  *Stars* :  ${data.stargazers_count || 0}
-│  *Forks* :  ${data.forks_count || 0}
-│  *Language* : ${data.language || 'N/A'}
-│  *License* : ${data.license?.name || 'None'}
+🔸 *Repository*  : ${data.name || repoName}
+🔸 *Owner*       : ${repoOwner}
+🔸 *Description* : ${data.description || 'No description'}
 │
-│  *GitHub* :
-│  https://github.com/${repoOwner}/${repoName}
+🔹 *Stars*       :  ${data.stargazers_count || 0}
+🔹 *Forks*       :  ${data.forks_count || 0}
+🔹 *Issues*      :  ${data.open_issues_count || 0}
+🔹 *Watchers*    : 👀 ${data.watchers_count || 0}
 │
+🔸 *Language*    : ${data.language || 'N/A'}
+🔸 *License*     : ${data.license?.name || 'None'}
+🔸 *Created*     : ${new Date(data.created_at).toLocaleDateString()}
+🔸 *Updated*     :  ${new Date(data.updated_at).toLocaleDateString()}
+│
+🔹 *GitHub Link* :
+🔹 https://github.com/${repoOwner}/${repoName}
 │
 ╰─────────────────❖
 
-> @${m.sender.split("@")[0]} ⭐ Star the repo!`;
+✨ @${m.sender.split("@")[0]} *Don't forget to ⭐ star the repo!* ✨`;
 
             const thumbnail = fs.readFileSync('./start/lib/Media/Images/Vesper3.jpg');
             
@@ -409,8 +416,8 @@ Start server Enjoy 😉
                 contextInfo: {
                     mentionedJid: [m.sender],
                     externalAdReply: {
-                        title: "Vesper-Xmd Repository",
-                        body: `⭐ ${data.stargazers_count || 0} Stars`,
+                        title: "🌟 Vesper-Xmd Repository",
+                        body: `⭐ ${data.stargazers_count || 0} Stars | 🍴 ${data.forks_count || 0} Forks`,
                         thumbnail: thumbnail,
                         sourceUrl: `https://github.com/${repoOwner}/${repoName}`
                     }
@@ -418,7 +425,21 @@ Start server Enjoy 😉
             }, { quoted: m });
 
         } catch (error) {
-            reply(`❌ Error: ${error.message}`);
+            const fallbackInfo = `
+╭──❖ 「 REPOSITORY 」 ❖──
+│
+🔸 *Repository* : Vesper-Xmd
+🔸 *Owner*      : Kevintech-hub
+🔸 *GitHub*     : https://github.com/Kevintech-hub/Vesper-Xmd
+│
+╰─────────────────❖
+
+✨ @${m.sender.split("@")[0]} *Visit the repo to ⭐ star!* ✨`;
+
+            await kelvin.sendMessage(m.chat, { 
+                text: fallbackInfo,
+                contextInfo: { mentionedJid: [m.sender] }
+            }, { quoted: m });
         }
     }
 }
