@@ -159,7 +159,7 @@ Start server Enjoy 😉
     operate: async ({ kelvin, m, reply, getServerUptime }) => { 
         const serverUptime = getServerUptime();
         
-        const info = `🔸 *Server Uptime* : ${serverUptime}`;
+        const info = `🔸 *Server Uptime* : *${serverUptime}*`;
 
         await kelvin.sendMessage(m.chat, { text: info }, { quoted: m });
     }
