@@ -1,3 +1,5 @@
+/*Kelvin Tech*/
+
 const { truthCommand, dareCommand } = require('../start/kelvinCmds/fun.js');
 
 function getCompatibilityMessage(score) {
@@ -142,27 +144,24 @@ module.exports = [
         }
     },
     {
-        command: ['pickupline', 'pickup', 'flirt'],
-        operate: async ({ kelvin, m, reply, botNumber }) => {
-            try {
-                const res = await fetch('https://api.popcat.xyz/pickuplines');
-                
-                if (!res.ok) {
-                    throw new Error(`API request failed with status ${res.status}`);
-                }
-
-                const json = await res.json();
-                const botname = getSetting(botNumber, 'botname', 'Vesper-Xmd');
-                const pickupLine = `*Here's a pickup line for you:*\n\n"${json.pickupline}"\n\n> *© Dropped by ${botname}*`;
-
-                await kelvin.sendMessage(m.chat, { text: pickupLine }, { quoted: m });
-
-            } catch (error) {
-                console.error("Error in pickupline command:", error);
-                reply("Sorry, something went wrong while fetching the pickup line. Please try again later.");
+    command: ['pickupline', 'pickup', 'pline'],
+    operate: async ({ reply }) => {
+        try {
+            const response = await fetch(`https://apiskeith.top/fun/pickuplines`);
+            const data = await response.json();
+            
+            if (!data.status || !data.result) {
+                return reply('❌ Failed to fetch pick-up line');
             }
+            
+            reply(`💘 *Pick-up Line*\n\n${data.result}`);
+            
+        } catch (error) {
+            console.error('Pickup line error:', error);
+            reply('❌ Error fetching pick-up line');
         }
-    },
+    }
+},
     {
         command: ['advice', 'suggestion', 'tip'],
         operate: async ({ kelvin, m, reply }) => {
