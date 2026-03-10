@@ -433,18 +433,20 @@ if (!Access) return reply(global.mess.owner);
             let fontList = '';
             const currentFont = await db.get(botNumber, 'bot_font', 'normal');
             
-            for (let i = 1; i <= 9; i++) {
+            // Loop through all 19 fonts
+            for (let i = 1; i <= 19; i++) {
                 const font = AVAILABLE_FONTS[i];
+                if (!font) continue; 
                 const check = currentFont === font.style ? '✅' : '  ';
                 fontList += `🔸 ${check} ${i}. ${font.name}\n`;
             }
-            fontList += `\n📌 *Usage:* ${prefix}setfont 1-9`;
+            fontList += `\n📌 *Usage:* ${prefix}setfont 1-19`;
             return reply(fontList);
         }
 
-        const fontNumber = args[0];
-        if (!AVAILABLE_FONTS[fontNumber]) {
-            return reply(`*Invalid font!* Choose 1-9`);
+        const fontNumber = parseInt(args[0]);
+        if (fontNumber < 1 || fontNumber > 19 || !AVAILABLE_FONTS[fontNumber]) {
+            return reply(`❌ *Invalid font!* Choose 1-19`);
         }
 
         const selectedFont = AVAILABLE_FONTS[fontNumber];
