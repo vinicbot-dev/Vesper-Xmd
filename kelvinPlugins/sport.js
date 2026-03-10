@@ -7,7 +7,6 @@ const BASE_API = "https://apiskeith.top";
 const GAME_EVENTS_API = "https://apiskeith.top/sport/gameevents?q=";
 
 // TEST SCRIPT - Save this as test-api.js and run with: node test-api.js
-const fetch = require('node-fetch');
 
 async function testAPI() {
   try {
