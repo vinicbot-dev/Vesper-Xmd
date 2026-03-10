@@ -677,7 +677,7 @@ module.exports = [
         }
     },
     {
-        command: ['admins', 'listadmins', 'adminlist'],
+        command: ['tagadmins', 'listadmins', 'adminlist'],
         operate: async ({ kelvin, m, reply, isGroup, groupMetadata, participants }) => {
             if (!isGroup) return reply(global.mess.notgroup);
 
@@ -716,7 +716,7 @@ module.exports = [
                 }
 
                 if (regularAdmins.length > 0) {
-                    adminList += `👮 *ADMINS* (${regularAdmins.length})\n`;
+                    adminList += `*ADMINS* (${regularAdmins.length})\n`;
                     regularAdmins.forEach((admin, index) => {
                         adminList += `${index + 1}. @${admin.id.split('@')[0]}\n`;
                     });
@@ -1447,22 +1447,6 @@ module.exports = [
 },
     {
         command: ['kick'],
-        operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, text, mentionedJid, quoted }) => {
-            if (!isGroup) return reply(global.mess.notgroup);
-            if (!m.isAdmin) return reply(global.mess.notadmin);
-            if (!m.isBotAdmin) return reply(global.mess.botadmin);
-
-            let bck = mentionedJid[0]
-                ? mentionedJid[0]
-                : quoted
-                ? quoted.sender
-                : text.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
-            await kelvin.groupParticipantsUpdate(m.chat, [bck], "remove");
-            reply(global.mess.done);
-        }
-    },
-    {
-        command: ['kick2'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, mentionedJid, quoted, from }) => {
             try {
                 if (!isGroup) return reply(global.mess.notgroup);
