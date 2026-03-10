@@ -5,38 +5,6 @@ const path = require('path');
 const yts = require('yt-search');
 const fetch = require("node-fetch");
 const axios = require('axios');
-const { playstoreSearch } = require('../start/kelvinCmds/playstore.js'); 
-
-async function tiktokSearch(query) {
-    try {
-        const searchUrl = `https://api.jerexd666.wongireng.my.id/search/tiktok?q=${encodeURIComponent(query)}`;
-        
-        const response = await fetch(searchUrl);
-        const data = await response.json();
-        
-        if (!data.status || !data.result || data.result.length === 0) {
-            return "No TikTok videos found for your search.";
-        }
-        
-        const videos = data.result.slice(0, 5); // Limit to 5 results
-        let result = `🎵 **TikTok Search Results for "${query}"**\n\n`;
-        
-        videos.forEach((video, index) => {
-            result += `**${index + 1}. ${video.title}**\n`;
-            result += `👤 Author: ${video.author.nickname}\n`;
-            result += `❤️ Likes: ${video.digg_count.toLocaleString()}\n`;
-            result += `▶️ Plays: ${video.play_count.toLocaleString()}\n`;
-            result += `💬 Comments: ${video.comment_count}\n`;
-            result += `🔗 Video URL: ${video.play}\n\n`;
-        });
-        
-        return result;
-        
-    } catch (error) {
-        console.error('TikTok search error:', error);
-        return "❌ Error searching TikTok. Please try again later.";
-    }
-}
 
 module.exports = [
     {
@@ -121,75 +89,36 @@ module.exports = [
         }
     },
     {
-    command: ['movie2', 'sinhalasub', 'films'],
-    operate: async ({ kelvin, m, reply, text }) => {
-        if (!text) return reply('*Please provide a movie name to search!*\nExample: .movie 2024');
-
-        try {
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "🎬", key: m.key } 
-            });
-
-            // Using Arslan API
-            const apiUrl = `https://arslan-apis.vercel.app/movie/sinhalasub/search?text=${encodeURIComponent(text)}`;
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-
-            if (!data.status) {
-                throw new Error('API returned error');
-            }
-
-            if (!data.result || data.result.length === 0) {
-                return reply(`❌ No movies found for "${text}". Try another keyword.`);
-            }
-
-            const movies = data.result;
-            
-            let movieList = `🎬 *Movie Search Results for:* ${text}\n\n`;
-            
-            movies.slice(0, 10).forEach((movie, index) => {
-                movieList += `${index + 1}. *${movie.title || 'Unknown'}*\n`;
-                if (movie.year) movieList += `   📅 Year: ${movie.year}\n`;
-                if (movie.rating) movieList += `   ⭐ Rating: ${movie.rating}\n`;
-                movieList += `\n`;
-            });
-
-            await kelvin.sendMessage(m.chat, { 
-                text: movieList 
-            }, { quoted: m });
-            
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "✅", key: m.key } 
-            });
-
-        } catch (error) {
-            console.error('Movie search error:', error);
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "❌", key: m.key } 
-            });
-            reply(`❌ *Error:* ${error.message}`);
-        }
+  command: ['apk', 'apksearch', 'appsearch'],
+  operate: async ({ m, reply, args }) => {
+    const query = args.join(' ');
+    
+    if (!query) return reply("*Please provide an app name. Example: `.apk xender*`");
+    
+    try {
+      const response = await fetch(`${global.api}/search/apk?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      
+      if (!data.status || !data.result?.length) {
+        return reply(`❌ No APK found for "${query}"`);
+      }
+      
+      let message = `*APK Search Results for "${query}"*\n\n`;
+      
+      data.result.forEach((app, i) => {
+        message += `*${i + 1}. ${app.title}*\n`;
+        message += ` ${app.developer || 'Unknown'}\n`;
+        message += `📥 ${app.link}\n\n`;
+      });
+      
+      reply(message);
+    } catch (error) {
+      console.error('APK Error:', error);
+      reply("❌ Error searching APK. Try again later.");
     }
+  }
 },
-    {
-        command: ['playstore', 'appstore', 'apps'],
-        operate: async ({ kelvin, m, reply, text }) => {
-            if (!text) return reply('*Please provide an app name to search!*\nExample: .playstore WhatsApp');
-
-            try {
-              
-                // Get search results
-                const result = await playstoreSearch(text);
-                
-                // Send the results
-                reply(result);
-                
-            } catch (error) {
-                console.error('PlayStore plugin error:', error);
-                reply('An error occurred while searching PlayStore.');
-            }
-        }
-    },
+ 
 {
     command: ['lyrics', 'lyric'],
     operate: async ({ kelvin, m, reply, text, prefix }) => {
@@ -319,19 +248,91 @@ module.exports = [
         }
     },
     {
-        command: ['tiktoksearch', 'tts'],
-        operate: async ({ reply, m, kelvin, text }) => {
-            const query = text.trim();
-            if (!query) return reply("*Provide TikTok username or search query*.");
-            
-            await kelvin.sendMessage(m.chat, { 
-                text: `🔍 Searching TikTok for "${query}"...` 
-            }, { quoted: m });
-            
-            const result = await tiktokSearch(query);
-            await kelvin.sendMessage(m.chat, { text: result }, { quoted: m });
+  command: ['tiktoksearch', 'ttsearch', 'tiksearch'],
+  operate: async ({ m, reply, args }) => {
+    const query = args.join(' ');
+    
+    if (!query) return reply("*Please provide a search term. Example: `.tiktoksearch keizzah4189*`");
+    
+    try {
+      const response = await fetch(`${global.api}/search/tiktoksearch?query=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      
+      if (!data.status || !data.result?.length) {
+        return reply(`❌ No TikTok videos found for "${query}"`);
+      }
+      
+      let message = `*TikTok Search Results for "${query}"*\n\n`;
+      message += `*📊 Found:* ${data.result.length} videos\n\n`;
+      
+      data.result.slice(0, 5).forEach((video, i) => {
+        message += `*${i + 1}. Video*\n`;
+        message += `👤 *Author:* ${video.author?.nickname || 'Unknown'}\n`;
+        message += `🌍 *Region:* ${video.region || 'N/A'}\n`;
+        message += `⏱️ *Duration:* ${video.duration || 0} seconds\n`;
+        if (video.title) message += `📝 *Title:* ${video.title.substring(0, 50)}${video.title.length > 50 ? '...' : ''}\n`;
+        message += `🎬 *Watch:* ${video.play}\n`;
+        if (video.music) message += `🎵 *Audio:* ${video.music}\n`;
+        message += `\n`;
+      });
+      
+      message += `\n_Showing top 5 results. Use .ttdl [video_url] to download._`;
+      
+      reply(message);
+    } catch (error) {
+      console.error('TikTok Search Error:', error);
+      reply("❌ Error searching TikTok. Try again later.");
+    }
+  }
+},
+{
+  command: ['imagesearch', 'imgsearch', 'image', 'img'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const query = args.join(' ');
+    
+    if (!query) return reply("*Please provide a search term. Example: `.imagesearch dog*`");
+    
+    try {
+      const response = await fetch(`${global.api}/search/images?query=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      
+      if (!data.status || !data.result?.length) {
+        return reply(`❌ No images found for "${query}"`);
+      }
+      
+      // Remove duplicates
+      const uniqueUrls = [];
+      const seen = new Set();
+      data.result.forEach(item => {
+        if (!seen.has(item.url)) {
+          seen.add(item.url);
+          uniqueUrls.push(item);
         }
-    },
+      });
+      
+      if (uniqueUrls.length === 0) {
+        return reply(`❌ No images found for "${query}"`);
+      }
+      
+      // Send first 2 images
+      for (let i = 0; i < Math.min(2, uniqueUrls.length); i++) {
+        const img = uniqueUrls[i];
+        await kelvin.sendMessage(m.chat, {
+          image: { url: img.url },
+          caption: `*📸 Image ${i + 1}*\n ${img.width} x ${img.height}`
+        }, { quoted: m });
+      }
+      
+      if (uniqueUrls.length > 2) {
+        reply(`✅ Found ${uniqueUrls.length} images.`);
+      }
+      
+    } catch (error) {
+      console.error('Image Search Error:', error);
+      reply("❌ Error searching images. Try again later.");
+    }
+  }
+},
         {
         command: ['define'],
         operate: async ({ kelvin, mek, m, reply, text, q }) => {
