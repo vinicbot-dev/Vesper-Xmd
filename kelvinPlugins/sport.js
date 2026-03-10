@@ -6,53 +6,113 @@ const fetch = require('node-fetch');
 const BASE_API = "https://apiskeith.top";
 const GAME_EVENTS_API = "https://apiskeith.top/sport/gameevents?q=";
 
+// TEST SCRIPT - Save this as test-api.js and run with: node test-api.js
+const fetch = require('node-fetch');
 
+async function testAPI() {
+  try {
+    console.log('Testing API...');
+    const response = await fetch('https://apiskeith.top/football?code=PL&query=standings');
+    const text = await response.text(); // Get as text first to see what's really coming
+    console.log('RAW RESPONSE:');
+    console.log(text.substring(0, 500)); // Show first 500 chars
+    
+    try {
+      const data = JSON.parse(text);
+      console.log('\nPARSED JSON STRUCTURE:');
+      console.log(JSON.stringify(data, null, 2).substring(0, 1000));
+    } catch (e) {
+      console.log('\n❌ NOT VALID JSON - This is the problem!');
+      console.log('Error:', e.message);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+testAPI();
 
 // Standings function
+// Standings function - WITH DEBUG
 async function formatStandings(leagueCode, leagueName, { m, reply }) {
   try {
     const apiUrl = `https://apiskeith.top/football?code=${leagueCode}&query=standings`;
+    
+    // DEBUG: Tell user we're fetching
+    await reply(`🔍 Fetching ${leagueName} standings...`);
+    
     const response = await fetch(apiUrl);
-    const data = await response.json();
+    
+    // DEBUG: Check response status
+    if (!response.ok) {
+      return reply(`❌ API returned status ${response.status}: ${response.statusText}`);
+    }
+    
+    const text = await response.text(); // Get as text first
+    
+    // DEBUG: Show first part of response
+    console.log(`RAW RESPONSE for ${leagueName}:`, text.substring(0, 300));
+    
+    // Try to parse JSON
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('JSON Parse Error:', e.message);
+      return reply(`❌ Invalid JSON response from API. First 100 chars: ${text.substring(0, 100)}`);
+    }
 
-    // DEBUG: Log what we received
-    console.log('API Response for standings:', JSON.stringify(data, null, 2).substring(0, 500));
-
-    // Try different possible response structures
+    // DEBUG: Log the structure
+    console.log('Data keys:', Object.keys(data));
+    
+    // Check different possible response structures
     let standings = null;
     
     if (data.result?.standings) {
-      // Structure 1: { result: { standings: [...] } }
       standings = data.result.standings;
     } else if (data.standings) {
-      // Structure 2: { standings: [...] }
       standings = data.standings;
     } else if (data.data?.standings) {
-      // Structure 3: { data: { standings: [...] } }
       standings = data.data.standings;
     } else if (Array.isArray(data)) {
-      // Structure 4: Direct array
       standings = data;
     } else if (data.result && Array.isArray(data.result)) {
-      // Structure 5: { result: [...] }
       standings = data.result;
     }
 
-    if (!standings) {
-      return reply(`❌ Failed to fetch ${leagueName} standings. Unexpected data format.`);
+    if (!standings || standings.length === 0) {
+      return reply(`❌ No standings data found. Response structure: ${JSON.stringify(Object.keys(data))}`);
     }
 
-    // Rest of your function remains the same...
+    // Your existing formatting code...
     let message = `*⚽ ${leagueName} Standings ⚽*\n\n`;
     
     standings.forEach((team) => {
-      // Your existing formatting code...
+      let positionIndicator = '';
+      if (leagueCode === 'CL' || leagueCode === 'EL') {
+        if (team.position <= (leagueCode === 'CL' ? 4 : 3)) positionIndicator = '🌟 ';
+      } else {
+        if (team.position <= 4) positionIndicator = '🌟 '; 
+        else if (team.position === 5 || team.position === 6) positionIndicator = '⭐ ';
+        else if (team.position >= standings.length - 2) positionIndicator = '⚠️ '; 
+      }
+
+      message += `*${positionIndicator}${team.position}.* ${team.team}\n`;
+      message += `   📊 Played: ${team.played} | W: ${team.won} | D: ${team.draw} | L: ${team.lost}\n`;
+      message += `   ⚽ Goals: ${team.goalsFor}-${team.goalsAgainst} (GD: ${team.goalDifference > 0 ? '+' : ''}${team.goalDifference})\n`;
+      message += `   🏆 Points: *${team.points}*\n\n`;
     });
 
+    if (leagueCode === 'CL' || leagueCode === 'EL') {
+      message += '\n*🌟 = Qualification for next stage*';
+    } else {
+      message += '\n*🌟 = UCL | ⭐ = Europa | ⚠️ = Relegation*';
+    }
+    
     reply(message);
   } catch (error) {
     console.error(`Error fetching ${leagueName} standings:`, error);
-    reply(`❌ Error fetching ${leagueName} standings. Please try again later.`);
+    reply(`❌ Error: ${error.message}`);
   }
 }
 
