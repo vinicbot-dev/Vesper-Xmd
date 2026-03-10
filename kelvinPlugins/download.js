@@ -11,8 +11,7 @@ const {  } = require('../start/lib/myfunction');
 const { 
     playCommand, 
     InstagramCommand, 
-    handleMediafireDownload, 
-    ytplayCommand, 
+    handleMediafireDownload,
     videoCommand, 
     takeCommand 
 } = require('../start/kelvinCmds/commands');
@@ -25,89 +24,37 @@ async function sleep(ms) {
 module.exports = [
 
 {
-    command: ['song', 'mp3'],
-    operate: async ({ kelvin, m, reply, text, prefix, command }) => {
+    command: ['song'],
+    operate: async ({ conn, m, reply, text, prefix, command }) => {
+        if (!text) return reply(`*Example*: ${prefix + command} sekkle down by bunnie Gunter`);
         
-        if (!text) return reply(`📌 Example: ${prefix + command} shape of you`);
+        await reply("🔍 Searching...");
         
         try {
-            await reply("🔍 Searching...");
+            // YouTube search
+            const searchResult = await yts(text);
+            if (!searchResult?.videos?.length) return reply("❌ Song not found");
             
-            // Encode the search query
-            const searchQuery = encodeURIComponent(text);
+            const video = searchResult.videos[0];
             
-           
-            const apiUrl = `https://apis.xwolf.space/download/mp3?url=${searchQuery}`;
+            // Download audio
+            const apiUrl = `https://yt-dl.officialhectormanuel.workers.dev/?url=${encodeURIComponent(video.url)}`;
+            const { data } = await axios.get(apiUrl, { timeout: 30000 });
             
-            const response = await axios.get(apiUrl, { timeout: 30000 });
-            const data = response.data;
-            
-            // Check if response is successful
-            if (!data || !data.success) {
-                throw new Error(data?.message || 'API returned an error');
-            }
-            
-            const title = data.title || text;
-            const videoId = data.videoId || '';
-            const thumbnail = data.thumbnail || `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-            const audioUrl = data.downloadUrl || data.streamUrl;
-            
-            if (!audioUrl) {
-                return reply("❌ Couldn't get audio download link.");
-            }
-            
-            // React
-            await kelvin.sendMessage(m.chat, {
-                react: { text: "🎵", key: m.key }
-            });
-            
-            // Send song info with thumbnail
-            await kelvin.sendMessage(
-                m.chat,
-                {
-                    image: { url: thumbnail },
-                    caption: `🎵 *${title}*\n\n` +
-                        `📥 Downloading...`,
-                    mentions: [m.sender]
-                },
-                { quoted: m }
-            );
+            if (!data?.audio) return reply("❌ Download failed");
             
             // Send audio
-            await kelvin.sendMessage(
-                m.chat,
-                {
-                    audio: { url: audioUrl },
-                    mimetype: "audio/mpeg",
-                    fileName: `${title.substring(0, 50)}.mp3`.replace(/[<>:"/\\|?*]/g, '_')
-                },
-                { quoted: m }
-            );
+            await conn.sendMessage(m.chat, {
+                audio: { url: data.audio },
+                mimetype: "audio/mpeg",
+                fileName: `${video.title}.mp3`
+            }, { quoted: m });
             
-            // Success reaction
-            await kelvin.sendMessage(m.chat, {
-                react: { text: "✅", key: m.key }
-            });
+            await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
             
         } catch (err) {
-            console.error('Song command error:', err);
-            
-            let errorMessage = '❌ Error downloading song. ';
-            
-            if (err.message.includes('timeout')) {
-                errorMessage += 'Request timed out.';
-            } else if (err.message.includes('API returned an error')) {
-                errorMessage += 'Service unavailable.';
-            } else {
-                errorMessage += err.message;
-            }
-            
-            reply(errorMessage);
-            
-            // Error reaction
-            await kelvin.sendMessage(m.chat, {
-                react: { text: "❌", key: m.key }
-            });
+            console.error("Song error:", err);
+            reply("❌ Error");
         }
     }
 },
@@ -188,7 +135,7 @@ module.exports = [
         }
     },
     {
-    command: ['play3', 'song3', 'ytmp3', 'Robertplay'],
+    command: ['play3', 'song3', 'Robertplay'],
     operate: async ({ kelvin, m, reply, text, prefix, command }) => {
         
         if (!text) return reply(`Please Provide Me A song Query or Link\n\nExample: ${prefix + command} shape of you`);
@@ -267,14 +214,34 @@ module.exports = [
         }
     }
 },
+{
+  command: ['instadl', 'igdl', 'instagramdl', 'reeldl'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const url = args[0];
     
-    // Instagram command
-    {
-        command: ['instagram', 'ig', 'insta'],
-        operate: async ({ kelvin, m, reply, args, text }) => {
-            await InstagramCommand(kelvin, m.chat, m);
-        }
-    },
+    if (!url) return reply("*Please provide an Instagram URL. Example: `.instadl https://www.instagram.com/reel/DD6q97IuzxD/*`");
+    
+    try {
+      const response = await fetch(`${global.api}/download/instadl?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+      
+      if (!data.status || !data.result) {
+        return reply(`❌ Failed to download from Instagram. Check the URL.`);
+      }
+      
+      const videoUrl = data.result;
+      
+      await kelvin.sendMessage(m.chat, {
+        video: { url: videoUrl },
+        caption: "✅ *Instagram Video Downloaded*",
+      }, { quoted: m });
+      
+    } catch (error) {
+      console.error('Instagram Download Error:', error);
+      reply("❌ Error downloading from Instagram. Try again later.");
+    }
+  }
+},
     
     {
     command: ['mediafire', 'mf', 'mfire'],
@@ -322,21 +289,40 @@ module.exports = [
 },
     
     // YTPlay command
-    {
-        command: ['ytplay', 'yplay', 'youtubeplay'],
-        operate: async ({ kelvin, m, reply, args, text }) => {
-            const query = args.join(' ') || text;
-            await ytplayCommand(kelvin, m.chat, query, m);
+{
+    command: ['ytmp3'],
+    operate: async ({ kelvin, m, reply, text, prefix, command }) => {
+        if (!text) return reply(`📌 Example: ${prefix + command} shape of you or ${prefix + command} https://youtube.com/watch?v=...`);
+        
+        await reply("🎵 Fetching audio...");
+        
+        try {
+            const isUrl = text.match(/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)/i);
+            
+            
+            const url = isUrl ? text : `https://youtube.com/watch?v=${text}`;
+            
+            const response = await fetch(`https://apiskeith.top/download/audio?url=${encodeURIComponent(url)}`);
+            const data = await response.json();
+            
+            if (!data.status || !data.result) {
+                return reply("❌ Couldn't get audio. Try a different song or URL.");
+            }
+            
+            await kelvin.sendMessage(m.chat, {
+                audio: { url: data.result },
+                mimetype: "audio/mpeg"
+            }, { quoted: m });
+            
+            await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
+            
+        } catch (error) {
+            console.error('Song error:', error);
+            reply("❌ Error fetching audio");
+            await kelvin.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
         }
-    },
-    
-    // Video command
-    {
-        command: ['video', 'ytvideo', 'youtubevideo'],
-        operate: async ({ kelvin, m, reply, args, text }) => {
-            await videoCommand(kelvin, m.chat, m);
-        }
-    },
+    }
+},
     {
         command: ['song2',  'music'],
         operate: async ({ kelvin, m, reply, text, fetchMp3DownloadUrl }) => {
@@ -672,60 +658,36 @@ module.exports = [
    {
     command: ['facebook', 'fb'],
     operate: async ({ kelvin, m, reply, text }) => {
-        if (!text) return reply('Usage: .fb <facebook_url>');
+        if (!text) return reply('*Please provide a Facebook URL. Example: .fb https://fb.com/video*');
+        
+        await reply('📥 Downloading...');
         
         try {
-            await reply('📥 Downloading...');
+            // Try Arslan API first
+            let res = await fetch(`https://arslan-apis.vercel.app/download/fbdown?url=${encodeURIComponent(text)}`);
+            let data = await res.json();
+            let videoUrl = data.status ? data.result?.download?.hd || data.result?.download?.sd : null;
             
-            // Using Arslan API
-            const apiUrl = `https://arslan-apis.vercel.app/download/fbdown?url=${encodeURIComponent(text)}`;
-            const res = await fetch(apiUrl);
-            const data = await res.json();
-            
-            if (data.status && data.result?.download) {
-                const download = data.result.download;
-                const metadata = data.result.metadata || {};
-                
-                // Try HD first, fallback to SD
-                const videoUrl = download.hd || download.sd;
-                
-                if (!videoUrl) {
-                    return reply('❌ No download link found');
-                }
-                
-                const caption = `*Facebook Video*\n\n` +
-                               `*Title:* ${metadata.title || 'N/A'}\n` +
-                               `*Duration:* ${metadata.duration || 'N/A'}\n` +
-                               `\n> ${global.wm || ''}`;
-                
-                await kelvin.sendMessage(m.chat, {
-                    video: { url: videoUrl },
-                    caption: caption,
-                    contextInfo: {
-                        externalAdReply: {
-                            title: "Facebook Video",
-                            body: metadata.title || "Downloaded",
-                            thumbnailUrl: metadata.thumbnail,
-                            mediaType: 1,
-                            sourceUrl: text
-                        }
-                    }
-                }, { quoted: m });
-                
-                await kelvin.sendMessage(m.chat, { 
-                    react: { text: "✅", key: m.key } 
-                });
-                
-            } else {
-                reply('❌ Download failed: Invalid response');
+            if (!videoUrl) {
+                res = await fetch(`https://apiskeith.top/download/fbdown?url=${encodeURIComponent(text)}`);
+                data = await res.json();
+                videoUrl = data.status ? data.result?.media?.hd || data.result?.media?.sd : null;
             }
+            
+            if (!videoUrl) return reply('❌ No download link found');
+            
+            await kelvin.sendMessage(m.chat, {
+                video: { url: videoUrl },
+                caption: `✅ *Facebook Video*\n> ${global.wm || ''}`,
+                contextInfo: { externalAdReply: { title: "Facebook Video", sourceUrl: text } }
+            }, { quoted: m });
+            
+            await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
             
         } catch (error) {
             console.error('Facebook error:', error);
             reply(`❌ Error: ${error.message}`);
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "❌", key: m.key } 
-            });
+            await kelvin.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
         }
     }
 },
@@ -878,55 +840,84 @@ module.exports = [
     }
 },
 {
-    command: ['pinterest', 'pini', 'pint'],
-    operate: async ({ kelvin, m, reply, text }) => {
-        if (!text) return reply('*Please provide a search query!*\nExample: .pinterest car');
-
-        try {
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "🔍", key: m.key } 
-            });
-
-            // Using Arslan API
-            const apiUrl = `https://arslan-apis.vercel.app/download/piniimg?text=${encodeURIComponent(text)}`;
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-
-            if (!data.status) {
-                throw new Error('API returned error');
-            }
-
-            // Check if results exist
-            if (!data.result || data.result.length === 0) {
-                return reply(`❌ No images found for "${text}". Try another keyword.`);
-            }
-
-            // Get random image from results
-            const randomIndex = Math.floor(Math.random() * data.result.length);
-            const imageUrl = data.result[randomIndex];
-
-            // Send the image
-            await kelvin.sendMessage(
-                m.chat,
-                {
-                    image: { url: imageUrl },
-                    caption: `🖼️ *Pinterest Result*\n\n🔍 *Query:* ${text}\n\n> ${global.wm || ''}`
-                },
-                { quoted: m }
-            );
-            
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "✅", key: m.key } 
-            });
-
-        } catch (error) {
-            console.error('Pinterest error:', error);
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "❌", key: m.key } 
-            });
-            reply(`❌ *Error:* ${error.message}`);
-        }
+  command: ['pindl', 'pinterestdl', 'pindownload'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const url = args[0];
+    
+    if (!url) return reply("*Please provide a Pinterest URL. Example: `.pindl https://pin.it/1zdlg6EPT*`");
+    
+    try {
+      const response = await fetch(`${global.api}/download/pindl3?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+      
+      if (!data.status || !data.result) {
+        return reply(`Failed to download from Pinterest. Check the URL.`);
+      }
+      
+      const { thumb, video, image } = data.result;
+      
+      // If it's a video
+      if (video) {
+        await kelvin.sendMessage(m.chat, {
+          video: { url: video },
+          caption: "✅ *Pinterest Video Downloaded*",
+          thumbnail: { url: thumb }
+        }, { quoted: m });
+      }
+      // If it's an image
+      else if (image) {
+        await kelvin.sendMessage(m.chat, {
+          image: { url: image },
+          caption: "✅ *Pinterest Image Downloaded*"
+        }, { quoted: m });
+      }
+      else {
+        reply("❌ No downloadable content found.");
+      }
+      
+    } catch (error) {
+      console.error('Pinterest Download Error:', error);
+      reply("❌ Error downloading from Pinterest. Try again later.");
     }
+  }
+},
+{
+  command: ['instaposts', 'igposts', 'instagramposts'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const query = args.join(' ');
+    
+    if (!query) return reply("*Please provide a search term. Example: `.instaposts ronaldo*`");
+    
+    try {
+      const response = await fetch(`${global.api}/download/instaposts?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      
+      if (!data.status) {
+        return reply(`Failed to fetch Instagram posts.`);
+      }
+      
+      if (data.result.total === 0 || !data.result.items?.length) {
+        return reply(`No Instagram posts found for "${query}"`);
+      }
+      
+      let message = `*Instagram Posts for "${query}"*\n\n`;
+      message += `*📊 Total:* ${data.result.total}\n\n`;
+      
+      data.result.items.slice(0, 5).forEach((post, i) => {
+        message += `*${i + 1}. Post*\n`;
+        if (post.caption) message += `📝 ${post.caption.substring(0, 100)}${post.caption.length > 100 ? '...' : ''}\n`;
+        if (post.likes) message += `❤️ Likes: ${post.likes}\n`;
+        if (post.comments) message += `💬 Comments: ${post.comments}\n`;
+        if (post.url) message += `🔗 ${post.url}\n`;
+        message += `\n`;
+      });
+      
+      reply(message);
+    } catch (error) {
+      console.error('Instagram Posts Error:', error);
+      reply("❌ Error fetching Instagram posts. Try again later.");
+    }
+  }
 },
 {
     command: ['spotify', 'sp', 'spotifydl'],
