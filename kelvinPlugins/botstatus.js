@@ -36,10 +36,12 @@ module.exports = [
         const ping = (performance.now() - start).toFixed(1);
         
         const response = `
-╭─❖ PONG ❖─
-│ ⚡ ${ping}ms
-│ ${ping < 300 ? '✅' : ping < 600 ? '⚠️' : '🐢'}
-╰────────❖`;
+╭──❖ 「 PONG 」 ❖──
+│
+🔸 *Speed* : ${ping}ms
+🔹 *Status* : ${ping < 300 ? '✅ Fast' : ping < 600 ? '⚠️ Medium' : '🐢 Slow'}
+│
+╰──────────────❖`;
 
         await kelvin.sendMessage(m.chat, {
             text: response,
@@ -67,6 +69,7 @@ module.exports = [
             './start/lib/Media/JexAudio4.mp3',
             './start/lib/Media/JexAudio5.mp3',
             './start/lib/Media/JexAudio6.mp3',
+            './start/lib/Media/JexAudio8.mp3',
             './start/lib/Media/JexAudio7.mp3'
         ];
         
@@ -154,21 +157,9 @@ Start server Enjoy 😉
     {
     command: ['uptime', 'up', 'runtime'],
     operate: async ({ kelvin, m, reply, getServerUptime }) => { 
-        const start = performance.now();
-        
         const serverUptime = getServerUptime();
         
-        const ping = (performance.now() - start).toFixed(2);
-        
-        const info = `
-╭──❖ 「 SYSTEM STATUS 」 ❖──
-│
-│  *Server Uptime* : ${serverUptime}
-│  *Ping*         : ${ping}ms
-│  *Version*      : ${global.versions || '1.4.0'}
-│  *Platform*     : ${os.platform()}
-│
-╰────────────────────❖`;
+        const info = `🔸 *Server Uptime* : ${serverUptime}`;
 
         await kelvin.sendMessage(m.chat, { text: info }, { quoted: m });
     }
@@ -278,7 +269,7 @@ Start server Enjoy 😉
             const botname = `${global.botname}`;
             const ownername = "Kelvin Tech";
             
-            const info = `
+            const botInfo = `
 ╭──❖ 「 BOT INFORMATION 」 ❖──
 │
 │  *Name*    : ${global.botname || 'Vesper-Xmd'}
@@ -301,6 +292,7 @@ Start server Enjoy 😉
     './start/lib/Media/JexAudio1.mp3',
     './start/lib/Media/JexAudio2.mp3',
     './start/lib/Media/JexAudio3.mp3',
+    './start/lib/Media/JexAudio8.mp3',
     './start/lib/Media/JexAudio4.mp3',
     './start/lib/Media/JexAudio5.mp3',
     './start/lib/Media/JexAudio6.mp3',
@@ -333,26 +325,47 @@ Start server Enjoy 😉
         }
     },
     {
-    command: ['botstatus', 'systeminfo'],
+    command: ['botstatus', 'systeminfo', 'stats'],
     operate: async ({ kelvin, m, reply, getServerUptime }) => {
         const used = process.memoryUsage();
-        const ram = `${formatSize(used.heapUsed)} / ${formatSize(os.totalmem())}`;
+        const totalRam = os.totalmem();
+        const freeRam = os.freemem();
+        const usedRam = totalRam - freeRam;
+        const ramPercent = ((usedRam / totalRam) * 100).toFixed(1);
+        
         const disk = await checkDiskSpace(process.cwd());
+        const diskUsed = disk.size - disk.free;
+        const diskPercent = ((diskUsed / disk.size) * 100).toFixed(1);
         
         const start = performance.now();
-        await reply("⏳ *Calculating...*");
+        await reply("⏳ *Calculating system Info...*");
         const ping = (performance.now() - start).toFixed(2);
         
         const serverUptime = getServerUptime();
         
+        const cpus = os.cpus();
+        const cpuModel = cpus[0].model;
+        const cpuCores = cpus.length;
+        const loadAvg = os.loadavg();
+        
         const status = `
 ╭──❖ 「 BOT STATUS 」 ❖──
 │
-│  *Ping*       : ${ping}ms
-│  *Server Uptime* : ${serverUptime}
-│  *RAM*        : ${ram}
-│  *Disk*       : ${formatSize(disk.size - disk.free)} / ${formatSize(disk.size)}
-│  *Node*       : ${process.version}
+🔸 *Ping*          : ${ping}ms
+🔸 *Server Uptime* : ${serverUptime}
+│
+🔹 *RAM*           : ${formatSize(usedRam)} / ${formatSize(totalRam)} (${ramPercent}%)
+🔹 *Heap*          : ${formatSize(used.heapUsed)} / ${formatSize(used.heapTotal)}
+│
+🔸 *Disk*          : ${formatSize(diskUsed)} / ${formatSize(disk.size)} (${diskPercent}%)
+🔸 *Free Disk*     : ${formatSize(disk.free)}
+│
+🔹 *CPU*           : ${cpuModel.substring(0, 25)}... (${cpuCores} cores)
+🔹 *Load*          : ${loadAvg[0].toFixed(2)}%, ${loadAvg[1].toFixed(2)}%, ${loadAvg[2].toFixed(2)}%
+│
+🔸 *Platform*      : ${os.platform()} ${os.release()}
+🔸 *Node*          : ${process.version}
+🔸 *Host*          : ${os.hostname()}
 │
 ╰────────────────────❖`;
 
