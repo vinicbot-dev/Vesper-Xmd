@@ -8,7 +8,7 @@ const fs = require('fs');
 
 global.owner = ["Kelvin Tech"];  
 global.status = false; // true = public, false = private
-global.versions = "v1.2.1";
+global.versions = "v1.2.2";
 global.botname = "Vesper-Xmd"; 
 
 // ========= Other Global Settings ========= //
@@ -21,7 +21,7 @@ global.author = 'Bot';
 global.wm = '©Vesper-Xmd is awesome 🔥';
 
 // === For only developer ============
-global.api = "https://xploaderapi-f5e63b.platform.cypherx.space";
+global.api = "https://apiskeith.top";
 global.wwe = "https://www.wwe.com/api/news";
 global.wwe1 = "https://www.thesportsdb.com/api/v1/json/3/searchfilename.php?e=wwe";
 global.wwe2 = "https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=wrestling";
