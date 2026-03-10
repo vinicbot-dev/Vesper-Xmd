@@ -386,7 +386,7 @@ Start server Enjoy 😉
             });
 
             const repoInfo = `
-╭──❖ 「 GITHUB REPOSITORY 」 ❖──
+╭──❖ 「 *Vesper-Xmd Repository*」 ❖──
 │
 🔸 *Repository*  : ${data.name || repoName}
 🔸 *Owner*       : ${repoOwner}
