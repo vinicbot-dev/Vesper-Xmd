@@ -870,7 +870,7 @@ module.exports = [
   },
   {
     command: ['venuesearch', 'stadium', 'venue'],
-    operate: async ({ m, reply, Kelvin, args }) => {
+    operate: async ({ m, reply, kelvin, args }) => {
       const query = args.join(' ');
       await searchVenue(query, { reply, kelvin });
     }
