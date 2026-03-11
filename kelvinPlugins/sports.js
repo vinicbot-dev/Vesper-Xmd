@@ -863,16 +863,16 @@ module.exports = [
   },
   {
     command: ['playersearch', 'playerinfo', 'player'],
-    operate: async ({ m, reply, args }) => {
+    operate: async ({ m, reply kelvin, args }) => {
       const query = args.join(' ');
-      await searchPlayer(query, { reply });
+      await searchPlayer(query, { reply, kelvin });
     }
   },
   {
     command: ['venuesearch', 'stadium', 'venue'],
-    operate: async ({ m, reply, args }) => {
+    operate: async ({ m, reply, Kelvin, args }) => {
       const query = args.join(' ');
-      await searchVenue(query, { reply });
+      await searchVenue(query, { reply, kelvin });
     }
   },
   {
