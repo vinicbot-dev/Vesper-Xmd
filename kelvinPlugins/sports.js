@@ -862,19 +862,19 @@ module.exports = [
     }
   },
   {
-    command: ['playersearch', 'playerinfo', 'player'],
-    operate: async ({ m, reply kelvin, args }) => {
-      const query = args.join(' ');
-      await searchPlayer(query, { reply, kelvin });
-    }
-  },
+  command: ['playersearch', 'playerinfo', 'player'],
+  operate: async ({ m, reply, kelvin, args }) => {  
+    const query = args.join(' ');
+    await searchPlayer(query, { reply, kelvin, m });
+  }
+},
   {
-    command: ['venuesearch', 'stadium', 'venue'],
-    operate: async ({ m, reply, kelvin, args }) => {
-      const query = args.join(' ');
-      await searchVenue(query, { reply, kelvin });
-    }
-  },
+  command: ['venuesearch', 'stadium', 'venue'],
+  operate: async ({ m, reply, kelvin, args }) => {
+    const query = args.join(' ');
+    await searchVenue(query, { reply, kelvin, m }); 
+  }
+},
   {
     command: ['livescores', 'livescore', 'lives'],
     operate: async ({ m, reply }) => {
