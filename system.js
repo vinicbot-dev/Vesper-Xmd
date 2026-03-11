@@ -12,7 +12,6 @@ const path = require('path');
 const axios = require('axios')
 const devKelvin = '256742932677';
 const cheerio = require('cheerio')
-const chalk = require('chalk');
 const os = require('os');
 const { performance } = require("perf_hooks");
 const acrcloud = require ('acrcloud');
@@ -287,16 +286,17 @@ function generateMenuText(plugins, ownername, prefix, mode, versions, latensie, 
     totalCommands = uniqueCommands.size;
 
     let menu = `┌─❖ *VESPER-XMD* ❖─\n`;
-    menu += `├─• ᴜsᴇʀ: ${ownername}\n`;
-    menu += `├─• ʙᴏᴛ: ${global.botname || 'Vesper-XMD'}\n`;
-    menu += `├─• ᴍᴏᴅᴇ: ${mode === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ'}\n`;
-    menu += `├─• ᴘʀᴇғɪx: [ ${prefix} ]\n`;
-    menu += `├─• ᴄᴍᴅs: ${totalCommands}+\n`;
-    menu += `├─• ᴠᴇʀsɪᴏɴ: ${versions}\n`;
-    menu += `├─• sᴘᴇᴇᴅ: ${latensie.toFixed(4)} ms\n`;
-    menu += `├─• 𝚁𝙰𝙼: ${progressBar(systemUsedMemory, totalMemory)}\n`;
-    menu += `└─• ᴅᴇᴠ: ☘ ᴋᴇʟᴠɪɴ  ☘\n`;
-    menu += `${readmore || ''}\n`;
+menu += `├─• ᴜsᴇʀ: ${ownername}\n`;
+menu += `├─• ʙᴏᴛ: ${global.botname || 'Vesper-XMD'}\n`;
+menu += `├─• ᴍᴏᴅᴇ: ${mode === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ'}\n`;
+menu += `├─• ᴘʟᴀᴛꜰᴏʀᴍ: ${os.platform()}\n`;
+menu += `├─• ᴘʀᴇғɪx: [ ${prefix} ]\n`;
+menu += `├─• ᴄᴍᴅs: ${totalCommands}+\n`;
+menu += `├─• ᴠᴇʀsɪᴏɴ: ${versions}\n`;
+menu += `├─• sᴘᴇᴇᴅ: ${latensie.toFixed(4)} ms\n`;
+menu += `├─• 𝚁𝙰𝙼: ${progressBar(systemUsedMemory, totalMemory)}\n`;
+menu += `└─• ᴅᴇᴠ: ☘ ᴋᴇʟᴠɪɴ  ☘\n`;
+menu += `${readmore || ''}\n`;
     
     for (const category in plugins) {
         menu += `┏▦  *${category.toUpperCase()} MENU* ▦\n`;
@@ -613,21 +613,29 @@ if (global.alwaysonline === true || global.alwaysonline === 'true') {
     
     const time = moment.tz("Asia/Makassar").format("HH:mm:ss");
     
-//================== [ CONSOLE LOG] ==================//
-const dayz = moment(Date.now()).tz(`${timezones}`).locale('en').format('dddd');
-const timez = moment(Date.now()).tz(`${timezones}`).locale('en').format('HH:mm:ss z');
-const datez = moment(Date.now()).tz(`${timezones}`).format("DD/MM/YYYY");
+    //================== [ CONSOLE LOG] ==================//
+    const timezones = "Asia/Makassar"; 
+    const dayz = moment(Date.now()).tz(timezones).locale('en').format('dddd');
+    const timez = moment(Date.now()).tz(timezones).locale('en').format('HH:mm:ss z');
+    const datez = moment(Date.now()).tz(timezones).format("DD/MM/YYYY");
 
-if (m.message) {
-  lolcatjs.fromString(`┏━━━━━━━━━━━━━『 VESPER-XMD 』━━━━━━━━━━━━━─`);
-  lolcatjs.fromString(`├─⏱️ ${dayz}, ${timez}`);
-  lolcatjs.fromString(`├─📨 ${m.mtype || 'N/A'}`);
-  lolcatjs.fromString(`├─👤 ${pushname || 'N/A'}`);
-  lolcatjs.fromString(`├─🆔 ${m.chat?.split('@')[0] || 'N/A'}`);
-  lolcatjs.fromString(`├─💬 ${budy || 'N/A'}`);
-  lolcatjs.fromString(`┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━─ ⳹\n`);
-}
-//<================================================>//
+    if (m.message) {
+      lolcatjs.fromString(`┏━━━━━━━━━━━━━『  VESPER-XMD  』━━━━━━━━━━━━━─`);
+      lolcatjs.fromString(`»  Sent Time: ${dayz}, ${timez}`);
+      lolcatjs.fromString(`»  Date: ${datez}`);
+      lolcatjs.fromString(`»  Message Type: ${m.mtype || 'N/A'}`);
+      lolcatjs.fromString(`»  Sender Name: ${pushname || 'N/A'}`);
+      lolcatjs.fromString(`»  Chat ID: ${m.chat?.split('@')[0] || 'N/A'}`);
+      
+      if (isGroup) {
+        lolcatjs.fromString(`»  Group: ${groupName || 'N/A'}`);
+        lolcatjs.fromString(`»  Group JID: ${m.chat?.split('@')[0] || 'N/A'}`);
+      }
+      
+      lolcatjs.fromString(`»  Message: ${budy || 'N/A'}`);
+      lolcatjs.fromString('┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━─ ⳹\n\n');
+    }
+    //<================================================>//
   
 // Initialize font system with bot number
 (async () => {
@@ -812,7 +820,7 @@ case 'reloadplugins': {
 };
 
 
-// Menu style functions - MOVED BELOW THE MAIN FUNCTION
+// Menu style functions 
 async function sendMenuWithStyle(kelvin, m, style, menuText, menuImages) {
     const randomImage = menuImages ? menuImages[Math.floor(Math.random() * menuImages.length)] : null;
     
