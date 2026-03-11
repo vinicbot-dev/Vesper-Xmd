@@ -840,6 +840,98 @@ module.exports = [
     }
 },
 {
+    command: ['video', 'ytvideo', 'mp4', 'ytmp4'],
+    operate: async ({ conn, m, reply, text, prefix, command }) => {    
+       try {
+       
+        if (!text) return reply(`*Please provide a YouTube video name or link.*\n\n*Example:* *${prefix + command} sekkle down by bunnie Gunter*`);
+
+        let videoUrl = "";
+        let videoTitle = "";
+        let videoThumbnail = "";
+
+        try {
+            // Detect or Search
+            if (/^https?:\/\//.test(text)) {
+                videoUrl = text;
+            } else {
+                const s = await yts(text);
+                if (!s?.videos?.length) return reply("❌ No results found.");
+                const v = s.videos[0];
+                videoUrl = v.url;
+                videoTitle = v.title;
+                videoThumbnail = v.thumbnail;
+            }
+
+            // Extract ID
+            const videoId = (videoUrl.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/) || [])[1];
+
+            // Show preview fast
+            if (videoThumbnail || videoId) {
+                const thumb = videoThumbnail || `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`;
+
+                await kelvin.sendMessage(m.chat, {
+                    image: { url: thumb },
+                    caption: `🎬 *${videoTitle || text}*\n⌛ Fetching video...`,
+                }, { quoted: m });
+            }
+
+            // Use yt-dl to get video title
+            if (!videoTitle && videoUrl) {
+                try {
+                    const ytdl = require('ytdl-core');
+                    const info = await ytdl.getInfo(videoUrl);
+                    videoTitle = info.videoDetails.title;
+                } catch (e) {
+                    console.log("yt-dl title fetch error:", e);
+                }
+            }
+
+            // Use only the last API
+            const API_URL = `https://media.cypherxbot.space/download/youtube/video?url=${encodeURIComponent(videoUrl)}`;
+
+            let result = null;
+
+            // Fetch from the single API
+            try {
+                const response = await axios.get(API_URL, { timeout: 30000 });
+                const data = response.data;
+
+                // Normalize download URL detection
+                const dl = data?.result?.download_url ||
+                          data?.result?.mp4 ||
+                          data?.result?.url ||
+                          data?.download_url ||
+                          data?.url ||
+                          data?.videoUrl;
+
+                if (dl) {
+                    result = {
+                        url: dl,
+                        title: videoTitle || data?.result?.title || "Downloaded Video",
+                    };
+                }
+            } catch (error) {
+                console.log("API Error:", error);
+            }
+
+            if (!result) return reply("❌ Failed to download video from server.");
+
+            // SEND THE VIDEO
+            await kelvin.sendMessage(m.chat, {
+                video: { url: result.url },
+                mimetype: "video/mp4",
+                fileName: `${result.title.replace(/[^\w\s]/gi, '')}.mp4`,
+                caption: `🎥 *${result.title}*\n\n> ${global.wm} ™`
+            }, { quoted: m });
+
+        } catch (error) {
+            console.error('Video download error:', error);
+            reply("❌ An error occurred while processing your request.");
+        }
+    }
+},   
+{
   command: ['pindl', 'pinterestdl', 'pindownload'],
   operate: async ({ m, reply, args, kelvin }) => {
     const url = args[0];
