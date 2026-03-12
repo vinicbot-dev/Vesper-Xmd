@@ -251,6 +251,39 @@ Use ${prefix}mode public/private to change`);
   }
 },
 {
+        command: ['vv'],
+        operate: async ({ kelvin, m, reply, quoted, mime, Access, mess }) => {
+      if (!Access) return reply(global.mess.owner) 
+    try {
+        if (!m.quoted) return reply('*Please reply to a viewonce Media!*');
+
+        const quotedMessage = m.msg.contextInfo.quotedMessage;
+        if (!quotedMessage) return reply('*No media found in the quoted message*.');
+
+        if (quotedMessage.imageMessage) {
+            let imageCaption = quotedMessage.imageMessage.caption || '';
+            let imageUrl = await kelvin.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
+            await kelvin.sendMessage(m.chat, { image: { url: imageUrl }, caption: imageCaption });
+        }
+
+        if (quotedMessage.videoMessage) {
+            let videoCaption = quotedMessage.videoMessage.caption || '';
+            let videoUrl = await kelvin.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
+            await kelvin.sendMessage(m.chat, { video: { url: videoUrl }, caption: videoCaption });
+        }
+
+        if (quotedMessage.audioMessage) {
+            let audioUrl = await kelvin.downloadAndSaveMediaMessage(quotedMessage.audioMessage);
+            await kelvin.sendMessage(m.chat, { audio: { url: audioUrl }, mimetype: 'audio/mp4' });
+        }
+
+    } catch (error) {
+        console.error('Error processing vv command:', error);
+        reply('❌ An error occurred while processing your request.');
+    }
+  }
+},
+
     command: ['block', 'blockuser'],
     operate: async ({ kelvin, m, reply, quoted, text, mentionedJid, Access, mess }) => {
           if (!Access) return reply(global.mess.owner);
