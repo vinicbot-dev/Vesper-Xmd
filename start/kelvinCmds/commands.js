@@ -54,98 +54,21 @@ async function playCommand(kelvin, chatId, message, args) {
             caption: `🎵 *${title}*\n\n⌛ Downloading audio... Please wait...`
         }, { quoted: message });
 
-        // Add loading reaction
         await kelvin.sendMessage(chatId, { react: { text: '⏳', key: message.key } });
 
-        let audioUrl = null;
-        let apiError = null;
-
-        // TRY PRIMARY API (apiskeith)
-        try {
-            const primaryApiUrl = `https://apiskeith.top/download/audio?url=${encodeURIComponent(videoUrl)}`;
-            console.log('Trying primary API:', primaryApiUrl);
-            
-            const response = await axios.get(primaryApiUrl, { timeout: 15000 }); // 15 second timeout
-            
-            if (response.data?.status && response.data?.result) {
-                audioUrl = response.data.result;
-                console.log('✅ Primary API successful');
-            } else {
-                throw new Error('Primary API returned invalid response');
-            }
-        } catch (primaryError) {
-            console.log('⚠️ Primary API failed:', primaryError.message);
-            apiError = primaryError;
-            
-            // TRY FALLBACK API (XWolf)
-            try {
-                // Extract video ID for fallback API
-                let videoId = '';
-                if (/youtu\.?be/.test(text)) {
-                    const idMatch = text.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-                    videoId = idMatch ? idMatch[1] : '';
-                } else {
-                    // We already have the video from search results
-                    const searchResults = await yts(text);
-                    if (searchResults.videos && searchResults.videos.length > 0) {
-                        const idMatch = searchResults.videos[0].url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-                        videoId = idMatch ? idMatch[1] : '';
-                    }
-                }
-                
-                if (!videoId) {
-                    throw new Error('Could not extract video ID');
-                }
-                
-                // Try different XWolf API endpoints
-                const fallbackUrls = [
-                    `https://apis.xwolf.space/download/mp3?url=${encodeURIComponent(videoUrl)}`,
-                    `https://apis.xwolf.space/download/mp3?v=${videoId}`,
-                    `https://apis.xwolf.space/download/audio?url=${encodeURIComponent(videoUrl)}`
-                ];
-                
-                for (const fallbackUrl of fallbackUrls) {
-                    try {
-                        console.log('Trying fallback API:', fallbackUrl);
-                        const fallbackResponse = await axios.get(fallbackUrl, { timeout: 15000 });
-                        
-                        if (fallbackResponse.data) {
-                            // Check different possible response formats
-                            if (fallbackResponse.data.downloadUrl) {
-                                audioUrl = fallbackResponse.data.downloadUrl;
-                                console.log('✅ Fallback API successful (downloadUrl)');
-                                break;
-                            } else if (fallbackResponse.data.streamUrl) {
-                                audioUrl = fallbackResponse.data.streamUrl;
-                                console.log('✅ Fallback API successful (streamUrl)');
-                                break;
-                            } else if (fallbackResponse.data.result) {
-                                audioUrl = fallbackResponse.data.result;
-                                console.log('✅ Fallback API successful (result)');
-                                break;
-                            } else if (typeof fallbackResponse.data === 'string' && fallbackResponse.data.startsWith('http')) {
-                                audioUrl = fallbackResponse.data;
-                                console.log('✅ Fallback API successful (direct URL)');
-                                break;
-                            }
-                        }
-                    } catch (fallbackError) {
-                        console.log(`Fallback URL ${fallbackUrl} failed:`, fallbackError.message);
-                        continue;
-                    }
-                }
-                
-                if (!audioUrl) {
-                    throw new Error('All fallback attempts failed');
-                }
-            } catch (fallbackError) {
-                console.log('❌ All APIs failed');
-                throw new Error('All download services are currently unavailable. Please try again later.');
-            }
+          const apiUrl = `https://apiskeith.top/download/audio?url=${encodeURIComponent(videoUrl)}`;
+        
+        // Fetch audio with timeout
+        const response = await axios.get(apiUrl, { timeout: 60000 });
+        
+        if (!response.data?.status) {
+            throw new Error('API returned no audio data');
         }
 
+        const audioUrl = response.data.result;
+        
         if (!audioUrl) {
-            throw new Error('Could not retrieve audio URL from any service');
+            throw new Error('No audio URL found in response');
         }
 
         // Format selection menu
@@ -184,7 +107,7 @@ async function playCommand(kelvin, chatId, message, args) {
                                 document: { url: audioUrl }, 
                                 mimetype: "audio/mpeg", 
                                 fileName: `${title}.mp3`.replace(/[<>:"/\\|?*]/g, '_'),
-                                caption: `🎵 *${title}*\n✅ Downloaded successfully`
+                                caption: `🎵 *${title}*\n✅ Downloaded successfully!\n🔗 Source: ${videoUrl}`
                             }, { quoted: mp3msg });   
                             break;
                             
@@ -260,8 +183,6 @@ async function playCommand(kelvin, chatId, message, args) {
             errorMessage += `No results found for "${text}".`;
         } else if (error.message.includes('No audio URL found')) {
             errorMessage += 'Could not retrieve audio. The video might be restricted.';
-        } else if (error.message.includes('All download services')) {
-            errorMessage += error.message;
         } else {
             errorMessage += 'Please try again later.';
         }
