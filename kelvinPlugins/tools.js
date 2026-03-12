@@ -1012,6 +1012,112 @@ module.exports = [
         }
     },
     {
+  command: ['countryinfo', 'country', 'infonegara'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const country = args.join(' ');
+    
+    if (!country) return reply("*Please provide a country name. Example: `.countryinfo Uganda*`");
+    
+    try {
+      const response = await fetch(`${global.siputzx}/api/tools/countryInfo?name=${encodeURIComponent(country)}`);
+      const data = await response.json();
+      
+      if (!data.status || !data.data) {
+        return reply(`No information found for "${country}"`);
+      }
+      
+      const info = data.data;
+      
+      let message = `*Country Information: ${info.name}*\n\n`;
+      message += `Capital: ${info.capital || 'N/A'}\n`;
+      message += `Phone Code: ${info.phoneCode || 'N/A'}\n`;
+      message += `Continent: ${info.continent?.name || 'N/A'}\n`;
+      message += `Coordinates: ${info.coordinates?.latitude || 'N/A'}, ${info.coordinates?.longitude || 'N/A'}\n`;
+      message += `Area: ${info.area?.squareKilometers?.toLocaleString() || 'N/A'} km²\n`;
+      message += `Landlocked: ${info.landlocked ? 'Yes' : 'No'}\n`;
+      message += `Famous For: ${info.famousFor || 'N/A'}\n`;
+      message += `Government: ${info.constitutionalForm || 'N/A'}\n`;
+      message += `Currency: ${info.currency || 'N/A'}\n`;
+      message += `Driving Side: ${info.drivingSide || 'N/A'}\n`;
+      message += `Internet TLD: ${info.internetTLD || 'N/A'}\n`;
+      message += `ISO Code: ${info.isoCode?.alpha2?.toUpperCase() || 'N/A'}\n\n`;
+      
+      if (info.languages) {
+        message += `Languages:\n`;
+        if (info.languages.native?.length) message += `  Native: ${info.languages.native.join(', ')}\n`;
+        if (info.languages.codes?.length) message += `  Codes: ${info.languages.codes.join(', ')}\n`;
+      }
+      
+      if (info.neighbors?.length) {
+        message += `\nNeighboring Countries:\n`;
+        info.neighbors.slice(0, 3).forEach(neighbor => {
+          message += `  • ${neighbor.name}\n`;
+        });
+      }
+      
+      if (info.flag) {
+        await kelvin.sendMessage(m.chat, {
+          image: { url: info.flag },
+          caption: message
+        }, { quoted: m });
+      } else {
+        reply(message);
+      }
+      
+    } catch (error) {
+      console.error('Country info error:', error);
+      reply("Error fetching country information.");
+    }
+  }
+},
+{
+  command: ['translate2', 'tr2', 'tl2'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const text = args.join(' ');
+    
+    if (!text) return reply("*Please provide text to translate. Example: `.translate2 en:id I love you*`");
+    
+    try {
+      // Parse format: source:target text
+      let sourceLang = 'en';
+      let targetLang = 'id';
+      let translateText = text;
+      
+      const match = text.match(/^([a-z]{2}):([a-z]{2})\s+(.+)/i);
+      if (match) {
+        sourceLang = match[1].toLowerCase();
+        targetLang = match[2].toLowerCase();
+        translateText = match[3];
+      }
+      
+      const url = `${global.siputzx}/api/tools/translate?text=${encodeURIComponent(translateText)}&source=${sourceLang}&target=${targetLang}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (!data.status || !data.data?.translatedText) {
+        return reply(`Translation failed.`);
+      }
+      
+      const result = `
+ *Translation*
+
+ *Original:* ${translateText}
+ *Translated:* ${data.data.translatedText}
+ *${sourceLang} → ${targetLang}*
+
+> ${global.wm || ''}
+      `;
+      
+      reply(result);
+      
+    } catch (error) {
+      console.error('Translate error:', error);
+      reply("❌ Error translating text.");
+    }
+  }
+},
+    {
     command: ['cekidch', 'idch'],
     operate: async ({ kelvin, m, reply, text }) => {
         if (!text) return reply("*Please provide a WhatsApp channel link*");
