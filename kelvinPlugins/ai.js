@@ -12,7 +12,6 @@ claudeAICommand
 } = require('../start/kelvinCmds/ai');
 
 module.exports = [
-    // Generate AI Image
     {
         command: ['generate', 'genimage', 'aiimage'],
         operate: async ({ kelvin, m, reply, text }) => {
@@ -345,6 +344,81 @@ module.exports = [
         operate: async ({ kelvin, m, reply, args, text }) => {
             await claudeAICommand(kelvin, m.chat, text, m);
         }
+    },
+{
+  command: ['gemini', 'geminai'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const text = args.join(' ');
+    
+    if (!text) return reply("*Please provide a question. Example: `.gemini Explain quantum physics*`");
+    
+    try {
+      await reply("🤔 Thinking...");
+      
+      const response = await fetch(`${global.siputzx}/api/ai/gemini?text=${encodeURIComponent(text)}&promptSystem=Act+as+a+helpful+assistant`);
+      const data = await response.json();
+      
+      if (!data.status || !data.data?.response) {
+        return reply("❌ Failed to get response from Gemini.");
+      }
+      
+      reply(data.data.response);
+      
+    } catch (error) {
+      console.error('Gemini error:', error);
+      reply("❌ Error communicating with Gemini AI.");
     }
+  }
+},
+{
+  command: ['glm', 'glm47', 'glmflash'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const text = args.join(' ');
+    
+    if (!text) return reply("*Please provide a question. Example: `.glm Introduction to JavaScript*`");
+    
+    try {
+      await reply("🤔 Thinking...");
+      
+      const response = await fetch(`${global.siputzx}/api/ai/glm47flash?prompt=${encodeURIComponent(text)}&system=You+are+a+helpful+assistant&temperature=0.7`);
+      const data = await response.json();
+      
+      if (!data.status || !data.data?.response) {
+        return reply("❌ Failed to get response from GLM.");
+      }
+      
+      reply(data.data.response);
+      
+    } catch (error) {
+      console.error('GLM error:', error);
+      reply("❌ Error communicating with GLM AI.");
+    }
+  }
+},
+{
+  command: ['phi2', 'phiai'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const text = args.join(' ');
+    
+    if (!text) return reply("*Please provide a question. Example: `.phi2 How are you*`");
+    
+    try {
+      await reply("🤔 Thinking...");
+      
+      const response = await fetch(`${global.siputzx}/api/ai/phi2?prompt=${encodeURIComponent(text)}&system=You+are+a+helpful+assistant&temperature=0.7`);
+      const data = await response.json();
+      
+      if (!data.status || !data.data?.response) {
+        return reply("❌ Failed to get response from PHI2.");
+      }
+      
+      reply(data.data.response);
+      
+    } catch (error) {
+      console.error('PHI2 error:', error);
+      reply("❌ Error communicating with PHI2 AI.");
+    }
+  }
+}
     
 ];
