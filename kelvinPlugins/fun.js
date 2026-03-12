@@ -360,6 +360,32 @@ module.exports = [
 
     await reply(replyText);
   }
+},
+{
+  command: ['guesscartoon', 'cartoonquiz', 'guesscharacter'],
+  operate: async ({ m, reply, kelvin }) => {
+    try {
+      await reply("🎮 Fetching a cartoon character...");
+      
+      const response = await fetch(`${global.siputzx}/api/games/tebakkartun`);
+      const data = await response.json();
+      
+      if (!data.status || !data.data) {
+        return reply("*Failed to fetch cartoon character.*");
+      }
+      
+      await kelvin.sendMessage(m.chat, {
+        image: { url: data.data.img },
+        caption: `🎪 *GUESS THE CARTOON CHARACTER!*\n\n` +
+                 `Can you name this character?\n\n` +
+                 `Reply with your answer!`
+      }, { quoted: m });
+      
+    } catch (error) {
+      console.error('Game error:', error);
+      reply("❌ Error fetching cartoon game.");
+    }
+  }
 }
     
 ];
