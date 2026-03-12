@@ -67,6 +67,44 @@ module.exports = [
             }
         }
     },
+    {
+  command: ['yts2', 'ytsearch2', 'youtubesearch2'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const query = args.join(' ');
+    
+    if (!query) return reply("*Please provide a search term. Example: `.yts2 JEXPLOIT-BOT*`");
+    
+    try {
+      const response = await fetch(`${global.siputzx}/api/s/youtube?query=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      
+      if (!data.status || !data.data || data.data.length === 0) {
+        return reply(`❌ No videos found for "${query}"`);
+      }
+      
+      const videos = data.data.slice(0, 5); // Show first 5 results
+      
+      let message = `📺 *YouTube Search Results for "${query}"*\n\n`;
+      
+      videos.forEach((video, index) => {
+        message += `*${index + 1}. ${video.title}*\n`;
+        message += `   👤 Channel: ${video.author?.name || 'Unknown'}\n`;
+        message += `   ⏱️ Duration: ${video.timestamp || 'N/A'}\n`;
+        message += `   👁️ Views: ${video.views?.toLocaleString() || 'N/A'}\n`;
+        message += `   📅 Uploaded: ${video.ago || 'N/A'}\n`;
+        message += `   🔗 Link: ${video.url}\n\n`;
+      });
+      
+      message += `> ${global.wm || ''}`;
+      
+      reply(message);
+      
+    } catch (error) {
+      console.error('YouTube search error:', error);
+      reply("❌ Error searching YouTube. Try again later.");
+    }
+  }
+},
         {
         command: ['imdb', 'movie'],
         operate: async ({ kelvin, m, reply, text }) => {
