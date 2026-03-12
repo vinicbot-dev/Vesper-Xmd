@@ -283,7 +283,7 @@ Use ${prefix}mode public/private to change`);
     }
   }
 },
-
+{
     command: ['block', 'blockuser'],
     operate: async ({ kelvin, m, reply, quoted, text, mentionedJid, Access, mess }) => {
           if (!Access) return reply(global.mess.owner);
