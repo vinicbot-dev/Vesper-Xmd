@@ -842,7 +842,6 @@ module.exports = [
 {
     command: ['video', 'ytvideo', 'mp4', 'ytmp4'],
     operate: async ({ conn, m, reply, text, prefix, command }) => {    
-       try {
        
         if (!text) return reply(`*Please provide a YouTube video name or link.*\n\n*Example:* *${prefix + command} sekkle down by bunnie Gunter*`);
 
