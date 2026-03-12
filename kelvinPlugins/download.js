@@ -751,38 +751,51 @@ module.exports = [
         }
     }
 },
-    {
-        command: ['tiktok2', 'tt2'],
-        operate: async ({ kelvin, m, reply, args, fetchJson }) => {
-            if (!args[0]) return reply('*Please provide a TikTok video url!*');
-            
-            try {
-                await kelvin.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
-                
-                let apiUrl = await fetchJson(`https://api-aswin-sparky.koyeb.app/api/downloader/tiktok?url=${args[0]}`);
-                
-                await kelvin.sendMessage(
-                    m.chat,
-                    {
-                        caption: global.wm || '',
-                        video: { url: apiUrl.data.video },
-                        fileName: "video.mp4",
-                        mimetype: "video/mp4",
-                    },
-                    { quoted: m }
-                );
-                
-                await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
-                
-            } catch (error) {
-                console.error(error);
-                await kelvin.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
-                reply(global.mess?.error || "*Failed to download TikTok*");
-            }
-        }
-    },
-
-    // TikTok audio command
+{
+  command: ['tiktok2', 'tt2', 'tikdl2'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const url = args[0];
+    
+    if (!url) return reply("*Please provide a TikTok URL.*`");
+    
+    try {
+      await reply("📥 Downloading TikTok video...");
+      
+      const response = await fetch(`${global.siputzx}/api/d/tiktok?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+      
+      if (!data.status || !data.data) {
+        return reply("*Failed to download TikTok video. Check the URL*.");
+      }
+      
+      const result = data.data;
+      
+      // Choose HD if available, otherwise SD
+      const videoUrl = result.media?.find(m => m.quality === 'HD')?.url || 
+                      result.media?.find(m => m.quality === 'SD')?.url;
+      
+      if (!videoUrl) {
+        return reply("*No video URL found in response*.");
+      }
+      
+      await kelvin.sendMessage(m.chat, {
+        video: { url: videoUrl },
+        caption: `> ${global.wm || ''}`
+      }, { quoted: m });
+      
+      await kelvin.sendMessage(m.chat, { 
+        react: { text: "✅", key: m.key } 
+      });
+      
+    } catch (error) {
+      console.error('TikTok download error:', error);
+      reply("*Error downloading TikTok video. Try again later*.");
+      await kelvin.sendMessage(m.chat, { 
+        react: { text: "❌", key: m.key } 
+      });
+    }
+  }
+},
     {
         command: ['tiktokaudio', 'tta'],
         operate: async ({ kelvin, m, reply, args, fetchJson }) => {
