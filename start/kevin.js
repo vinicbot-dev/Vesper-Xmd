@@ -1162,158 +1162,68 @@ async function handleAntisticker(kelvin, m, botNumber) {
     }
 }
 
-// Function to handle status updates
-async function handleStatusUpdate(kelvin, status) {
+async function reactToStatus(kelvin, mek) {
     try {
-        // Get bot number
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
-        
-        const autoviewstatus = await db.get(botNumber, 'autoviewstatus', false);
         const autoreactstatus = await db.get(botNumber, 'autoreactstatus', false);
         const statusemoji = await db.get(botNumber, 'statusemoji', '💚');
         
-        // If both are disabled, return
-        if (!autoviewstatus && !autoreactstatus) {
-            return;
-        }
+        if (!autoreactstatus) return;
 
-        // Add delay to prevent rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Select random emoji from popular ones
-        const getRandomEmoji = () => {
-            const emojis = ['❤️', '😂', '😮', '😢', '🔥', '👏', '🎉', '🤔', '👍', '👎', '😍', '🤯', '😡', '🥰', '😎', '🤩', '🥳', '😭', '🙏', '💯'];
-            return emojis[Math.floor(Math.random() * emojis.length)];
-        };
-
-        const reactionEmoji = statusemoji === '💚' || !statusemoji ? getRandomEmoji() : statusemoji;
-
-        // Handle status from messages.upsert
-        if (status.messages && status.messages.length > 0) {
-            const msg = status.messages[0];
-            if (msg.key && msg.key.remoteJid === 'status@broadcast') {
+        let realJid = mek.key.participant || mek.key.remoteJid;
+        if (realJid.endsWith('@lid')) {
+            const rawPn = mek.key?.participantPn || mek.key?.senderPn;
+            if (rawPn) {
+                realJid = rawPn.includes('@') ? rawPn : `${rawPn}@s.whatsapp.net`;
+            } else {
                 try {
-                    if (autoreactstatus) {
-                        // View first, then react
-                        await kelvin.readMessages([msg.key]);
-                        await new Promise(resolve => setTimeout(resolve, 500));
-                        
-                        await kelvin.sendMessage(msg.key.remoteJid, { 
-                            react: { 
-                                text: reactionEmoji, 
-                                key: msg.key 
-                            } 
-                        });
-                        
-                    } else if (autoviewstatus) {
-                        // Only view if autoviewstatus is enabled
-                        await kelvin.readMessages([msg.key]);
-                    }
-                    
-                } catch (err) {
-                    if (err.message?.includes('rate-overlimit')) {
-                        await new Promise(resolve => setTimeout(resolve, 3000));
-                        
-                        try {
-                            if (autoreactstatus) {
-                                await kelvin.readMessages([msg.key]);
-                                await new Promise(resolve => setTimeout(resolve, 500));
-                                await kelvin.sendMessage(msg.key.remoteJid, { 
-                                    react: { 
-                                        text: reactionEmoji, 
-                                        key: msg.key 
-                                    } 
-                                });
-                            } else if (autoviewstatus) {
-                                await kelvin.readMessages([msg.key]);
-                            }
-                        } catch (retryError) {}
-                    }
-                }
-                return;
+                    const resolved = await kelvin.getJidFromLid(realJid);
+                    if (resolved) realJid = resolved;
+                } catch {}
             }
         }
 
-        // Handle direct status updates
-        if (status.key && status.key.remoteJid === 'status@broadcast') {
-            try {
-                if (autoreactstatus) {
-                    await kelvin.readMessages([status.key]);
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    
-                    await kelvin.sendMessage(status.key.remoteJid, { 
-                        react: { 
-                            text: reactionEmoji, 
-                            key: status.key 
-                        } 
-                    });
-                    
-                } else if (autoviewstatus) {
-                    await kelvin.readMessages([status.key]);
-                }
-                
-            } catch (err) {
-                if (err.message?.includes('rate-overlimit')) {
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                    try {
-                        if (autoreactstatus) {
-                            await kelvin.readMessages([status.key]);
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                            await kelvin.sendMessage(status.key.remoteJid, { 
-                                react: { 
-                                    text: reactionEmoji, 
-                                    key: status.key 
-                                } 
-                            });
-                        } else if (autoviewstatus) {
-                            await kelvin.readMessages([status.key]);
-                        }
-                    } catch (retryError) {}
-                }
-            }
-            return;
+        // Use custom emoji from DB or fallback to random
+        let emoji = statusemoji;
+        if (emoji === '💚' || !emoji) {
+            const emojis = ['💚', '❤️', '🔥', '✨', '💯', '🙌', '🌟'];
+            emoji = emojis[Math.floor(Math.random() * emojis.length)];
         }
 
-        // Handle status in reactions
-        if (status.reaction && status.reaction.key.remoteJid === 'status@broadcast') {
-            try {
-                if (autoreactstatus) {
-                    await kelvin.readMessages([status.reaction.key]);
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    await kelvin.sendMessage(status.reaction.key.remoteJid, { 
-                        react: { 
-                            text: reactionEmoji, 
-                            key: status.reaction.key 
-                        } 
-                    });
-                } else if (autoviewstatus) {
-                    await kelvin.readMessages([status.reaction.key]);
-                }
-                
-            } catch (err) {
-                if (err.message?.includes('rate-overlimit')) {
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                    try {
-                        if (autoreactstatus) {
-                            await kelvin.readMessages([status.reaction.key]);
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                            await kelvin.sendMessage(status.reaction.key.remoteJid, { 
-                                react: { 
-                                    text: reactionEmoji, 
-                                    key: status.reaction.key 
-                                } 
-                            });
-                        } else if (autoviewstatus) {
-                            await kelvin.readMessages([status.reaction.key]);
-                        }
-                    } catch (retryError) {}
-                }
-            }
-            return;
+        await kelvin.sendMessage(
+            'status@broadcast',
+            { react: { key: { ...mek.key, participant: realJid }, text: emoji } },
+            { statusJidList: [realJid, kelvin.user.id] }
+        );
+        
+    } catch (error) {
+        console.error('❌ Status Reaction Error:', error.message);
+    }
+}
+
+async function handleStatusUpdate(kelvin, chatUpdate) {
+    try {
+        const botNumber = await kelvin.decodeJid(kelvin.user.id);
+        const autoviewstatus = await db.get(botNumber, 'autoviewstatus', false);
+        const autoreactstatus = await db.get(botNumber, 'autoreactstatus', false);
+        
+        if (!autoviewstatus && !autoreactstatus) return;
+
+        const mek = chatUpdate.messages ? chatUpdate.messages[0] : chatUpdate;
+        if (!mek.key || mek.key.remoteJid !== 'status@broadcast' || mek.key.fromMe) return;
+
+        await new Promise(res => setTimeout(res, 2000));
+
+        await kelvin.readMessages([mek.key]);
+        
+        if (autoreactstatus) {
+            await reactToStatus(kelvin, mek);
         }
 
     } catch (error) {
-        // Silent error handling
+        if (!error.message.includes('rate-overlimit')) {
+            console.error('Status View Error:', error.message);
+        }
     }
 }
 
