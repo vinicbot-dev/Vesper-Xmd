@@ -581,22 +581,235 @@ async function getHeadToHead(team1, team2, { reply }) {
     });
 
     message += `*📈 Statistics:*\n`;
-    message += `   🏠 ${team1}: ${team1Wins} wins\n`;
-    message += `   🚌 ${team2}: ${team2Wins} wins\n`;
-    message += `   ⚖️ Draws: ${draws}\n`;
-    message += `   ⚽ Goals: ${team1Goals} - ${team2Goals}\n\n`;
-    
+    message += `   🏠 ${team1}: ${team1Wins} wins (${Math.round(team1Wins/matches.length*100)}%)\n`;
+    message += `   🚌 ${team2}: ${team2Wins} wins (${Math.round(team2Wins/matches.length*100)}%)\n`;
+    message += `   ⚖️ Draws: ${draws} (${Math.round(draws/matches.length*100)}%)\n`;
+    message += `   ⚽ Goals: ${team1} ${team1Goals} - ${team2Goals} ${team2}\n\n`;
+    message += `─────────────────\n\n`;
+
     // Recent matches
     message += `*📅 Recent Encounters:*\n\n`;
     matches.slice(0, 5).forEach((match, index) => {
       message += `${index + 1}. ${match.match}\n`;
       message += `   📊 ${match.teams?.home?.score || 0} - ${match.teams?.away?.score || 0}\n`;
+      message += `   🏆 ${match.league?.name || 'Unknown'}\n`;
+      message += `   📅 ${match.dateTime?.date || 'Date TBD'}\n`;
+      if (match.media?.video) {
+        message += `   📺 [Highlights](${match.media.video})\n`;
+      }
+      message += `\n`;
     });
 
     reply(message);
   } catch (error) {
     console.error('Error fetching head-to-head:', error);
-    reply("❌ Error fetching head-to-head data.");
+    reply("❌ Error fetching head-to-head data. Please try again later.");
+  }
+}
+
+// Search Game Events
+async function searchGameEvents(query, { reply }) {
+  try {
+    if (!query || query.trim() === '') {
+      return reply("❌ Please provide a search query. Example: `.gameevents Arsenal vs Chelsea`");
+    }
+
+    const encodedQuery = encodeURIComponent(query.trim());
+    const apiUrl = `${BASE_API}/sport/gameevents?q=${encodedQuery}`;
+    
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+
+    if (!data.status || !data.result || data.result.length === 0) {
+      return reply(`❌ No events found for "${query}". Try a different search term.`);
+    }
+
+    const events = data.result;
+    let message = `*⚽ Game Events Search Results ⚽*\n\n`;
+    message += `*🔍 Search Query:* "${query}"\n`;
+    message += `*📊 Total Results:* ${events.length}\n\n`;
+    message += `─────────────────\n\n`;
+
+    events.forEach((match, index) => {
+      message += `*${index + 1}. ${match.match}*\n`;
+      
+      const homeTeam = match.teams?.home?.name || 'Unknown';
+      const awayTeam = match.teams?.away?.name || 'Unknown';
+      const homeScore = match.teams?.home?.score ?? '?';
+      const awayScore = match.teams?.away?.score ?? '?';
+      
+      message += `   🏠 ${homeTeam} vs 🚌 ${awayTeam}\n`;
+      message += `   📊 Score: ${homeScore} - ${awayScore}\n`;
+      message += `   🏆 ${match.league?.name || 'Unknown League'}`;
+      if (match.season) message += ` (${match.season})`;
+      message += `\n`;
+      
+      if (match.dateTime?.date) {
+        const date = new Date(match.dateTime.date);
+        message += `   📅 ${date.toLocaleDateString('en-US', { 
+          weekday: 'short', 
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric' 
+        })}`;
+        if (match.dateTime.time) {
+          message += ` at ${match.dateTime.time.substring(0, 5)}`;
+        }
+        message += `\n`;
+      }
+      
+      const statusEmoji = match.status === 'Match Finished' ? '✅' : 
+                         match.status?.toLowerCase().includes('live') ? '🔴' : '⏳';
+      message += `   ${statusEmoji} ${match.status || 'Scheduled'}\n`;
+      
+      if (match.venue?.name) {
+        message += `   🏟️ ${match.venue.name}`;
+        if (match.venue.city) message += `, ${match.venue.city}`;
+        message += `\n`;
+      }
+      
+      if (match.media?.video) {
+        message += `   📺 [Match Highlights](${match.media.video})\n`;
+      }
+      
+      message += `\n`;
+      if (index < events.length - 1) message += `─────────────────\n\n`;
+    });
+
+    message += `\n*📌 Useful Commands:*\n`;
+    message += `• Get match details: .matchdetails [match_id]\n`;
+    message += `• Example: .matchdetails ${events[0]?.id || '2401588'}\n`;
+
+    reply(message);
+  } catch (error) {
+    console.error('Error searching game events:', error);
+    reply("❌ Error fetching game events. Please try again later.");
+  }
+}
+
+// Get Match Details by ID
+async function getMatchDetails(matchId, { reply }) {
+  try {
+    if (!matchId) {
+      return reply("❌ Please provide a match ID. Example: `.matchdetails 2401588`");
+    }
+
+    const response = await fetch(`${BASE_API}/sport/gameevents?q=${encodeURIComponent('vs')}`);
+    const data = await response.json();
+
+    if (!data.status || !data.result) {
+      return reply("❌ Failed to fetch match details.");
+    }
+
+    const match = data.result.find(m => m.id === matchId);
+    
+    if (!match) {
+      return reply(`❌ Match with ID ${matchId} not found.`);
+    }
+
+    let message = `*⚽ Detailed Match Information ⚽*\n\n`;
+    
+    // Format match details
+    const homeScore = match.teams?.home?.score ?? 0;
+    const awayScore = match.teams?.away?.score ?? 0;
+    
+    if (match.status === 'Match Finished') {
+      message += `✅ *${match.match}*\n`;
+    } else if (match.status?.toLowerCase().includes('live')) {
+      message += `🔴 *LIVE: ${match.match}*\n`;
+    } else {
+      message += `⏳ *${match.match}*\n`;
+    }
+    
+    message += `┌────────────────\n`;
+    message += `│ 🏠 *Home:* ${match.teams?.home?.name || 'Unknown'}\n`;
+    message += `│ 🚌 *Away:* ${match.teams?.away?.name || 'Unknown'}\n`;
+    message += `│ 📊 *Score:* ${homeScore} - ${awayScore}\n`;
+    message += `└────────────────\n`;
+    message += `│ 🏆 *Competition:* ${match.league?.name || 'Unknown'}\n`;
+    message += `│ 📅 *Season:* ${match.season || 'N/A'}\n`;
+    message += `│ 🔄 *Round:* ${match.round || 'N/A'}\n`;
+    
+    if (match.dateTime) {
+      const matchDate = new Date(match.dateTime.timestamp || match.dateTime.date);
+      const formattedDate = matchDate.toLocaleString('en-US', {
+        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+      message += `│ ⏰ *Date:* ${formattedDate}\n`;
+    }
+    
+    if (match.venue?.name) {
+      message += `│ 🏟️ *Venue:* ${match.venue.name}`;
+      if (match.venue.city) message += `, ${match.venue.city}`;
+      if (match.venue.country) message += `, ${match.venue.country}`;
+      message += `\n`;
+    }
+    
+    message += `│ ℹ️ *Status:* ${match.status || 'Scheduled'}\n`;
+    
+    if (match.media?.video) {
+      message += `│ 📺 *Highlights:* ${match.media.video}\n`;
+    }
+    
+    message += `─────────────────\n\n`;
+
+    reply(message);
+  } catch (error) {
+    console.error('Error fetching match details:', error);
+    reply("❌ Error fetching match details. Please try again later.");
+  }
+}
+
+// Get Today's Matches
+async function getTodaysMatches({ reply }) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    
+    const response = await fetch(`${BASE_API}/sport/gameevents?q=${today}`);
+    const data = await response.json();
+    
+    if (!data.status || !data.result || data.result.length === 0) {
+      return reply("❌ No matches found for today.");
+    }
+
+    const todaysMatches = data.result.filter(match => 
+      match.dateTime?.date === today || 
+      new Date(match.dateTime?.timestamp || match.dateTime?.date).toISOString().split('T')[0] === today
+    );
+
+    if (todaysMatches.length === 0) {
+      return reply("❌ No matches scheduled for today.");
+    }
+
+    let message = `*📅 Today's Matches (${today}) ⚽*\n\n`;
+    
+    const byCompetition = {};
+    todaysMatches.forEach(match => {
+      const comp = match.league?.name || 'Other';
+      if (!byCompetition[comp]) byCompetition[comp] = [];
+      byCompetition[comp].push(match);
+    });
+
+    Object.entries(byCompetition).forEach(([competition, matches]) => {
+      message += `*🏆 ${competition}*\n`;
+      matches.forEach(match => {
+        message += `   • ${match.match}`;
+        if (match.status !== 'Scheduled') {
+          message += ` (${match.teams?.home?.score || 0}-${match.teams?.away?.score || 0})`;
+        }
+        message += `\n`;
+        if (match.dateTime?.time) {
+          message += `     ⏰ ${match.dateTime.time.substring(0, 5)}\n`;
+        }
+      });
+      message += `\n`;
+    });
+
+    reply(message);
+  } catch (error) {
+    console.error('Error fetching today\'s matches:', error);
+    reply("❌ Error fetching today's matches. Please try again later.");
   }
 }
 
