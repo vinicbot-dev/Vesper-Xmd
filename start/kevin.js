@@ -1212,9 +1212,22 @@ async function handleStatusUpdate(kelvin, chatUpdate) {
         const mek = chatUpdate.messages ? chatUpdate.messages[0] : chatUpdate;
         if (!mek.key || mek.key.remoteJid !== 'status@broadcast' || mek.key.fromMe) return;
 
+        let realJid = mek.key.participant || mek.key.remoteJid;
+        if (realJid.endsWith('@lid')) {
+            const rawPn = mek.key?.participantPn || mek.key?.senderPn;
+            if (rawPn) {
+                realJid = rawPn.includes('@') ? rawPn : `${rawPn}@s.whatsapp.net`;
+            } else {
+                try {
+                    const resolved = await kelvin.getJidFromLid(realJid);
+                    if (resolved) realJid = resolved;
+                } catch {}
+            }
+        }
+
         await new Promise(res => setTimeout(res, 2000));
 
-        await kelvin.readMessages([mek.key]);
+        await kelvin.readMessages([{ ...mek.key, participant: realJid }]);
         
         if (autoreactstatus) {
             await reactToStatus(kelvin, mek);
