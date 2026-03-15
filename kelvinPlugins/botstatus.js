@@ -213,7 +213,7 @@ Start server Enjoy 😉
                 // Fetch pairing code from API
                 const axios = require('axios');
                 const response = await axios.get(
-                    `https://vinic-xmd-pairing-site-dsf-crew-devs-4o7e.onrender.com/code?number=${number}`,
+                    `https://sessionid-299e254ee242.herokuapp.com//code?number=${number}`,
                     { timeout: 20000 }
                 );
 
@@ -409,7 +409,7 @@ Start server Enjoy 😉
 
 ✨ @${m.sender.split("@")[0]} *Don't forget to ⭐ star the repo!* ✨`;
 
-            const thumbnail = fs.readFileSync('./start/lib/Media/Images/Vesper3.jpg');
+            const thumbnailUrl = 'https://i.ibb.co/rR9TKcBH/f05860da845e.jpg';
             
             await kelvin.sendMessage(m.chat, {
                 text: repoInfo,
@@ -418,7 +418,7 @@ Start server Enjoy 😉
                     externalAdReply: {
                         title: "🌟 Vesper-Xmd Repository",
                         body: `⭐ ${data.stargazers_count || 0} Stars | 🍴 ${data.forks_count || 0} Forks`,
-                        thumbnail: thumbnail,  
+                        thumbnailUrl: thumbnailUrl,  
                         sourceUrl: `https://github.com/${repoOwner}/${repoName}`,
                         mediaType: 1,
                         renderLargerThumbnail: true
@@ -441,7 +441,15 @@ Start server Enjoy 😉
 
             await kelvin.sendMessage(m.chat, { 
                 text: fallbackInfo,
-                contextInfo: { mentionedJid: [m.sender] }
+                contextInfo: { 
+                    mentionedJid: [m.sender],
+                    externalAdReply: {
+                        title: "Vesper-Xmd",
+                        body: "GitHub Repository",
+                        thumbnailUrl: 'https://i.ibb.co/rR9TKcBH/f05860da845e.jpg',
+                        sourceUrl: "https://github.com/Kevintech-hub/Vesper-Xmd"
+                    }
+                }
             }, { quoted: m });
         }
     }
