@@ -489,7 +489,7 @@ module.exports = [
     },
     {
         command: ['browse', 'fetch'],
-        operate: async ({ reply, m, kelvin, text, fetch }) => {
+        operate: async ({ reply, m, kelvin, text }) => {
             if (!text) return reply("Enter URL");
 
             try {
