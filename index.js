@@ -188,7 +188,7 @@ async function loadSession() {
             console.log(chalk.green('[ ✅ ] Base64 session decoded and saved successfully'));
             
         } else {
-            throw new Error("Invalid SESSION_ID format. Use 'VISPER-BOT~' for base64 or 'jexploit~/malvin~' for MEGA.nz");
+            throw new Error("Invalid SESSION_ID format. Use 'VESPER-BOT~' for base64 or 'jexploit~/malvin~' for MEGA.nz");
         }
 
         return sessionData;
@@ -997,11 +997,12 @@ kelvin.ev.on('group-participants.update', async (anu) => {
         console.error('Error in group-participants.update:', error);
     }
 });
+
 kelvin.ev.on('call', async (callData) => {
     try {
         const botNumber = await kelvin.decodeJid(kelvin.user.id);
         
-        // GET ANTICALL SETTING FROM SQLITE
+        // get anticall setting from SQL 
         const anticallSetting = await db.get(botNumber, 'anticall', 'off');
         
         if (!anticallSetting || anticallSetting === 'off') {
