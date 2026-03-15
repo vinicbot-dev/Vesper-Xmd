@@ -122,6 +122,32 @@ function getServerUptime() {
     return runtime(uptimeSeconds);
 }
 
+// Function to detect hosting platform
+function getHostPlatform() {
+    // Check for Heroku
+    if (process.env.DYNO) {
+        return 'Heroku';
+    }
+    // Check for Panel/Pterodactyl
+    if (process.env.PANEL || process.env.PTERODACTYL) {
+        return 'Panel';
+    }
+    // Check for Replit
+    if (process.env.REPL_ID || process.env.REPL_SLUG) {
+        return 'Replit';
+    }
+    // Check for Railway
+    if (process.env.RAILWAY_STATIC_URL) {
+        return 'Railway';
+    }
+    // Check for Koyeb
+    if (process.env.KOYEB) {
+        return 'Koyeb';
+    }
+    // Default to OS platform
+    return os.platform();
+}
+
 // ephoto function 
 async function ephoto(url, texk) {
       let form = new FormData();
@@ -289,7 +315,7 @@ function generateMenuText(plugins, ownername, prefix, mode, versions, latensie, 
 menu += `├─• ᴜsᴇʀ: ${ownername}\n`;
 menu += `├─• ʙᴏᴛ: ${global.botname || 'Vesper-XMD'}\n`;
 menu += `├─• ᴍᴏᴅᴇ: ${mode === 'public' ? 'ᴘᴜʙʟɪᴄ' : 'ᴘʀɪᴠᴀᴛᴇ'}\n`;
-menu += `├─• ᴘʟᴀᴛꜰᴏʀᴍ: ${os.platform()}\n`;
+menu += `├─• ᴘʟᴀᴛꜰᴏʀᴍ: ${getHostPlatform()}\n`;
 menu += `├─• ᴘʀᴇғɪx: [ ${prefix} ]\n`;
 menu += `├─• ᴄᴍᴅs: ${totalCommands}+\n`;
 menu += `├─• ᴠᴇʀsɪᴏɴ: ${versions}\n`;
@@ -714,7 +740,7 @@ const mode = await db.get(botNumber, 'mode', 'public');
     
     // Get menu style from database - this will load from DB every time
     let menuStyle = await db.getMenuStyle(botNumber, '2'); // '2' is default if not set
-    menuStyle = String(menuStyle || '2'); // Ensure it's a string
+    menuStyle = String(menuStyle || '4'); // Ensure it's a string
     
     console.log(`📊 Menu style loaded from DB: ${menuStyle}`); // Debug log
     
