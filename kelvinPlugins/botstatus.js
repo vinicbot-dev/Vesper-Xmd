@@ -324,9 +324,9 @@ Start server Enjoy 😉
             );
         }
     },
-    {
+   {
     command: ['botstatus', 'systeminfo', 'stats'],
-    operate: async ({ kelvin, m, reply, getServerUptime }) => {
+    operate: async ({ kelvin, m, reply, getHostPlatform, getServerUptime }) => {
         const used = process.memoryUsage();
         const totalRam = os.totalmem();
         const freeRam = os.freemem();
@@ -363,7 +363,7 @@ Start server Enjoy 😉
 🔹 *CPU*           : ${cpuModel.substring(0, 25)}... (${cpuCores} cores)
 🔹 *Load*          : ${loadAvg[0].toFixed(2)}%, ${loadAvg[1].toFixed(2)}%, ${loadAvg[2].toFixed(2)}%
 │
-🔸 *Platform*      : ${os.platform()} ${os.release()}
+🔸 *Platform*      : ${getHostPlatform()} ${os.release()}
 🔸 *Node*          : ${process.version}
 🔸 *Host*          : ${os.hostname()}
 │
