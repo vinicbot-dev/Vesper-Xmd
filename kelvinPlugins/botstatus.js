@@ -418,13 +418,16 @@ Start server Enjoy 😉
                     externalAdReply: {
                         title: "🌟 Vesper-Xmd Repository",
                         body: `⭐ ${data.stargazers_count || 0} Stars | 🍴 ${data.forks_count || 0} Forks`,
-                        thumbnail: thumbnail,
-                        sourceUrl: `https://github.com/${repoOwner}/${repoName}`
+                        thumbnail: thumbnail,  
+                        sourceUrl: `https://github.com/${repoOwner}/${repoName}`,
+                        mediaType: 1,
+                        renderLargerThumbnail: true
                     }
                 }
             }, { quoted: m });
 
         } catch (error) {
+            console.error('Repo error:', error);
             const fallbackInfo = `
 ╭──❖ 「 REPOSITORY 」 ❖──
 │
