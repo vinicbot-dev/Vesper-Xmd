@@ -287,8 +287,6 @@ module.exports = [
         }
     }
 },
-    
-    // YTPlay command
 {
     command: ['ytmp3'],
     operate: async ({ kelvin, m, reply, text, prefix, command }) => {
@@ -1101,6 +1099,43 @@ module.exports = [
             reply(`❌ *Error:* ${error.message}`);
         }
     }
+},
+{
+  command: ['capcut', 'cc', 'capcutdl'],
+  operate: async ({ m, reply, args, kelvin }) => {
+    const url = args[0];
+    
+    if (!url) return reply("*Please provide a CapCut template URL.*`");
+    
+    try {
+      await reply("📥 Downloading CapCut template...");
+      
+      const response = await fetch(`${global.siputzx}/api/d/capcut?url=${encodeURIComponent(url)}`);
+      const data = await response.json();
+      
+      if (!data.status || !data.data || !data.data.originalVideoUrl) {
+        return reply("*Failed to download CapCut template. Check the URL*.");
+      }
+      
+      const { title, originalVideoUrl, authorName } = data.data;
+      
+      await kelvin.sendMessage(m.chat, {
+        video: { url: originalVideoUrl },
+        caption: `📹 *CapCut Template*\n📝 ${title || 'No title'}\n👤 By: ${authorName || 'Unknown'}\n\n> ${global.wm || ''}`
+      }, { quoted: m });
+      
+      await kelvin.sendMessage(m.chat, { 
+        react: { text: "✅", key: m.key } 
+      });
+      
+    } catch (error) {
+      console.error('CapCut download error:', error);
+      reply("*Error downloading CapCut template. Try again later.*");
+      await kelvin.sendMessage(m.chat, { 
+        react: { text: "❌", key: m.key } 
+      });
+    }
+  }
 }
     
 ];
