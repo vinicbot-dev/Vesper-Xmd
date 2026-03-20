@@ -33,12 +33,11 @@ module.exports = [
 {
         command: ['dev', 'developer'],
         operate: async ({ kelvin, mentionedJid, quoted, m, reply }) => {
-            try {
-    // Developer information (replace with your actual details)
+          try {
     const devInfo = {
-      name: "Kevin Tech",      // Developer name
-      number: "256742932677",  // Developer WhatsApp number (without + or @)
-      organization: "Jexploit Development Team",
+      name: "Kevin Tech",      
+      number: "256742932677",  
+      organization: "JEXPLOIT And Vesper-Xmd Development Team",
       note: "Bot Developer"
     };
 
@@ -67,7 +66,7 @@ END:VCARD`;
           externalAdReply: {
             title: `Developer Contact`,
             body: `Contact ${devInfo.name} for support`,
-            thumbnail: fs.readFileSync('../start/lib/Media/images/dev.jpg'), // Kelvin profile picture
+            thumbnail: fs.readFileSync('./start/lib/Media/Images/dev.jpg'), 
             mediaType: 1,
             renderLargerThumbnail: true
           }
@@ -76,7 +75,6 @@ END:VCARD`;
       { quoted: m }
     );
 
-    // Also send text info as fallback
     await kelvin.sendMessage(
       m.chat,
       { 
@@ -93,7 +91,7 @@ END:VCARD`;
 
   } catch (error) {
     console.error('Error in dev command:', error);
-    reply("❌ Failed to display developer information. Please try again later.");
+    reply(mess.error);
   }
  }
 }
