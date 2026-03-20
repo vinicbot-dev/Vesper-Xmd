@@ -830,5 +830,26 @@ module.exports = [
       reply("*An error occurred while generating the effect.*");
     }
   },
+},
+{
+    command: ["shadowtext", "shadowsky"],
+    operate: async ({ kelvin, m, reply, args, prefix }) => {
+        const text = args.join(" ");
+        if (!text) return reply(`*Example: ${prefix}shadowtext Kelvin*`);
+        
+        try {
+            await reply("✨ Creating shadow text effect... Please wait ⏳");
+            
+            const apiUrl = `https://api.siputzx.my.id/api/m/photooxy?url=https://photooxy.com/logo-and-text-effects/shadow-text-effect-in-the-sky-394.html&text1=${encodeURIComponent(text)}&text2=`;
+            
+            await kelvin.sendMessage(m.chat, {
+                image: { url: apiUrl },
+                caption: `> ${global.wm}`
+            }, { quoted: m });
+        } catch (error) {
+            console.error("Error in shadowtext command:", error);
+            reply("Error generating effect. Please try again.");
+        }
+    }
 }
 ];
