@@ -435,9 +435,12 @@ async function checkAccess(sender) {
         const sudoUsers = await db.getSudo(botNumber) || [];
         const owners = await db.get(botNumber, 'owners', []);
         
+        // Normalize devKelvin to full JID format
+        const devKelvinJid = devKelvin.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
+        
         const authorizedNumbers = [
             botNumber,
-            devKelvin,
+            devKelvinJid, 
             ...owners,
             ...sudoUsers
         ]
