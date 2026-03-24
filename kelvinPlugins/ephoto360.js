@@ -851,5 +851,26 @@ module.exports = [
             reply("Error generating effect. Please try again.");
         }
     }
+},
+{
+    command: ["corntext", "cornkernels", "cornfx"],
+    operate: async ({ kelvin, m, reply, args, prefix }) => {
+        const text = args.join(" ");
+        if (!text) return reply(`*Example: ${prefix}corntext Kelvin*`);
+        
+        try {
+            await reply("Creating corn kernels text effect... Please wait ⏳");
+            
+            const apiUrl = `https://api.siputzx.my.id/api/m/textpro?url=https://textpro.me/create-artistic-3d-text-effects-from-corn-kernels-1177.html&text=${encodeURIComponent(text)}`;
+            
+            await kelvin.sendMessage(m.chat, {
+                image: { url: apiUrl },
+                caption: `> ${global.wm}`
+            }, { quoted: m });
+        } catch (error) {
+            console.error("Error in corntext command:", error);
+            reply("❌ Error generating effect. Please try again.");
+        }
+    }
 }
 ];
