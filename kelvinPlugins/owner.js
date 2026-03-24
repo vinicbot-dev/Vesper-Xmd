@@ -286,10 +286,13 @@ Use ${prefix}mode public/private to change`);
 {
     command: ['block', 'blockuser'],
     operate: async ({ kelvin, m, reply, quoted, text, mentionedJid, Access, mess }) => {
-          if (!Access) return reply(global.mess.owner);
+        if (!Access) return reply(global.mess.owner);
         
-        if (!m.quoted && !mentionedJid[0] && !text) return reply("Reply to a message or mention/user ID to block");
+        if (!m.quoted && !mentionedJid[0] && !text) {
+            return reply("Reply to a message to block the user.");
+        }
         
+        // Get the user to block
         const userId = mentionedJid[0] || quoted?.sender || text.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
         
         try {
@@ -301,12 +304,18 @@ Use ${prefix}mode public/private to change`);
                 }
             });
             
-            // Block the user
-            await kelvin.updateBlockStatus(userId, "block");
+            if (m.quoted) {
+                const lid = m.quoted.sender;
+                const jid = m.quoted.fakeObj.key.remoteJid;
+                await kelvin.updateBlockStatus(lid, jid, "block");
+            } else {
+                await kelvin.updateBlockStatus(userId, "block");
+            }
+            
             reply(`✅ Successfully blocked @${userId.split('@')[0]}`);
         } catch (error) {
             console.error('Error blocking user:', error);
-            reply(`Failed to block user: ${error.message}`);
+            reply(`❌ Failed to block user: ${error.message}`);
         }
     }
 },
