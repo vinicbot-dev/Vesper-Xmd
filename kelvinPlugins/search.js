@@ -580,6 +580,54 @@ ${index + 1}. *${video.title}*
     reply("❌ An error occurred while processing your request. Please try again.");
   }
  }
+},
+{
+    command: ['iguser', 'igprofile', 'instagramuser'],
+    operate: async ({ m, reply, args, kelvin }) => {
+        const username = args[0];
+        
+        if (!username) return reply("*Please provide an Instagram username. Example: `.iguser siputzx_*`");
+        
+        try {
+            await reply(`🔍 Searching for @${username}...`);
+            
+            const response = await fetch(`${global.siputzx}/api/d/igram?url=${encodeURIComponent(username)}`);
+            const data = await response.json();
+            
+            if (!data.status || !data.data?.result?.length) {
+                return reply(`❌ User "@${username}" not found.`);
+            }
+            
+            const user = data.data.result[0].user;
+            
+            let message = `*📸 INSTAGRAM PROFILE*\n\n`;
+            message += `👤 *Username:* @${user.username}\n`;
+            message += `📛 *Name:* ${user.full_name || 'Not set'}\n`;
+            message += `📝 *Bio:* ${user.biography || 'No bio'}\n`;
+            message += `🔗 *Website:* ${user.external_url || 'None'}\n\n`;
+            message += `👥 *Followers:* ${user.follower_count?.toLocaleString() || 0}\n`;
+            message += `👣 *Following:* ${user.following_count?.toLocaleString() || 0}\n`;
+            message += `📹 *Posts:* ${user.media_count?.toLocaleString() || 0}\n`;
+            message += `🔒 *Private:* ${user.is_private ? 'Yes' : 'No'}\n`;
+            message += `✅ *Verified:* ${user.is_verified ? 'Yes' : 'No'}\n\n`;
+            
+            if (user.profile_pic_url) {
+                await kelvin.sendMessage(m.chat, {
+                    image: { url: user.profile_pic_url },
+                    caption: message
+                }, { quoted: m });
+            } else {
+                reply(message);
+            }
+            
+            await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
+            
+        } catch (error) {
+            console.error('Instagram user error:', error);
+            reply("❌ Error fetching Instagram profile. Try again later.");
+            await kelvin.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
+        }
+    }
 }
         
 
