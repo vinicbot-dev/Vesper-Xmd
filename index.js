@@ -457,6 +457,13 @@ kelvin.public = mode === 'public';
 ├─❖ *Time:* ${moment().tz(timezones).format('HH:mm:ss')}
 ├─❖ *Date:* ${moment().tz(timezones).format('DD/MM/YYYY')}
 │
+├─❖ *Join Our Community*
+├─❖ WhatsApp Channel:
+├─❖ https://whatsapp.com/channel/0029Vb725SbIyPtOEG92nA04
+│
+├─❖ Telegram Group:
+├─❖ https://t.me/VinicSupportDsfCrewDevs
+│
 ╰─❖ *Powered by Kelvin Tech* ❖─╯
 
 > ${global.wm || '© Vesper-Xmd is awesome 🔥'}`;
