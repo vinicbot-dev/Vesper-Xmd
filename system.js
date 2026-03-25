@@ -213,80 +213,87 @@ async function ephoto(url, texk) {
   }
 }
 
-// Function to fetch MP3 download URL
-async function fetchMp3DownloadUrl(link) {
-  
-  // XWOLF API (primary)
-  const fetchFromXWolf = async (videoUrl) => {
-    try {
-      // Extract video ID from URL
-      let videoId = '';
-      const idMatch = videoUrl.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/);
-      videoId = idMatch ? idMatch[1] : '';
-      
-      if (!videoId) {
-        throw new Error('Could not extract video ID');
-      }
-      
-      // Try XWolf API
-      const wolfUrl = `https://apis.xwolf.space/download/mp3?url=${encodeURIComponent(videoUrl)}`;
-      const response = await axios.get(wolfUrl, { timeout: 15000 });
-      
-      if (response.data && response.data.success) {
-        if (response.data.downloadUrl) {
-          console.log('✅ XWolf API successful (downloadUrl)');
-          return response.data.downloadUrl;
-        } else if (response.data.streamUrl) {
-          console.log('✅ XWolf API successful (streamUrl)');
-          return response.data.streamUrl;
+async function fetchMp3DownloadUrl(youtubeUrl) {
+  const apis = [
+    {
+      name: "Vreden New API",
+      fetch: async () => {
+        const url = `https://api.vreden.my.id/api/v1/download/youtube/audio?url=${encodeURIComponent(youtubeUrl)}&quality=128`;
+        const res = await axios.get(url);
+        if (res.status !== 200 || !res.data?.result?.download?.url) {
+          throw new Error("Invalid response from Vreden New API");
         }
-      }
-      
-      throw new Error('XWolf API returned invalid response');
-    } catch (error) {
-      console.error('Error with XWolf API:', error.message);
-      throw error;
-    }
-  };
-  
-  // KEITH API (fallback)
-  const fetchFromKeith = async (videoUrl) => {
+        return validateDownloadUrl(res.data.result.download.url);
+      },
+    },
+    {
+      name: "Vreden Alternate API",
+      fetch: async () => {
+        const url = `https://api.vreden.my.id/api/ytmp3?url=${encodeURIComponent(youtubeUrl)}`;
+        const res = await axios.get(url);
+        if (res.status !== 200 || !res.data?.result?.download?.url) {
+          throw new Error("Invalid response from Vreden Alternate API");
+        }
+        return validateDownloadUrl(res.data.result.download.url);
+      },
+    },
+    {
+      name: "Keith API",
+      fetch: async () => {
+        const url = `https://apiskeith.top/download/audio?url=${encodeURIComponent(youtubeUrl)}`;
+        const res = await axios.get(url, { timeout: 15000 });
+        if (res.status !== 200 || !res.data?.status || !res.data?.result) {
+          throw new Error("Invalid response from Keith API");
+        }
+        return validateDownloadUrl(res.data.result);
+      },
+    },
+    {
+      name: "Y2Mate API",
+      fetch: async () => {
+        const apiKey = "AIzaSyB-";
+        const initUrl = `https://www.y2mate.com/mates/analyzeV2/ajax?url=${encodeURIComponent(youtubeUrl)}&q_auto=1`;
+        const initRes = await axios.get(initUrl, { headers: { referer: "https://www.y2mate.com" } });
+        if (!initRes.data?.status || !initRes.data.id) {
+          throw new Error("Y2Mate init failed");
+        }
+        const { id } = initRes.data;
+        while (true) {
+          const pollRes = await axios.get(
+            `https://www.y2mate.com/mates/convertV2/index?id=${id}`,
+            { headers: { referer: "https://www.y2mate.com" } }
+          );
+          if (pollRes.data?.status && pollRes.data.c_status === 1000) {
+            return validateDownloadUrl(pollRes.data.dlink);
+          }
+          await wait(5000);
+        }
+      },
+    },
+  ];
+
+  for (const api of apis) {
     try {
-      const apiUrl = `https://apiskeith.top/download/audio?url=${encodeURIComponent(videoUrl)}`;
-      const response = await axios.get(apiUrl, { timeout: 15000 });
-      
-      if (response.status !== 200 || !response.data?.status) {
-        throw new Error('Failed to fetch from Keith API');
+      console.log(`🔄 Trying ${api.name}...`);
+      return await api.fetch();
+    } catch (err) {
+      console.warn(`❌ ${api.name} failed: ${err.message}`);
+      if (err.response?.status === 403) {
+        console.log("⚠️ Access denied (403). Skipping.");
       }
-      
-      if (response.data.result) {
-        console.log('✅ Keith API successful');
-        return response.data.result;
-      }
-      
-      throw new Error('Keith API returned invalid response');
-    } catch (error) {
-      console.error('Error with Keith API:', error.message);
-      throw error;
-    }
-  };
- 
-  // Try XWolf first, then Keith as fallback
-  try {
-    console.log('🎵 Trying XWolf API...');
-    const downloadUrl = await fetchFromXWolf(link);
-    return downloadUrl;
-  } catch (xwolfError) {
-    console.log('⚠️ XWolf failed, trying Keith API...');
-    
-    try {
-      const keithDownloadUrl = await fetchFromKeith(link);
-      return keithDownloadUrl;
-    } catch (keithError) {
-      console.error('❌ Both APIs failed');
-      throw new Error('Unable to download audio. Please try again later.');
     }
   }
+  throw new Error("All audio download APIs failed.");
+}
+
+async function validateDownloadUrl(url) {
+  console.log(`🔍 Validating download link: ${url}`);
+  const res = await axios.head(url, { timeout: 15000 });
+  if (res.status === 200) {
+    console.log("✅ Download link is valid.");
+    return url;
+  }
+  throw new Error(`Invalid download link (Status: ${res.status})`);
 }
 
 function generateMenuText(plugins, ownername, prefix, mode, versions, latensie, readmore) {
