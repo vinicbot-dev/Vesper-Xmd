@@ -207,7 +207,64 @@ async function loadSession() {
         return null;
     }
 }
+// JID Normalization Functions
+function normalizeJid(jid) {
+    try {
+        if (!jid) return jid;
+        if (/:\d+@/gi.test(jid)) {
+            const { user, server } = jidDecode(jid) || {};
+            return (user && server) ? `${user}@${server}` : jid;
+        }
+        return jid;
+    } catch {
+        return jid;
+    }
+}
 
+function getJidVariants(jid) {
+    const variants = new Set();
+    const normalized = normalizeJid(jid);
+    if (!normalized) return [];
+    variants.add(normalized);
+    const local = normalized.split("@")[0];
+    if (local) variants.add(local);
+    const cleaned = normalized.replace(/[^0-9]/g, "");
+    if (cleaned) {
+        variants.add(cleaned);
+        variants.add(`${cleaned}@s.whatsapp.net`);
+        variants.add(`${cleaned}@lid`);
+    }
+    if (normalized.includes("@s.whatsapp.net")) {
+        variants.add(normalized.replace("@s.whatsapp.net", "@lid"));
+    }
+    if (normalized.includes("@lid")) {
+        variants.add(normalized.replace("@lid", "@s.whatsapp.net"));
+    }
+    return Array.from(variants);
+}
+
+function extractGroupAdmins(participants) {
+    const admins = [];
+    for (const p of participants || []) {
+        if (p?.admin === "superadmin" || p?.admin === "admin") {
+            const jid = normalizeJid(p.id || p.jid);
+            if (jid) admins.push(jid);
+        }
+    }
+    return admins;
+}
+
+function isUserAdmin(sender, groupAdmins) {
+    if (!sender || !groupAdmins) return false;
+    const senderVariants = getJidVariants(sender);
+    for (const admin of groupAdmins) {
+        const adminVariants = getJidVariants(admin);
+        if (senderVariants.some(sv => adminVariants.includes(sv))) {
+            return true;
+        }
+    }
+    return false;
+}
     
 async function clientstart() {
     await loadAllPlugins();
@@ -325,33 +382,20 @@ await new Promise(resolve => setTimeout(resolve, 500));
         m.sender = await kelvin.decodeJid(m.fromMe && kelvin.user.id || m.participant || m.key.participant || m.chat || '')
         
         if (m.isGroup) {
-            m.metadata = await kelvin.groupMetadata(m.chat).catch(_ => ({})) || {}
-            const admins = []
-            if (m.metadata?.participants) {
-                for (let p of m.metadata.participants) {
-                    if (p.admin !== null) {
-                        if (p.jid) admins.push(p.jid)
-                        if (p.id) admins.push(p.id)
-                        if (p.lid) admins.push(p.lid)
-                    }
-                }
-            }
-            m.admins = admins
-            
-            const checkAdmin = (jid, list) =>
-                list.some(x =>
-                    x === jid ||
-                    (jid.endsWith('@s.whatsapp.net') && x === jid.replace('@s.whatsapp.net', '@lid')) ||
-                    (jid.endsWith('@lid') && x === jid.replace('@lid', '@s.whatsapp.net'))
-                )
-            
-            m.isAdmin = checkAdmin(m.sender, m.admins)
-            m.isBotAdmin = checkAdmin(botNumber, m.admins)
-            m.participant = m.key.participant || ""
-        } else {
-            m.isAdmin = false
-            m.isBotAdmin = false
-        }
+    m.metadata = await kelvin.groupMetadata(m.chat).catch(_ => ({})) || {}
+    
+    // Extract admins using the new function
+    const admins = extractGroupAdmins(m.metadata?.participants);
+    m.admins = admins
+    
+    // Use the new admin check function
+    m.isAdmin = isUserAdmin(m.sender, m.admins)
+    m.isBotAdmin = isUserAdmin(botNumber, m.admins)
+    m.participant = m.key.participant || ""
+} else {
+    m.isAdmin = false
+    m.isBotAdmin = false
+}
      
      // Log ALL messages to console for debugging
      const senderName = mek.pushName || "Unknown";
