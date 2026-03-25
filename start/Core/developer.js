@@ -8,7 +8,7 @@ const fs = require('fs');
 
 global.owner = ["Kelvin Tech"];  
 global.status = false; // true = public, false = private
-global.versions = "v1.2.3";
+global.versions = "v1.2.2";
 global.botname = "Vesper-Xmd"; 
 
 // ========= Other Global Settings ========= //
@@ -50,9 +50,9 @@ global.mess = {
   limited: "*Limit reached*",
   helpersList: [
     { name: "Malvin king", number: "+263776388689", country: "Zimbabwe", flag: "🇿🇼" },
-    { name: "lonlysaam", number: "+254762586673", country: "Kenya", flag: "🇹🇿" },
+    { name: "𝐊𝐚𝐚𝐗𝐇𝐮𝐧𝐭𝐞𝐫𝐳", number: "+91 80751 69545", country: "India", flag: "🇮🇳" },
     { name: "Terri", number: "+256752792178", country: "Uganda", flag: "🇺🇬" },
-    { name: "Dev sung", number: "+27649342626", country: "South Africa", flag: "🇿🇦" }
+    { name: "Lord Voyage", number: "+256702662846", country: "Uganda", flag: "🇺🇬" }
   ],
   siputzx: "https://api.siputzx.my.id" 
 };
