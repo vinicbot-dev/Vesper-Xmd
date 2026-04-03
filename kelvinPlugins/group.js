@@ -4,6 +4,8 @@ const { downloadContentFromMessage,getContentType,
 generateWAMessageFromContent,
 generateWAMessageContent } = require('@whiskeysockets/baileys');
 const crypto = require('crypto')
+const jimp = require('jimp');
+const fs = require('fs');
 const {
 antidemoteCommand,
 antipromoteCommand
@@ -135,6 +137,22 @@ Usage:
 ✦ tosgroup text
 ✦ Reply to media/sticker with .tosgroup
 ✦ Add caption after command`;
+}
+
+async function generateProfilePicture(buffer) {
+    let buff;
+    if (Buffer.isBuffer(buffer)) {
+        buff = buffer;
+    } else if (typeof buffer === 'string' && fs.existsSync(buffer)) {
+        buff = fs.readFileSync(buffer);
+    } else if (typeof buffer === 'string' && buffer.startsWith('http')) {
+        buff = await getBuffer(buffer);
+    }
+    const image = await jimp.read(buff);
+    const min = Math.min(image.getWidth(), image.getHeight());
+    const cropped = image.crop(0, 0, min, min);
+    const img = await cropped.scaleToFit(720, 720).getBufferAsync(jimp.MIME_JPEG);
+    return { img };
 }
 
 module.exports = [
@@ -566,6 +584,45 @@ module.exports = [
         }
     },
     {
+    command: ['setgrouppp', 'setgrouppic'],
+    operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, prefix, quoted, mime, args }) => {
+        
+        if (!m.isGroup) return reply(mess.notgroup);
+        if (!m.isAdmin) return reply(global.mess.notadmin);
+        if (!m.isBotAdmin) return reply(global.mess.botadmin);
+        if (!quoted) return reply(`Reply to an image!\nExample: ${prefix + command}`);
+        if (!/image/.test(mime)) return reply(`Reply to an image, not a sticker!`);
+        
+        try {
+            await kelvin.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
+            
+            const mediaPath = await kelvin.downloadAndSaveMediaMessage(quoted, "pp");
+            
+            if (args[0] && args[0].toLowerCase() === "full") {
+                const img = await jimp.read(mediaPath);
+                const min = Math.min(img.getWidth(), img.getHeight());
+                const cropped = await img.crop(0, 0, min, min).scaleToFit(720, 720).getBufferAsync(jimp.MIME_JPEG);
+                
+                await kelvin.query({
+                    tag: "iq",
+                    attrs: { to: m.chat, type: "set", xmlns: "w:profile:picture" },
+                    content: [{ tag: "picture", attrs: { type: "image" }, content: cropped }]
+                });
+            } else {
+                await kelvin.updateProfilePicture(m.chat, { url: mediaPath });
+            }
+            
+            fs.unlinkSync(mediaPath);
+            await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
+            reply(`✅ Group icon updated!`);
+            
+        } catch (error) {
+            await kelvin.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
+            reply(`❌ Error: ${error.message}`);
+        }
+    }
+},
+    {
         command: ['listrequest'],
         operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin }) => {
             if (!isGroup) return reply(global.mess.notgroup);
@@ -647,7 +704,7 @@ module.exports = [
                 await kelvin.groupParticipantsUpdate(m.chat, [target], "promote");
                 reply(`✅ *User promoted successfully!*`);
             } catch (error) {
-                reply("❌ *Failed to promote user. They might already be an admin or the bot lacks permissions.*");
+                reply("*Failed to promote user. They might already be an admin or the bot lacks permissions.*");
             }
         }
     },
@@ -672,7 +729,7 @@ module.exports = [
                 await kelvin.groupParticipantsUpdate(m.chat, [target], "demote");
                 reply(`✅ *User demoted successfully!*`);
             } catch (error) {
-                reply("❌ *Failed to demote user. They might already be a member or the bot lacks permissions.*");
+                reply("*Failed to demote user. They might already be a member or the bot lacks permissions.*");
             }
         }
     },
@@ -742,7 +799,7 @@ module.exports = [
                     }
                 });
                 
-                reply('❌ *Failed to get admin list.* Please try again.');
+                reply('*Failed to get admin list.* Please try again.');
             }
         }
     },
@@ -911,7 +968,7 @@ module.exports = [
 
             } catch (error) {
                 console.error("UnlockGS Error:", error);
-                reply("❌ Failed to unlock group settings");
+                reply("Failed to unlock group settings");
             }
         }
     },
@@ -1013,20 +1070,6 @@ module.exports = [
                 kelvin.groupSettingUpdate(m.chat, "not_announcement");
                 reply("*Group opened by admin. Members can now send messages.*");
             }, timer);
-        }
-    },
-    {
-        command: ['totalmembers'],
-        operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, groupMetadata, participants }) => {
-            if (!isGroup) return reply(global.mess.notgroup);
-
-            await kelvin.sendMessage(
-                m.chat,
-                {
-                    text: `*GROUP*: ${groupMetadata.subject}\n*MEMBERS*: ${participants.length}`,
-                },
-                { quoted: m, ephemeralExpiration: 86400 }
-            );
         }
     },
     {
@@ -1244,14 +1287,13 @@ module.exports = [
             
             // Set the action type
             await db.setGroupSetting(botNumber, chatId, 'badwordaction', mode);
-            // Enable/disable the feature
             await db.setGroupSetting(botNumber, chatId, 'antibadword', enabled);
             
             return reply(`✅ Antibadword *${mode}* has been *${action}* for this group.`);
         }
 
         // Invalid command
-        reply('❌ Invalid command! Use `.antibadword` to see available commands.');
+        reply('Invalid command! Use `.antibadword` to see available commands.');
     }
 },
 {
@@ -1311,7 +1353,7 @@ module.exports = [
         }
 
         // Invalid command
-        reply('❌ Invalid command! Use `.antisticker` to see available commands.');
+        reply('Invalid command! Use `.antisticker` to see available commands.');
     }
 },
     {
@@ -1506,7 +1548,7 @@ module.exports = [
 
             } catch (error) {
                 console.error("GInfo Error:", error);
-                reply("❌ Failed to get group information");
+                reply("Failed to get group information");
             }
         }
     },
@@ -1601,11 +1643,6 @@ module.exports = [
     if (!m.isBotAdmin) return reply(mess.botadmin);
     
     const action = args[0]?.toLowerCase();
-    
-    // Get target user from:
-    // 1. Mentioned user
-    // 2. Quoted message sender
-    // 3. Argument (phone number)
     let target = m.mentionedJid[0] || (m.quoted ? m.quoted.sender : args[1]);
     
     if (!action) {
