@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const Jimp = require('jimp');
 const moment = require('moment-timezone');
 const { exec } = require('child_process');
 const util = require('util');
@@ -677,54 +678,39 @@ ${bugReportMsg}
     }
 },
 {
-    command: ['setpp'],
-    operate: async ({ kelvin, m, reply, prefix, args, Access, quoted, mime, botNumber, getBuffer }) => {
-          if (!Access) return reply(global.mess.owner);
-        if (!quoted) return reply(`*Send or reply to an image With captions ${prefix}setpp*`);
-        if (!/image/.test(mime)) return reply(`*Send or reply to an image With captions ${prefix}setpp*`);
-        if (/webp/.test(mime)) return reply(`*Send or reply to an image With captions ${prefix}setpp*`);
-
-        const fs = require('fs');
-        const medis = await kelvin.downloadAndSaveMediaMessage(quoted, "ppbot.jpeg");
-
-        if (args[0] === "full") {
-            const generateFullProfilePic = async (imagePath) => {
-                const Jimp = require('jimp');
-                const jimp = await Jimp.read(imagePath);
-                const min = jimp.getWidth();
-                const max = jimp.getHeight();
-                const cropped = jimp.crop(0, 0, min, max);
-                return {
-                    img: await cropped.scaleToFit(720, 720).getBufferAsync(Jimp.MIME_JPEG)
-                };
-            };
+    command: ['setpp', 'setownerpp', 'setmypp'],
+    operate: async ({ kelvin, m, reply, prefix, args, Access, quoted, mime, botNumber }) => {
+        
+        if (!Access) return reply(global.mess.owner);
+        if (!quoted) return reply(`*Reply to an image*\nExample: ${prefix}setpp`);
+        if (!/image/.test(mime)) return reply(`*Please reply to an image!*`);
+        const mediaPath = await kelvin.downloadAndSaveMediaMessage(quoted, "botpp");
+        
+        try {
+            await kelvin.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
             
-            const { img } = await generateFullProfilePic(medis);
-            await kelvin.query({
-                tag: "iq",
-                attrs: {
-                    to: botNumber,
-                    type: "set",
-                    xmlns: "w:profile:picture",
-                },
-                content: [
-                    {
-                        tag: "picture",
-                        attrs: {
-                            type: "image",
-                        },
-                        content: img,
-                    },
-                ],
-            });
-            fs.unlinkSync(medis);
-            reply(global.mess.done);
-        } else {
-            await kelvin.updateProfilePicture(botNumber, {
-                url: medis,
-            });
-            fs.unlinkSync(medis);
-            reply(global.mess.done);
+            if (args[0] === "full") {
+                const img = await Jimp.read(mediaPath);
+                const size = Math.min(img.getWidth(), img.getHeight());
+                const cropped = await img.crop(0, 0, size, size).scaleToFit(720, 720).getBufferAsync(Jimp.MIME_JPEG);
+                
+                await kelvin.query({
+                    tag: "iq",
+                    attrs: { to: botNumber, type: "set", xmlns: "w:profile:picture" },
+                    content: [{ tag: "picture", attrs: { type: "image" }, content: cropped }]
+                });
+            } else {
+                await kelvin.updateProfilePicture(botNumber, { url: mediaPath });
+            }
+            
+            fs.unlinkSync(mediaPath);
+            await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
+            reply(`*✅ Profile picture updated successfully*!`);
+            
+        } catch (error) {
+            fs.unlinkSync(mediaPath);
+            await kelvin.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
+            reply(`❌ Error: ${error.message}`);
         }
     }
 },
