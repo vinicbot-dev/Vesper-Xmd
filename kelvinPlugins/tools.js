@@ -459,49 +459,34 @@ module.exports = [
             }
         }
     },
-    {
-    command: ['getdevice', 'device'],
-    operate: async ({ kelvin, m, reply, text, mentionedJid, getDevice, prefix }) => {
-        try {
-            let targetUser = null;
-            let userName = "User";
-            
-            if (mentionedJid && mentionedJid.length > 0) {
-                targetUser = mentionedJid[0];
-                userName = await kelvin.getName(targetUser) || targetUser.split('@')[0];
-            }
-            else if (m.quoted) {
-                targetUser = m.quoted.sender;
-                userName = m.quoted.pushName || targetUser.split('@')[0];
-            }
-            else {
-                return reply(`*Usage:* ${prefix}getdevice @user\n*Or reply to a message:* ${prefix}getdevice`);
+     {
+        command: ['getdevice', 'device'],
+        operate: async ({ reply, m, text, getDevice }) => {
+            if (!m.quoted) {
+                return reply('*Please quote a message to use this command!*');
             }
             
-            let messageId = null;
-            let device = "Unknown";
-            
-            if (m.quoted) {
-                messageId = m.quoted.key.id;
-                device = getDevice(messageId) || "Unknown";
-            } else {
-                const messages = await store.loadMessages(targetUser, 5);
-                const userMsg = messages?.find(msg => msg.key?.remoteJid === targetUser);
-                if (userMsg) {
-                    device = getDevice(userMsg.key.id) || "Unknown";
+            console.log('Quoted Message:', m.quoted);
+            console.log('Quoted Key:', m.quoted?.key);
+
+            try {
+                const quotedMsg = await m.getQuotedMessage();
+
+                if (!quotedMsg) {
+                    return reply('*Could not detect, please try with newly sent message!*');
                 }
+
+                const messageId = quotedMsg.key.id;
+
+                const device = getDevice(messageId) || 'Unknown';
+
+                reply(`The message is sent from *${device}* device.`);
+            } catch (err) {
+                console.error('Error determining device:', err);
+                reply('Error determining device: ' + err.message);
             }
-            
-            const deviceUpper = device.toUpperCase();
-            
-            reply(`@${userName} Is Currently Chatting From an *${deviceUpper}* Device.`);
-            
-        } catch (err) {
-            console.error('Device detection error:', err);
-            reply('❌ Could not detect device.');
         }
-    }
-},
+    },
     {
         command: ['browse', 'fetch'],
         operate: async ({ reply, m, kelvin, text }) => {
