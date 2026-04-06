@@ -378,21 +378,21 @@ module.exports = [
     }
 },
 {
-        command: ['totalmembers'],
-        operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, Access, participants, text }) => {
-            if (!isGroup) return reply(global.mess.notgroup);
-            
-   if (!m.isAdmin) return reply(global.mess.notadmin);
-   if (!m.isBotAdmin) return reply(global.mess.botadmin);
-      
-    await kelvin.sendMessage(
-      m.chat,
-      {
-        text: `*GROUP*: ${groupMetadata.subject}\n*MEMBERS*: ${participants.length}`,
-      },
-      { quoted: m, ephemeralExpiration: 86400 }
-    );
-  }
+    command: ['totalmembers'],
+    operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, Access, participants, text, groupMetadata }) => {
+        if (!isGroup) return reply(global.mess.notgroup);
+        
+        if (!m.isAdmin) return reply(global.mess.notadmin);
+        if (!m.isBotAdmin) return reply(global.mess.botadmin);
+          
+        await kelvin.sendMessage(
+            m.chat,
+            {
+                text: `*GROUP*: ${groupMetadata.subject}\n*MEMBERS*: ${participants.length}`,
+            },
+            { quoted: m, ephemeralExpiration: 86400 }
+        );
+    }
 },
 {
         command: ['tagall'],
@@ -585,9 +585,9 @@ module.exports = [
     },
     {
     command: ['setgrouppp', 'setgrouppic'],
-    operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, prefix, quoted, mime, args }) => {
+    operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, prefix, quoted, mime, args, command }) => {
         
-        if (!m.isGroup) return reply(mess.notgroup);
+        if (!m.isGroup) return reply(global.mess.notgroup);
         if (!m.isAdmin) return reply(global.mess.notadmin);
         if (!m.isBotAdmin) return reply(global.mess.botadmin);
         if (!quoted) return reply(`Reply to an image!\nExample: ${prefix + command}`);
@@ -867,30 +867,30 @@ module.exports = [
         }
     },
     {
-        command: ['invite'],
-        operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, text }) => {
-            if (!isGroup) return reply(global.mess.notgroup);
-                  
-            if (!text)
-                return reply(
-                    `*Enter the number you want to invite to this group*\n\nExample :\n${prefix}invite 256742932677`
-                );
-            if (text.includes("+"))
-                return reply(`*Enter the number together without* *+*`);
-            if (isNaN(text))
-                return reply(
-                    `*Enter only the numbers with your country code without spaces*`
-                );
+    command: ['invite'],
+    operate: async ({ kelvin, m, reply, isGroup, isSenderAdmin, text, prefix }) => {
+        if (!isGroup) return reply(global.mess.notgroup);
+              
+        if (!text)
+            return reply(
+                `*Enter the number you want to invite to this group*\n\nExample :\n${prefix}invite 256742932677`
+            );
+        if (text.includes("+"))
+            return reply(`*Enter the number together without* *+*`);
+        if (isNaN(text))
+            return reply(
+                `*Enter only the numbers with your country code without spaces*`
+            );
 
-            let group = m.chat;
-            let link = "https://chat.whatsapp.com/" + (await kelvin.groupInviteCode(group));
-            await kelvin.sendMessage(text + "@s.whatsapp.net", {
-                text: `*GROUP INVITATION*\n\nSomeone invites you to join this group: \n\n${link}`,
-                mentions: [m.sender],
-            });
-            reply(`*Successfully sent invite link*`);
-        }
-    },
+        let group = m.chat;
+        let link = "https://chat.whatsapp.com/" + (await kelvin.groupInviteCode(group));
+        await kelvin.sendMessage(text + "@s.whatsapp.net", {
+            text: `*GROUP INVITATION*\n\nSomeone invites you to join this group: \n\n${link}`,
+            mentions: [m.sender],
+        });
+        reply(`*Successfully sent invite link*`);
+    }
+},
         {
         command: ['linkgc2'],
         operate: async ({ kelvin, m, reply, Access, isGroup, groupMetadata, participants }) => {
@@ -1488,11 +1488,12 @@ module.exports = [
     }
 },
     {
-        command: ['kick'],
-        operate: async ({ kelvin, m, reply, isGroup, mentionedJid, quoted, from }) => {
-             if (!m.isGroup) return reply(mess.group);
-       if (!m.isAdmin) return reply(global mess.notadmin);
-       if (!m.isBotAdmin) return reply(global.mess.botadmin);
+    command: ['kick'],
+    operate: async ({ kelvin, m, reply, isGroup, mentionedJid, quoted, from, text, mess }) => {
+        if (!m.isGroup) return reply(mess.group);
+        if (!m.isAdmin) return reply(global.mess.notadmin);
+        if (!m.isBotAdmin) return reply(global.mess.botadmin);
+        
         let bck = m.mentionedJid[0]
             ? m.mentionedJid[0]
             : m.quoted
@@ -1500,8 +1501,8 @@ module.exports = [
             : text.replace(/[^0-9]/g, "") + "@s.whatsapp.net";
         await kelvin.groupParticipantsUpdate(m.chat, [bck], "remove");
         reply(global.mess.done);
-             }
-    },
+    }
+},
     {
         command: ['groupinfo'],
         operate: async ({ kelvin, m, reply, isGroup, groupMetadata, from }) => {
