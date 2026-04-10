@@ -31,18 +31,18 @@ module.exports = [
     }
 },
 {
-        command: ['dev', 'developer'],
-        operate: async ({ kelvin, mentionedJid, quoted, m, reply }) => {
-          try {
-    const devInfo = {
-      name: "Kevin Tech",      
-      number: "256742932677",  
-      organization: "JEXPLOIT And Vesper-Xmd Development Team",
-      note: "Bot Developer"
-    };
+    command: ['dev', 'developer'],
+    operate: async ({ kelvin, m, reply }) => {
+        try {
+            const devInfo = {
+                name: "Kevin Tech",
+                number: "256742932677",
+                organization: "JEXPLOIT And Vesper-Xmd Development Team",
+                note: "Bot Developer"
+            };
 
-    // Create vCard
-    const vcard = `BEGIN:VCARD
+            // Create vCard
+            const vcard = `BEGIN:VCARD
 VERSION:3.0
 FN:${devInfo.name}
 ORG:${devInfo.organization};
@@ -50,50 +50,26 @@ TEL;type=CELL;type=VOICE;waid=${devInfo.number}:${devInfo.number}
 NOTE:${devInfo.note}
 END:VCARD`;
 
-    // Send as contact card
-    await kelvin.sendMessage(
-      m.chat, 
-      {
-        contacts: {
-          displayName: devInfo.name,
-          contacts: [{
-            displayName: devInfo.name,
-            vcard: vcard
-          }]
-        },
-        contextInfo: {
-          mentionedJid: [m.sender],
-          externalAdReply: {
-            title: `Developer Contact`,
-            body: `Contact ${devInfo.name} for support`,
-            thumbnail: fs.readFileSync('./start/lib/Media/Images/dev.jpg'), 
-            mediaType: 1,
-            renderLargerThumbnail: true
-          }
+            // Send only contact card - no thumbnail
+            await kelvin.sendMessage(
+                m.chat,
+                {
+                    contacts: {
+                        displayName: devInfo.name,
+                        contacts: [{
+                            displayName: devInfo.name,
+                            vcard: vcard
+                        }]
+                    }
+                },
+                { quoted: m }
+            );
+
+        } catch (error) {
+            console.error('Error in dev command:', error);
+            reply('❌ Failed to send developer contact.');
         }
-      },
-      { quoted: m }
-    );
-
-    await kelvin.sendMessage(
-      m.chat,
-      { 
-        text: `👨‍💻 *Developer Information*\n\n` +
-              `• *Name:* ${devInfo.name}\n` +
-              `• *Contact:* wa.me/${devInfo.number}\n` +
-              `• *Role:* ${devInfo.note}\n` +
-              `• *Team:* ${devInfo.organization}`,
-              
-        mentions: [m.sender]
-      },
-      { quoted: m }
-    );
-
-  } catch (error) {
-    console.error('Error in dev command:', error);
-    reply(mess.error);
-  }
- }
+    }
 }
 
 ]
