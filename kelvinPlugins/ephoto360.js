@@ -872,5 +872,33 @@ module.exports = [
             reply("❌ Error generating effect. Please try again.");
         }
     }
+},
+{
+    command: ["glossysilver", "silvertext", "silverfx"],
+    operate: async ({ kelvin, m, reply, args, prefix }) => {
+        const text = args.join(" ");
+        if (!text) return reply(`*Example: ${prefix}glossysilver Kevin*`);
+        
+        try {
+            await reply("✨ Creating glossy silver text effect... Please wait ⏳");
+            
+            const axios = require('axios');
+            const apiUrl = `https://api.princetechn.com/api/ephoto360/glossysilver?apikey=prince&text=${encodeURIComponent(text)}`;
+            
+            const response = await axios.get(apiUrl);
+            
+            if (response.data && response.data.success && response.data.result && response.data.result.image_url) {
+                await kelvin.sendMessage(m.chat, {
+                    image: { url: response.data.result.image_url },
+                    caption: `> ${global.wm}`
+                }, { quoted: m });
+            } else {
+                reply("Failed to generate glossy silver text. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error in glossysilver command:", error);
+            reply("Error generating glossy silver text. Please try again later.");
+        }
+    }
 }
 ];
