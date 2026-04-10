@@ -126,36 +126,42 @@ module.exports = [
             }
         }
     },
-    {
-  command: ['apk', 'apksearch', 'appsearch'],
-  operate: async ({ m, reply, args }) => {
-    const query = args.join(' ');
-    
-    if (!query) return reply("*Please provide an app name. Example: `.apk xender*`");
-    
-    try {
-      const response = await fetch(`${global.api}/search/apk?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
-      
-      if (!data.status || !data.result?.length) {
-        return reply(`❌ No APK found for "${query}"`);
-      }
-      
-      let message = `*APK Search Results for "${query}"*\n\n`;
-      
-      data.result.forEach((app, i) => {
-        message += `*${i + 1}. ${app.title}*\n`;
-        message += ` ${app.developer || 'Unknown'}\n`;
-        message += `📥 ${app.link}\n\n`;
-      });
-      
-      reply(message);
-    } catch (error) {
-      console.error('APK Error:', error);
-      reply("❌ Error searching APK. Try again later.");
-    }
-  }
-},
+{
+        command: ['apksearch', 'playstore', 'searchapp'],
+        operate: async ({ kelvin, m, reply, args, prefix }) => {
+            const query = args.join(" ");
+            if (!query) return reply(`Example: ${prefix}apksearch WhatsApp`);
+
+            try {
+                await reply(`Searching for "${query}"...`);
+
+                const axios = require('axios');
+                const apiUrl = `https://api.princetechn.com/api/search/playstore?apikey=prince&query=${encodeURIComponent(query)}`;
+                const response = await axios.get(apiUrl);
+                
+                if (response.data?.success && response.data?.results?.length > 0) {
+                    const results = response.data.results.slice(0, 5);
+                    
+                    let text = `*PLAY STORE RESULTS*\n\n`;
+                    for (let i = 0; i < results.length; i++) {
+                        const app = results[i];
+                        text += `${i + 1}. *${app.name}*\n`;
+                        text += `   Developer: ${app.developer}\n`;
+                        text += `   Rating: ${app.rating} ⭐\n`;
+                        text += `   ${app.summary}\n\n`;
+                    }
+                    text += `> ${global.wm || 'Vesper-Xmd'}`;
+                    
+                    await reply(text);
+                } else {
+                    reply(`No results found for "${query}"`);
+                }
+            } catch (error) {
+                console.error(error);
+                reply(`Failed to search for "${query}"`);
+            }
+        }
+    },
  
 {
     command: ['lyrics', 'lyric'],
