@@ -654,30 +654,54 @@ module.exports = [
     },
 
    {
-    command: ['facebook', 'fb'],
+    command: ['facebook', 'fb', 'fbdl', 'facebookdl', 'fbvideo'],
     operate: async ({ kelvin, m, reply, text }) => {
-        if (!text) return reply('*Please provide a Facebook URL. Example: .fb https://fb.com/video*');
+        if (!text) return reply('*Please provide a Facebook URL*');
         
         await reply('📥 Downloading...');
         
         try {
-            // Try Arslan API first
-            let res = await fetch(`https://arslan-apis.vercel.app/download/fbdown?url=${encodeURIComponent(text)}`);
+            // Use siputzx API
+            let res = await fetch(`https://api.siputzx.my.id/api/d/facebook?url=${encodeURIComponent(text)}`);
             let data = await res.json();
-            let videoUrl = data.status ? data.result?.download?.hd || data.result?.download?.sd : null;
             
-            if (!videoUrl) {
-                res = await fetch(`https://apiskeith.top/download/fbdown?url=${encodeURIComponent(text)}`);
-                data = await res.json();
-                videoUrl = data.status ? data.result?.media?.hd || data.result?.media?.sd : null;
+            // Check if API returned success
+            if (!data.status || !data.data) {
+                return reply('Failed to fetch video. Check the URL and try again.');
             }
             
-            if (!videoUrl) return reply('❌ No download link found');
+            const videoData = data.data;
+            const downloads = videoData.downloads || [];
+            
+            let videoUrl = null;
+            
+            // Try to get HD (720p)
+            const hdVideo = downloads.find(d => d.quality === '720p (HD)' && d.type === 'video');
+            if (hdVideo) {
+                videoUrl = hdVideo.url;
+            } else {
+                // Fallback to SD (360p)
+                const sdVideo = downloads.find(d => d.quality === '360p (SD)' && d.type === 'video');
+                if (sdVideo) {
+                    videoUrl = sdVideo.url;
+                }
+            }
+            
+            if (!videoUrl) return reply('No video download link found');
             
             await kelvin.sendMessage(m.chat, {
                 video: { url: videoUrl },
-                caption: `✅ *Facebook Video*\n> ${global.wm || ''}`,
-                contextInfo: { externalAdReply: { title: "Facebook Video", sourceUrl: text } }
+                caption: `${global.wm || ''}`,
+                contextInfo: { 
+                    externalAdReply: { 
+                        title: "Facebook Video",
+                        body: "Downloaded",
+                        thumbnailUrl: videoData.thumbnail || '',
+                        sourceUrl: text,
+                        mediaType: 1,
+                        renderLargerThumbnail: true
+                    } 
+                }
             }, { quoted: m });
             
             await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
@@ -1136,6 +1160,43 @@ module.exports = [
       });
     }
   }
+},
+{
+        command: ['apkdl', 'apkdownload', 'downloadapk'],
+        operate: async ({ kelvin, m, reply, args, prefix }) => {
+            const appName = args.join(" ");
+            if (!appName) return reply(`*Example:* ${prefix}apkdl WhatsApp`);
+
+            try {
+                await reply(`Searching for ${appName} APK...`);
+
+                const axios = require('axios');
+                const apiUrl = `https://api.princetechn.com/api/download/apkdl?apikey=prince&appName=${encodeURIComponent(appName)}`;
+                const response = await axios.get(apiUrl);
+                
+                if (response.data?.success && response.data?.result) {
+                    const { appname, download_url } = response.data.result;
+                    
+                    const apkResponse = await axios({
+                        method: 'GET',
+                        url: download_url,
+                        responseType: 'stream'
+                    });
+                    
+                    await kelvin.sendMessage(m.chat, {
+                        document: apkResponse.data,
+                        mimetype: 'application/vnd.android.package-archive',
+                        fileName: `${appname.replace(/[^a-zA-Z0-9]/g, '_')}.apk`,
+                        caption: `✅ ${appname}\n> ${global.wm || 'Vesper-Xmd'}`
+                    }, { quoted: m });
+                } else {
+                    reply(`❌ ${appName} not found`);
+                }
+            } catch (error) {
+                console.error(error);
+                reply(`❌ Failed to download ${appName}`);
+            }
+        }
 }
     
 ];
