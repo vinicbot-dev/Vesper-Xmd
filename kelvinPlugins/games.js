@@ -1,6 +1,6 @@
 /*Kelvin Tech*/
 
-const { truthCommand, dareCommand } = require('../start/kelvinCmds/fun.js');
+const { getBuffer } = require('../start/lib/myfunction');
 
 function getCompatibilityMessage(score) {
     if (score >= 900) return "Soulmates! 💞 You're perfect for each other!";
@@ -12,24 +12,68 @@ function getCompatibilityMessage(score) {
 
 module.exports = [
     {
-        command: ['truth', 't', 'question'],
-        operate: async ({ kelvin, m, reply }) => {
+        command: ['truth', 'truthgame', 'asktruth'],
+        operate: async ({ kelvin, m, reply, prefix, getBuffer }) => {
             try {
-                await truthCommand(kelvin, m.chat, m);
+                const axios = require('axios');
+                const apiUrl = 'https://api.princetechn.com/api/fun/truth?apikey=prince';
+                const response = await axios.get(apiUrl);
+                
+                if (response.data?.success && response.data?.result) {
+                    const truth = response.data.result;
+                    const from = m.chat;
+                    
+                    try {
+                        const buffer = await getBuffer('https://i.ibb.co/305yt26/bf84f20635dedd5dde31e7e5b6983ae9.jpg');
+                        
+                        await kelvin.sendMessage(from, {
+                            image: buffer,
+                            caption: `*TRUTH*\n\n${truth}`
+                        }, { quoted: m });
+                    } catch (imgError) {
+                        await kelvin.sendMessage(from, {
+                            text: `*TRUTH*\n\n${truth}`
+                        }, { quoted: m });
+                    }
+                } else {
+                    reply('Failed to generate truth. Try again.');
+                }
             } catch (error) {
-                console.error('Truth command error:', error);
-                reply('❌ Error executing truth command.');
+                console.error(error);
+                reply('Error generating truth.');
             }
         }
     },
     {
-        command: ['dare', 'd', 'challenge'],
-        operate: async ({ kelvin, m, reply }) => {
+        command: ['dare', 'truthdare', 'dareme'],
+        operate: async ({ kelvin, m, reply, prefix }) => {
             try {
-                await dareCommand(kelvin, m.chat, m);
+                const axios = require('axios');
+                const apiUrl = 'https://api.princetechn.com/api/fun/dares?apikey=prince';
+                const response = await axios.get(apiUrl);
+                
+                if (response.data?.success && response.data?.result) {
+                    const dare = response.data.result;
+                    const from = m.chat;
+                    
+                    try {
+                        const buffer = await getBuffer('https://i.ibb.co/305yt26/bf84f20635dedd5dde31e7e5b6983ae9.jpg');
+                        
+                        await kelvin.sendMessage(from, {
+                            image: buffer,
+                            caption: `*DARE*\n\n${dare}`
+                        }, { quoted: m });
+                    } catch (imgError) {
+                        await kelvin.sendMessage(from, {
+                            text: `*DARE*\n\n${dare}`
+                        }, { quoted: m });
+                    }
+                } else {
+                    reply('Failed to generate dare. Try again.');
+                }
             } catch (error) {
-                console.error('Dare command error:', error);
-                reply('❌ Error executing dare command.');
+                console.error(error);
+                reply('Error generating dare.');
             }
         }
     },
