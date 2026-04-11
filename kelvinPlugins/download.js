@@ -134,92 +134,54 @@ module.exports = [
             await playCommand(kelvin, m.chat, m, args);
         }
     },
-    {
-    command: ['play3', 'song3', 'Robertplay'],
-    operate: async ({ kelvin, m, reply, text, prefix, command }) => {
-        
-        if (!text) return reply(`Please Provide Me A song Query or Link\n\nExample: ${prefix + command} shape of you`);
+   {
+        command: ['play3'],
+        operate: async ({ kelvin, m, reply, args, prefix }) => {
+            const query = args.join(" ");
+            if (!query) return reply(`Example: ${prefix}play3 Gata Only`);
 
-        try {
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "⏳", key: m.key } 
-            });
-
-            // Search YouTube
-            const search = await yts(text);
-            
-            if (!search.videos || !search.videos.length) {
-                return reply("No result Found");
+            try {
+                await reply(`Searching for "${query}"...`);
+                
+                const searchResults = await ytSearch(query);
+                if (!searchResults.videos.length) return reply('No results found.');
+                
+                const video = searchResults.videos[0];
+                const videoUrl = video.url;
+                
+                const apiUrl = `https://api.princetechn.com/api/download/ytmp3?apikey=prince&url=${encodeURIComponent(videoUrl)}`;
+                const response = await axios.get(apiUrl);
+                
+                if (response.data?.success && response.data?.result?.download_url) {
+                    const { title, duration, download_url } = response.data.result;
+                    
+                    const audioBuffer = await axios({
+                        method: 'GET',
+                        url: download_url,
+                        responseType: 'arraybuffer'
+                    });
+                    
+                    await kelvin.sendMessage(m.chat, {
+                        audio: Buffer.from(audioBuffer.data),
+                        mimetype: 'audio/mpeg',
+                        fileName: `${title}.mp3`
+                    }, { quoted: m });
+                    
+                } else {
+                    reply('Failed to fetch audio. Try again.');
+                }
+            } catch (error) {
+                console.error(error);
+                reply('Error processing request.');
             }
-
-            const video = search.videos[0];
-            
-            // MP3 API using Arslan
-            const apiUrl = `https://arslan-apis.vercel.app/download/ytmp3?url=${video.url}`;
-            const res = await axios.get(apiUrl, { timeout: 60000 });
-
-            if (!res.data || !res.data.status || !res.data.result || !res.data.result.download || !res.data.result.download.url) {
-                return reply("❌ Audio Not Generated");
-            }
-
-            const dlUrl = res.data.result.download.url;
-            const meta = res.data.result.metadata;
-            const quality = res.data.result.download.quality || "128kbps";
-
-            // Send song info with thumbnail
-            await kelvin.sendMessage(
-                m.chat,
-                {
-                    image: { url: video.thumbnail },
-                    caption: `🎵 *${meta.title || video.title}*\n` +
-                             `🎚️ Quality: ${quality}\n\n` +
-                             `⬇️ Downloading audio...`
-                },
-                { quoted: m }
-            );
-
-            // Send audio
-            await kelvin.sendMessage(
-                m.chat,
-                {
-                    audio: { url: dlUrl },
-                    mimetype: "audio/mpeg",
-                    ptt: false,
-                    fileName: `${meta.title || video.title}.mp3`.replace(/[<>:"/\\|?*]/g, '_'),
-                    caption: `> ${global.wm || ''}`,
-                    contextInfo: {
-                        externalAdReply: {
-                            title: meta.title ? meta.title.substring(0, 40) : "YouTube Song",
-                            body: "YouTube MP3",
-                            thumbnailUrl: video.thumbnail,
-                            sourceUrl: video.url,
-                            mediaType: 1,
-                            renderLargerThumbnail: true
-                        }
-                    }
-                },
-                { quoted: m }
-            );
-
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "✅", key: m.key } 
-            });
-
-        } catch (err) {
-            console.error("PLAY ERROR:", err);
-            reply("❌ Error Found Please Try Later");
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "❌", key: m.key } 
-            });
         }
-    }
-},
+    },
 {
   command: ['instadl', 'igdl', 'instagramdl', 'reeldl'],
   operate: async ({ m, reply, args, kelvin }) => {
     const url = args[0];
     
-    if (!url) return reply("*Please provide an Instagram URL. Example: `.instadl https://www.instagram.com/reel/DD6q97IuzxD/*`");
+    if (!url) return reply("*Please provide an Instagram URL.*`");
     
     try {
       const response = await fetch(`${global.api}/download/instadl?url=${encodeURIComponent(url)}`);
@@ -243,50 +205,51 @@ module.exports = [
   }
 },
     
-    {
-    command: ['mediafire', 'mf', 'mfire'],
-    operate: async ({ kelvin, m, reply, text }) => {
-        if (!text) return reply('*Please provide a MediaFire url!*');
-
-        try {
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "⏳", key: m.key } 
-            });
-
-            const apiUrl = `https://arslan-apis.vercel.app/download/mfire?url=${encodeURIComponent(text)}`;
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-
-            if (!data.status || !data.result?.dl_link) {
-                throw new Error('Failed to fetch file');
+     {
+        command: ['mediafire', 'mf', 'mfdl'],
+        operate: async ({ kelvin, m, reply, args, prefix }) => {
+            const url = args[0];
+            
+            if (!url) return reply(`*Please provide mediafire url*`);
+            
+            if (!url.includes('mediafire.com')) {
+                return reply('Please provide a valid MediaFire URL.');
             }
 
-            const file = data.result;
+            try {
+                await reply('Fetching file from MediaFire...');
 
-            await kelvin.sendMessage(
-                m.chat,
-                {
-                    document: { url: file.dl_link },
-                    fileName: file.fileName,
-                    mimetype: file.fileType || 'application/octet-stream',
-                    caption: `> ${global.wm || ''}`
-                },
-                { quoted: m }
-            );
-            
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "✅", key: m.key } 
-            });
-
-        } catch (error) {
-            console.error('MediaFire error:', error);
-            await kelvin.sendMessage(m.chat, { 
-                react: { text: "❌", key: m.key } 
-            });
-            reply(`❌ *Error:* ${error.message}`);
+                const axios = require('axios');
+                const apiUrl = `https://api.princetechn.com/api/download/mediafire?apikey=prince&url=${encodeURIComponent(url)}`;
+                const response = await axios.get(apiUrl);
+                
+                if (response.data?.success && response.data?.result) {
+                    const { fileName, fileSize, fileType, downloadUrl } = response.data.result;
+                    
+                    const fileBuffer = await axios({
+                        method: 'GET',
+                        url: downloadUrl,
+                        responseType: 'arraybuffer'
+                    });
+                    
+                    const mimetype = response.data.result.mimeType || 'application/octet-stream';
+                    
+                    await kelvin.sendMessage(m.chat, {
+                        document: Buffer.from(fileBuffer.data),
+                        mimetype: mimetype,
+                        fileName: fileName,
+                        caption: `📄 ${fileName}\n📦 Size: ${fileSize}\n📁 Type: ${fileType}`
+                    }, { quoted: m });
+                    
+                } else {
+                    reply('Failed to fetch file from MediaFire.');
+                }
+            } catch (error) {
+                console.error(error);
+                reply('Error downloading file. Please try again.');
+            }
         }
-    }
-},
+    },
 {
     command: ['ytmp3'],
     operate: async ({ kelvin, m, reply, text, prefix, command }) => {
@@ -875,96 +838,36 @@ module.exports = [
     }
 },
 {
-    command: ['video', 'ytvideo', 'mp4', 'ytmp4'],
-    operate: async ({ conn, m, reply, text, prefix, command }) => {    
-       
-        if (!text) return reply(`*Please provide a YouTube video name or link.*\n\n*Example:* *${prefix + command} sekkle down by bunnie Gunter*`);
-
-        let videoUrl = "";
-        let videoTitle = "";
-        let videoThumbnail = "";
+    command: ['video'],
+    operate: async ({ kelvin, m, reply, text, fetchVideoDownloadUrl }) => {
+        if (!text) return reply('Please provide a song name. Example: .video Bebe');
 
         try {
-            // Detect or Search
-            if (/^https?:\/\//.test(text)) {
-                videoUrl = text;
-            } else {
-                const s = await yts(text);
-                if (!s?.videos?.length) return reply("❌ No results found.");
-                const v = s.videos[0];
-                videoUrl = v.url;
-                videoTitle = v.title;
-                videoThumbnail = v.thumbnail;
+            const search = await yts(text);
+            
+            if (!search || !search.videos || search.videos.length === 0) {
+                return reply('No results found.');
             }
 
-            // Extract ID
-            const videoId = (videoUrl.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/) || [])[1];
+            const video = search.videos[0];
+            const videoData = await fetchVideoDownloadUrl(video.url);
 
-            // Show preview fast
-            if (videoThumbnail || videoId) {
-                const thumb = videoThumbnail || `https://i.ytimg.com/vi/${videoId}/sddefault.jpg`;
-
-                await kelvin.sendMessage(m.chat, {
-                    image: { url: thumb },
-                    caption: `🎬 *${videoTitle || text}*\n⌛ Fetching video...`,
-                }, { quoted: m });
+            if (!videoData?.result?.download_url) {
+                return reply('Failed to get video URL.');
             }
 
-            // Use yt-dl to get video title
-            if (!videoTitle && videoUrl) {
-                try {
-                    const ytdl = require('ytdl-core');
-                    const info = await ytdl.getInfo(videoUrl);
-                    videoTitle = info.videoDetails.title;
-                } catch (e) {
-                    console.log("yt-dl title fetch error:", e);
-                }
-            }
-
-            // Use only the last API
-            const API_URL = `https://media.cypherxbot.space/download/youtube/video?url=${encodeURIComponent(videoUrl)}`;
-
-            let result = null;
-
-            // Fetch from the single API
-            try {
-                const response = await axios.get(API_URL, { timeout: 30000 });
-                const data = response.data;
-
-                // Normalize download URL detection
-                const dl = data?.result?.download_url ||
-                          data?.result?.mp4 ||
-                          data?.result?.url ||
-                          data?.download_url ||
-                          data?.url ||
-                          data?.videoUrl;
-
-                if (dl) {
-                    result = {
-                        url: dl,
-                        title: videoTitle || data?.result?.title || "Downloaded Video",
-                    };
-                }
-            } catch (error) {
-                console.log("API Error:", error);
-            }
-
-            if (!result) return reply("❌ Failed to download video from server.");
-
-            // SEND THE VIDEO
             await kelvin.sendMessage(m.chat, {
-                video: { url: result.url },
-                mimetype: "video/mp4",
-                fileName: `${result.title.replace(/[^\w\s]/gi, '')}.mp4`,
-                caption: `🎥 *${result.title}*\n\n> ${global.wm} ™`
+                video: { url: videoData.result.download_url },
+                mimetype: 'video/mp4',
+                caption: video.title
             }, { quoted: m });
 
         } catch (error) {
-            console.error('Video download error:', error);
-            reply("❌ An error occurred while processing your request.");
+            console.error('Video command failed:', error);
+            reply(`Error: ${error.message}`);
         }
     }
-},   
+},
 {
   command: ['pindl', 'pinterestdl', 'pindownload'],
   operate: async ({ m, reply, args, kelvin }) => {
