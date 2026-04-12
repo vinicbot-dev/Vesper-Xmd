@@ -841,13 +841,13 @@ module.exports = [
     command: ['video',],
     operate: async ({ kelvin, m, reply, text, prefix,  mess, command }) => {
         
-        if (!text) return reply("*Please provide a song name!*\nExample: `.video despacito`");
+        if (!text) return reply("*Please provide a song name!*\nExample: `.video wrong places by Joshua baraka`");
         
         try {
             const searchQuery = text.trim();
             
             if (!searchQuery) {
-                return reply("*Please provide a song name!*\nExample: `.video wrong places by Joshua baraka`");
+                return reply("*Please provide a song name!*\nExample: `.video wrong places by Joshua baraka.`");
             }
             
             // React with 🎬 emoji
@@ -869,11 +869,11 @@ module.exports = [
             const videoUrl = video.url;
             
             // Send video info before download
-            await reply("⏳ *Searching and downloading video... Please wait*");
+            await reply("⏳ *Searching and downloading audio... Please wait*");
             
             await kelvin.sendMessage(m.chat, {
                 image: { url: video.thumbnail },
-                caption: `*${video.title}*\n⏱ *Duration:* ${video.timestamp}\n👁 *Views:* ${video.views.toLocaleString()}\n\n⏳ *Downloading video...*`
+                caption: `*${video.title}*\n⏱ *Duration:* ${video.timestamp}\n👁 *Views:* ${video.views.toLocaleString()}\n\n⏳ *Downloading audio...*`
             }, { quoted: m });
             
             // Call the API with ?url= style
@@ -882,27 +882,25 @@ module.exports = [
             const data = response.data;
             
             if (!data?.status) {
-                return reply("🚫 *Failed to fetch video from API. Try again later.*");
+                return reply("🚫 *Failed to fetch audio from API. Try again later.*");
             }
             
-            // The API returns fields: title, thumbnail, audio, videos, etc.
-            const videoUrlResult = data.videos || data.video || data.video_url;
-            const title = data.title || video.title;
-            
-            if (!videoUrlResult) {
-                return reply("🚫 *No video URL found in the response.*");
-            }
-            
-            // Send the video file
-            await kelvin.sendMessage(m.chat, {
-                video: { url: videoUrlResult },
-                mimetype: "video/mp4",
-                fileName: `${title.replace(/[^\w\s]/gi, '')}.mp4`,
-                caption: title
-            }, { quoted: m });
+            const videoUrl = data.videos["360"];
+const title = data.title || video.title;
+
+if (!videoUrl) {
+   return reply("🚫 No video URL found.");
+}
+
+await kelvin.sendMessage(m.chat, {
+   video: { url: videoUrl },
+   caption: `🎬 *${title}*`,
+   fileName: `${title.replace(/[^\w\s]/gi, "")}.mp4`,
+   mimetype: "video/mp4"
+}, { quoted: m });
             
         } catch (error) {
-            console.error('Error in video command:', error);
+            console.error('Error in play2 command:', error);
             reply("❌ *Download failed. Please try again later.*");
         }
     }
