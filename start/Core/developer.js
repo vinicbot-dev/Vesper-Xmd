@@ -8,7 +8,7 @@ const fs = require('fs');
 
 global.owner = ["Kelvin Tech"];  
 global.status = false; // true = public, false = private
-global.versions = "v1.2.3";
+global.versions = "v1.2.4";
 global.botname = "Vesper-Xmd"; 
 
 // ========= Other Global Settings ========= //
