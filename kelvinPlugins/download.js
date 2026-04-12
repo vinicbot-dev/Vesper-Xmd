@@ -386,42 +386,6 @@ module.exports = [
         }
     },
     {
-        command: ['apk', 'androidapk', 'downloadapk'],
-        operate: async ({ kelvin, m, reply, fetchJson, text, botNumber }) => {
-            if (!text) return reply("*Which apk do you want to download?*");
-            
-            try {
-                const botname = global.botname || 'Vesper-Xmd';
-                let apiUrl = await fetchJson(`https://api.bk9.dev/search/apk?q=${text}`);
-                let kelvinData = await fetchJson(`https://api.bk9.dev/download/apk?id=${apiUrl.BK9[0].id}`);
-
-                await kelvin.sendMessage(
-                    m.chat,
-                    {
-                        document: { url: kelvinData.BK9.dllink },
-                        fileName: kelvinData.BK9.name,
-                        mimetype: "application/vnd.android.package-archive",
-                        contextInfo: {
-                            externalAdReply: {
-                                title: botname,
-                                body: `${kelvinData.BK9.name}`,
-                                thumbnailUrl: `${kelvinData.BK9.icon}`,
-                                sourceUrl: `${kelvinData.BK9.dllink}`,
-                                mediaType: 2,
-                                showAdAttribution: true,
-                                renderLargerThumbnail: true
-                            }
-                        }
-                    },
-                    { quoted: m }
-                );
-            } catch (error) {
-                console.error(error);
-                reply(global.mess?.error || "*Failed to download APK*");
-            }
-        }
-    },
-    {
         command: ['gdrive', 'googledrive', 'gdrivedl'],
         operate: async ({ kelvin, m, reply, text }) => {
             if (!text) return reply("*Please provide a Google Drive file URL*");
@@ -1154,25 +1118,14 @@ module.exports = [
             if (response.data?.status && response.data?.apk) {
                 const { name, package: packageName, icon, downloadLink, lastUpdated } = response.data.apk;
                 
-                // Send APK info with icon
+                // Send APK directly using URL
                 await kelvin.sendMessage(m.chat, {
-                    image: { url: icon },
-                    caption: `📱 *${name}*\n📦 Package: ${packageName}\n🔄 Version: ${lastUpdated}\n\n⬇️ Sending APK file...`
-                }, { quoted: m });
-                
-                // Download and send APK
-                const apkResponse = await axios({
-                    method: 'GET',
-                    url: downloadLink,
-                    responseType: 'stream'
-                });
-                
-                await kelvin.sendMessage(m.chat, {
-                    document: apkResponse.data,
+                    document: { url: downloadLink },
                     mimetype: 'application/vnd.android.package-archive',
                     fileName: `${name.replace(/[^a-zA-Z0-9]/g, '_')}.apk`,
-                    caption: `✅ ${name}\n> ${global.wm || 'Vesper-Xmd'}`
+                    caption: `✅ ${name}\n📦 ${packageName}\n🔄 ${lastUpdated}\n> ${global.wm || 'Vesper-Xmd'}`
                 }, { quoted: m });
+                
             } else {
                 reply(`❌ ${appName} not found`);
             }
