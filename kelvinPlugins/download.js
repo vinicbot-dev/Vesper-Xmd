@@ -838,33 +838,72 @@ module.exports = [
     }
 },
 {
-    command: ['video'],
-    operate: async ({ kelvin, m, reply, text, fetchVideoDownloadUrl }) => {
-        if (!text) return reply('Please provide a song name. Example: .video Bebe');
-
+    command: ['video',],
+    operate: async ({ kelvin, m, reply, text, prefix,  mess, command }) => {
+        
+        if (!text) return reply("*Please provide a song name!*\nExample: `.video despacito`");
+        
         try {
-            const search = await yts(text);
+            const searchQuery = text.trim();
             
-            if (!search || !search.videos || search.videos.length === 0) {
-                return reply('No results found.');
+            if (!searchQuery) {
+                return reply("*Please provide a song name!*\nExample: `.video wrong places by Joshua baraka`");
             }
-
-            const video = search.videos[0];
-            const videoData = await fetchVideoDownloadUrl(video.url);
-
-            if (!videoData?.result?.download_url) {
-                return reply('Failed to get video URL.');
-            }
-
+            
+            // React with 🎬 emoji
             await kelvin.sendMessage(m.chat, {
-                video: { url: videoData.result.download_url },
-                mimetype: 'video/mp4',
-                caption: video.title
+                react: {
+                    text: "🎬",
+                    key: m.key
+                }
+            });
+            
+            // Search YouTube
+            const { videos } = await yts(searchQuery);
+            if (!videos || videos.length === 0) {
+                return reply("⚠️ *No results found for your query!*");
+            }
+            
+            // Use first video
+            const video = videos[0];
+            const videoUrl = video.url;
+            
+            // Send video info before download
+            await reply("⏳ *Searching and downloading video... Please wait*");
+            
+            await kelvin.sendMessage(m.chat, {
+                image: { url: video.thumbnail },
+                caption: `*${video.title}*\n⏱ *Duration:* ${video.timestamp}\n👁 *Views:* ${video.views.toLocaleString()}\n\n⏳ *Downloading video...*`
             }, { quoted: m });
-
+            
+            // Call the API with ?url= style
+            const apiUrl = `https://yt-dl.officialhectormanuel.workers.dev/?url=${encodeURIComponent(videoUrl)}`;
+            const response = await axios.get(apiUrl);
+            const data = response.data;
+            
+            if (!data?.status) {
+                return reply("🚫 *Failed to fetch video from API. Try again later.*");
+            }
+            
+            // The API returns fields: title, thumbnail, audio, videos, etc.
+            const videoUrlResult = data.videos || data.video || data.video_url;
+            const title = data.title || video.title;
+            
+            if (!videoUrlResult) {
+                return reply("🚫 *No video URL found in the response.*");
+            }
+            
+            // Send the video file
+            await kelvin.sendMessage(m.chat, {
+                video: { url: videoUrlResult },
+                mimetype: "video/mp4",
+                fileName: `${title.replace(/[^\w\s]/gi, '')}.mp4`,
+                caption: title
+            }, { quoted: m });
+            
         } catch (error) {
-            console.error('Video command failed:', error);
-            reply(`Error: ${error.message}`);
+            console.error('Error in video command:', error);
+            reply("❌ *Download failed. Please try again later.*");
         }
     }
 },
