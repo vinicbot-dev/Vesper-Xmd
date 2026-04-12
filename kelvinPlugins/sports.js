@@ -1191,5 +1191,38 @@ module.exports = [
     operate: async ({ m, reply }) => {
       await getTodaysMatches({ reply });
     }
-  }
+  },
+  {
+    command: ['betting', 'odds', 'betodds'],
+    operate: async ({ kelvin, m, reply, args }) => {
+        try {
+            const apiUrl = 'https://api.malvin.gleeze.com/sports/betting/odds';
+            const response = await axios.get(apiUrl);
+            
+            if (!response.data?.status || !response.data?.result?.tips) {
+                return reply('Failed to fetch betting odds.');
+            }
+            
+            const tips = response.data.result.tips;
+            let message = `*BETTING ODDS*\n\n`;
+            
+            tips.forEach((match, index) => {
+                message += `${index + 1}. ${match.event}\n`;
+                message += `📅 ${new Date(match.commenceTime).toLocaleString()}\n`;
+                message += `📊 Bookmakers: ${match.bookmakers}\n`;
+                message += `\n🎲 Odds:\n`;
+                
+                match.bestOdds.forEach(odd => {
+                    message += `   • ${odd.name}: ${odd.price}\n`;
+                });
+                message += `\n─────────────────\n\n`;
+            });
+            
+            reply(message);
+        } catch (error) {
+            console.error('Betting odds error:', error);
+            reply('Error fetching betting odds.');
+        }
+    }
+}
 ];
