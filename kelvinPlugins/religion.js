@@ -130,43 +130,43 @@ ${chapterData.text}\n`;
         }
     },
         {
-        command: ['quran'],
-        operate: async ({ reply, m, kelvin, text }) => {
-            try {
-                const surahNumber = parseInt(text.trim());
-                
-                if (!text || isNaN(surahNumber)) {
-                    await kelvin.sendMessage(m.chat, { text: "📖 Usage: .quran <surah_number>\nExample: .quran 1" });
-                    return;
-                }
-
-                const url = `https://apis.davidcyriltech.my.id/quran?surah=${surahNumber}`;
-                const res = await fetch(url);
-                const data = await res.json();
-
-                if (!data.success) {
-                    await kelvin.sendMessage(m.chat, { text: "❌ Could not fetch Surah. Please try another number." });
-                    return;
-                }
-
-                const { number, name, type, ayahCount, tafsir, recitation } = data.surah;
-
-                let replyText = `📖 *Surah ${name.english}* (${name.arabic})\n\n`;
-                replyText += `Surah Number: ${number}\n📌 Type: ${type}\n📜 Ayahs: ${ayahCount}\n\n`;
-                replyText += `Tafsir: ${tafsir.id}`;
-
-                await kelvin.sendMessage(m.chat, { text: replyText });
-
-                await kelvin.sendMessage(m.chat, {
-                    audio: { url: recitation },
-                    mimetype: "audio/mp4",
-                    ptt: true
-                }, { quoted: m });
-
-            } catch (err) {
-                await kelvin.sendMessage(m.chat, { text: "⚠️ Error fetching Surah. Try again later." });
-                console.error("Quran command error:", err.message);
+    command: ['quran'],
+    operate: async ({ reply, m, kelvin, text }) => {
+        try {
+            const surahNumber = parseInt(text.trim());
+            
+            if (!text || isNaN(surahNumber)) {
+                await kelvin.sendMessage(m.chat, { text: "Usage: .quran <surah_number>\nExample: .quran 1" });
+                return;
             }
+
+            const url = `https://apis.davidcyril.name.ng/quran?surah=${surahNumber}`;
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (!data.success) {
+                await kelvin.sendMessage(m.chat, { text: "Could not fetch Surah. Please try another number." });
+                return;
+            }
+
+            const { number, name, type, ayahCount, tafsir, recitation } = data.surah;
+
+            let replyText = `📖 *${name.english}* (${name.arabic})\n`;
+            replyText += `Number: ${number} | Type: ${type} | Ayahs: ${ayahCount}\n\n`;
+            replyText += `Tafsir: ${tafsir.id}`;
+
+            await kelvin.sendMessage(m.chat, { text: replyText });
+
+            await kelvin.sendMessage(m.chat, {
+                audio: { url: recitation },
+                mimetype: "audio/mpeg",
+                mp3: true
+            }, { quoted: m });
+
+        } catch (err) {
+            await kelvin.sendMessage(m.chat, { text: "Error fetching Surah. Try again later." });
+            console.error("Quran command error:", err.message);
         }
     }
+}
 ]
