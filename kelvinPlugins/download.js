@@ -839,7 +839,7 @@ module.exports = [
 },
 {
     command: ['video',],
-    operate: async ({ kelvin, m, reply, text, prefix,  mess, command }) => {
+    operate: async ({ kelvin, m, reply, text, prefix, mess, command }) => {
         
         if (!text) return reply("*Please provide a song name!*\nExample: `.video wrong places by Joshua baraka`");
         
@@ -847,7 +847,7 @@ module.exports = [
             const searchQuery = text.trim();
             
             if (!searchQuery) {
-                return reply("*Please provide a song name!*\nExample: `.video wrong places by Joshua baraka.`");
+                return reply("*Please provide a song name!*\nExample: `.video wrong places by Joshua baraka`");
             }
             
             // React with 🎬 emoji
@@ -869,38 +869,38 @@ module.exports = [
             const videoUrl = video.url;
             
             // Send video info before download
-            await reply("⏳ *Searching and downloading audio... Please wait*");
+            await reply("⏳ *Searching and downloading video... Please wait*");
             
             await kelvin.sendMessage(m.chat, {
                 image: { url: video.thumbnail },
-                caption: `*${video.title}*\n⏱ *Duration:* ${video.timestamp}\n👁 *Views:* ${video.views.toLocaleString()}\n\n⏳ *Downloading audio...*`
+                caption: `*${video.title}*\n⏱ *Duration:* ${video.timestamp}\n👁 *Views:* ${video.views.toLocaleString()}\n\n⏳ *Downloading video...*`
             }, { quoted: m });
             
             // Call the API with ?url= style
-const apiUrl = `https://yt-dl.officialhectormanuel.workers.dev/?url=${encodeURIComponent(videoUrl)}`;
-const response = await axios.get(apiUrl);
-const data = response.data;
-
-if (!data?.status) {
-    return reply("🚫 *Failed to fetch video from API. Try again later.*");
-}
-
-const videoUrlResult = data.videos?.["360"] || data.video || data.videos?.["720"];
-const title = data.title || video.title;
-
-if (!videoUrlResult) {
-    return reply("🚫 No video URL found.");
-}
-
-await kelvin.sendMessage(m.chat, {
-    video: { url: videoUrlResult },
-    mimetype: "video/mp4",
-    fileName: `${title.replace(/[^\w\s]/gi, "")}.mp4`,
-    caption: `🎬 *${title}*`
-}, { quoted: m });
+            const apiUrl = `https://yt-dl.officialhectormanuel.workers.dev/?url=${encodeURIComponent(videoUrl)}`;
+            const response = await axios.get(apiUrl);
+            const data = response.data;
+            
+            if (!data?.status) {
+                return reply("🚫 *Failed to fetch video from API. Try again later.*");
+            }
+            
+            const videoResult = data.videos?.["360"] || data.video || data.videos?.["720"] || data.videos?.["480"];
+            const title = data.title || video.title;
+            
+            if (!videoResult) {
+                return reply("🚫 No video URL found.");
+            }
+            
+            await kelvin.sendMessage(m.chat, {
+                video: { url: videoResult },
+                mimetype: "video/mp4",
+                fileName: `${title.replace(/[^\w\s]/gi, "")}.mp4`,
+                caption: `🎬 *${title}*`
+            }, { quoted: m });
             
         } catch (error) {
-            console.error('Error in play2 command:', error);
+            console.error('Error in video command:', error);
             reply("❌ *Download failed. Please try again later.*");
         }
     }
