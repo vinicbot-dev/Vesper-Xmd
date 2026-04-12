@@ -877,26 +877,26 @@ module.exports = [
             }, { quoted: m });
             
             // Call the API with ?url= style
-            const apiUrl = `https://yt-dl.officialhectormanuel.workers.dev/?url=${encodeURIComponent(videoUrl)}`;
-            const response = await axios.get(apiUrl);
-            const data = response.data;
-            
-            if (!data?.status) {
-                return reply("🚫 *Failed to fetch audio from API. Try again later.*");
-            }
-            
-            const videoUrl = data.videos["360"];
+const apiUrl = `https://yt-dl.officialhectormanuel.workers.dev/?url=${encodeURIComponent(videoUrl)}`;
+const response = await axios.get(apiUrl);
+const data = response.data;
+
+if (!data?.status) {
+    return reply("🚫 *Failed to fetch video from API. Try again later.*");
+}
+
+const videoUrlResult = data.videos?.["360"] || data.video || data.videos?.["720"];
 const title = data.title || video.title;
 
-if (!videoUrl) {
-   return reply("🚫 No video URL found.");
+if (!videoUrlResult) {
+    return reply("🚫 No video URL found.");
 }
 
 await kelvin.sendMessage(m.chat, {
-   video: { url: videoUrl },
-   caption: `🎬 *${title}*`,
-   fileName: `${title.replace(/[^\w\s]/gi, "")}.mp4`,
-   mimetype: "video/mp4"
+    video: { url: videoUrlResult },
+    mimetype: "video/mp4",
+    fileName: `${title.replace(/[^\w\s]/gi, "")}.mp4`,
+    caption: `🎬 *${title}*`
 }, { quoted: m });
             
         } catch (error) {
