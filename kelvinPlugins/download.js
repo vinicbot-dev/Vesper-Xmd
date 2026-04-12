@@ -24,37 +24,38 @@ async function sleep(ms) {
 module.exports = [
 
 {
-    command: ['song'],
-    operate: async ({ conn, m, reply, text, prefix, command }) => {
-        if (!text) return reply(`*Example*: ${prefix + command} sekkle down by bunnie Gunter`);
-        
-        await reply("🔍 Searching...");
-        
+    command: ['song', 'music', 'audio'],
+    operate: async ({ kelvin, m, reply, args, prefix }) => {
+        const query = args.join(" ");
+        if (!query) return reply(`Example: ${prefix}song Faded`);
+
         try {
-            // YouTube search
-            const searchResult = await yts(text);
-            if (!searchResult?.videos?.length) return reply("❌ Song not found");
+            await reply(`Searching for "${query}"...`);
+
+            const axios = require('axios');
+            const apiUrl = `https://apis.davidcyril.name.ng/song?query=${encodeURIComponent(query)}`;
+            const response = await axios.get(apiUrl);
             
-            const video = searchResult.videos[0];
-            
-            // Download audio
-            const apiUrl = `https://yt-dl.officialhectormanuel.workers.dev/?url=${encodeURIComponent(video.url)}`;
-            const { data } = await axios.get(apiUrl, { timeout: 30000 });
-            
-            if (!data?.audio) return reply("❌ Download failed");
-            
-            // Send audio
-            await conn.sendMessage(m.chat, {
-                audio: { url: data.audio },
-                mimetype: "audio/mpeg",
-                fileName: `${video.title}.mp3`
-            }, { quoted: m });
-            
-            await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
-            
-        } catch (err) {
-            console.error("Song error:", err);
-            reply("❌ Error");
+            if (response.data?.status && response.data?.result) {
+                const { title, audio } = response.data.result;
+                
+                if (!audio || !audio.download_url) {
+                    return reply(`No audio found for "${query}"`);
+                }
+                
+                await kelvin.sendMessage(m.chat, {
+                    audio: { url: audio.download_url },
+                    mimetype: 'audio/mpeg',
+                    fileName: `${title.replace(/[^\w\s]/gi, '')}.mp3`,
+                    ptt: false
+                }, { quoted: m });
+                
+            } else {
+                reply(`No results found for "${query}"`);
+            }
+        } catch (error) {
+            console.error('Song error:', error.message);
+            reply(`Error: ${error.message}`);
         }
     }
 },
@@ -134,48 +135,45 @@ module.exports = [
             await playCommand(kelvin, m.chat, m, args);
         }
     },
-   {
-        command: ['play3'],
-        operate: async ({ kelvin, m, reply, args, prefix }) => {
-            const query = args.join(" ");
-            if (!query) return reply(`Example: ${prefix}play3 Gata Only`);
+{
+    command: ['play3'],
+    operate: async ({ kelvin, m, reply, args, prefix }) => {
+        const query = args.join(" ");
+        if (!query) return reply(`Example: ${prefix}play3 Faded`);
 
-            try {
-                await reply(`Searching for "${query}"...`);
+        try {
+            await reply(`Searching for "${query}"...`);
+
+            const axios = require('axios');
+            const apiUrl = `https://apis.davidcyril.name.ng/play?query=${encodeURIComponent(query)}`;
+            const response = await axios.get(apiUrl);
+            
+            if (response.data?.status && response.data?.result) {
+                const { title, duration, views, published, download_url } = response.data.result;
                 
-                const searchResults = await ytSearch(query);
-                if (!searchResults.videos.length) return reply('No results found.');
-                
-                const video = searchResults.videos[0];
-                const videoUrl = video.url;
-                
-                const apiUrl = `https://api.princetechn.com/api/download/ytmp3?apikey=prince&url=${encodeURIComponent(videoUrl)}`;
-                const response = await axios.get(apiUrl);
-                
-                if (response.data?.success && response.data?.result?.download_url) {
-                    const { title, duration, download_url } = response.data.result;
-                    
-                    const audioBuffer = await axios({
-                        method: 'GET',
-                        url: download_url,
-                        responseType: 'arraybuffer'
-                    });
-                    
-                    await kelvin.sendMessage(m.chat, {
-                        audio: Buffer.from(audioBuffer.data),
-                        mimetype: 'audio/mpeg',
-                        fileName: `${title}.mp3`
-                    }, { quoted: m });
-                    
-                } else {
-                    reply('Failed to fetch audio. Try again.');
+                if (!download_url) {
+                    return reply(`No audio found for "${query}"`);
                 }
-            } catch (error) {
-                console.error(error);
-                reply('Error processing request.');
+                
+                const caption = `*${title}*\n⏱ ${duration} | 👁 ${views?.toLocaleString()} | 📅 ${published}`;
+                
+                await kelvin.sendMessage(m.chat, {
+                    audio: { url: download_url },
+                    mimetype: 'audio/mpeg',
+                    fileName: `${title.replace(/[^\w\s]/gi, '')}.mp3`,
+                    ptt: false,
+                    caption: caption
+                }, { quoted: m });
+                
+            } else {
+                reply(`No results found for "${query}"`);
             }
+        } catch (error) {
+            console.error('Play3 error:', error.message);
+            reply(`Error: ${error.message}`);
         }
-    },
+    }
+},
 {
   command: ['instadl', 'igdl', 'instagramdl', 'reeldl'],
   operate: async ({ m, reply, args, kelvin }) => {
@@ -838,7 +836,7 @@ module.exports = [
     }
 },
 {
-    command: ['video',],
+    command: ['video2',],
     operate: async ({ kelvin, m, reply, text, prefix, mess, command }) => {
         
         if (!text) return reply("*Please provide a song name!*\nExample: `.video wrong places by Joshua baraka`");
@@ -902,6 +900,45 @@ module.exports = [
         } catch (error) {
             console.error('Error in video command:', error);
             reply("❌ *Download failed. Please try again later.*");
+        }
+    }
+},
+{
+    command: ['video'],
+    operate: async ({ kelvin, m, reply, args, prefix }) => {
+        const query = args.join(" ");
+        if (!query) return reply(`Example: ${prefix}video3 Gata Only`);
+
+        try {
+            await reply(`Searching for "${query}"...`);
+
+            const axios = require('axios');
+            const apiUrl = `https://apis.davidcyril.name.ng/song?query=${encodeURIComponent(query)}`;
+            const response = await axios.get(apiUrl);
+            
+            if (response.data?.status && response.data?.result) {
+                const { title, duration, views, published, video, thumbnail } = response.data.result;
+                
+                if (!video || !video.download_url) {
+                    return reply(`No video found for "${query}"`);
+                }
+                
+                const caption = `*${title}*\n⏱ ${duration} | 👁 ${views?.toLocaleString()} | 📅 ${published}`;
+                
+                await kelvin.sendMessage(m.chat, {
+                    video: { url: video.download_url },
+                    mimetype: 'video/mp4',
+                    fileName: `${title.replace(/[^\w\s]/gi, '')}.mp4`,
+                    caption: caption,
+                    thumbnail: { url: thumbnail }
+                }, { quoted: m });
+                
+            } else {
+                reply(`No results found for "${query}"`);
+            }
+        } catch (error) {
+            console.error('Video3 error:', error.message);
+            reply(`Error: ${error.message}`);
         }
     }
 },
@@ -1102,41 +1139,48 @@ module.exports = [
   }
 },
 {
-        command: ['apkdl', 'apkdownload', 'downloadapk'],
-        operate: async ({ kelvin, m, reply, args, prefix }) => {
-            const appName = args.join(" ");
-            if (!appName) return reply(`*Example:* ${prefix}apkdl WhatsApp`);
+    command: ['apkdl', 'apkdownload', 'downloadapk'],
+    operate: async ({ kelvin, m, reply, args, prefix }) => {
+        const appName = args.join(" ");
+        if (!appName) return reply(`Example: ${prefix}apkdl whatsapp`);
 
-            try {
-                await reply(`Searching for ${appName} APK...`);
+        try {
+            await reply(`Searching for ${appName} APK...`);
 
-                const axios = require('axios');
-                const apiUrl = `https://api.princetechn.com/api/download/apkdl?apikey=prince&appName=${encodeURIComponent(appName)}`;
-                const response = await axios.get(apiUrl);
+            const axios = require('axios');
+            const apiUrl = `https://apis.davidcyril.name.ng/download/apk?text=${encodeURIComponent(appName)}`;
+            const response = await axios.get(apiUrl);
+            
+            if (response.data?.status && response.data?.apk) {
+                const { name, package: packageName, icon, downloadLink, lastUpdated } = response.data.apk;
                 
-                if (response.data?.success && response.data?.result) {
-                    const { appname, download_url } = response.data.result;
-                    
-                    const apkResponse = await axios({
-                        method: 'GET',
-                        url: download_url,
-                        responseType: 'stream'
-                    });
-                    
-                    await kelvin.sendMessage(m.chat, {
-                        document: apkResponse.data,
-                        mimetype: 'application/vnd.android.package-archive',
-                        fileName: `${appname.replace(/[^a-zA-Z0-9]/g, '_')}.apk`,
-                        caption: `✅ ${appname}\n> ${global.wm || 'Vesper-Xmd'}`
-                    }, { quoted: m });
-                } else {
-                    reply(`❌ ${appName} not found`);
-                }
-            } catch (error) {
-                console.error(error);
-                reply(`❌ Failed to download ${appName}`);
+                // Send APK info with icon
+                await kelvin.sendMessage(m.chat, {
+                    image: { url: icon },
+                    caption: `📱 *${name}*\n📦 Package: ${packageName}\n🔄 Version: ${lastUpdated}\n\n⬇️ Sending APK file...`
+                }, { quoted: m });
+                
+                // Download and send APK
+                const apkResponse = await axios({
+                    method: 'GET',
+                    url: downloadLink,
+                    responseType: 'stream'
+                });
+                
+                await kelvin.sendMessage(m.chat, {
+                    document: apkResponse.data,
+                    mimetype: 'application/vnd.android.package-archive',
+                    fileName: `${name.replace(/[^a-zA-Z0-9]/g, '_')}.apk`,
+                    caption: `✅ ${name}\n> ${global.wm || 'Vesper-Xmd'}`
+                }, { quoted: m });
+            } else {
+                reply(`❌ ${appName} not found`);
             }
+        } catch (error) {
+            console.error(error);
+            reply(`❌ Failed to download ${appName}`);
         }
+    }
 }
     
 ];
