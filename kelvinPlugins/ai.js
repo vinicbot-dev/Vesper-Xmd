@@ -75,14 +75,11 @@ module.exports = [
             if (!text) return reply(`Please provide a query/question\n\nExample: ${prefix + command} what is artificial intelligence?`);
             
             try {
-                // Send "typing..." indicator
                 await kelvin.sendPresenceUpdate('composing', m.chat);
                 
-                // Encode the query for the API
                 const query = encodeURIComponent(text);
                 const apiUrl = `https://api.giftedtech.co.ke/api/ai/ai?apikey=gifted&q=${query}`;
                 
-                // Fetch response from API
                 const { data } = await axios.get(apiUrl);
                 
                 let response;
@@ -95,7 +92,6 @@ module.exports = [
                     response = "❌ Sorry, I couldn't process your request at the moment. Please try again later.";
                 }
                 
-                // Format the response
                 const finalResponse = `🤖 *GPT RESPONSE*\n\n${response}\n\n*Powered by Jexploit AI*`;
                 
                 reply(finalResponse);
@@ -114,18 +110,14 @@ module.exports = [
             if (!text) return reply(`❌ *Please provide a question!*\n\n📌 *Example:* ${prefix}metaai Hello, how are you?`);
 
             try {
-                // React while processing
                 await kelvin.sendMessage(m.chat, { react: { text: "💭", key: m.key } });
 
-                // API URL
                 const apiUrl = `https://api.nekolabs.web.id/text-generation/ai4chat?text=${encodeURIComponent(text)}`;
                 
-                // Fetch response from API
                 const response = await fetch(apiUrl);
                 const data = await response.json();
 
                 if (data.success && data.result) {
-                    // Format the response nicely
                     const replyText = `🤖 *AI Response*\n\n${data.result}\n\n⏱️ *Response Time:* ${data.responseTime || 'N/A'}`;
                     
                     await kelvin.sendMessage(
@@ -134,7 +126,6 @@ module.exports = [
                         { quoted: m }
                     );
                     
-                    // Success reaction
                     await kelvin.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
                 } else {
                     throw new Error('No response from AI');
@@ -263,46 +254,41 @@ module.exports = [
     },
     {
         command: ['think'],
-        operate: async ({ kelvin, mek, m, reply, text, q }) => {
-           try {
-        if (!q) {
-            return reply('Please provide a complex question for deep thinking mode.\n\nExample: .think analyze the ethical implications of artificial intelligence in healthcare');
-        }
-
-        await reply('_🧠 Microsoft Copilot is thinking deeply... This may take a moment._');
-
-        const response = await axios.get(`https://malvin-api.vercel.app/ai/copilot-think?text=${encodeURIComponent(q)}`);
-        
-        if (response.data && response.data.result) {
-            const answer = response.data.result;
-            
-            await kelvin.sendMessage(from, {
-                text: `🧠 *Microsoft Copilot - Deep Thinking:*\n\n${answer}\n\n💭 *Deep analysis completed*\n👤 *Requested by:* @${sender.split('@')[0]}`,
-                mentions: [sender],
-                contextInfo: {
-                    mentionedJid: [sender],
-                    quotedMessage: mek.message
+        operate: async ({ kelvin, m, reply, text, q }) => {
+            try {
+                const query = text || q;
+                if (!query) {
+                    return reply('Please provide a complex question for deep thinking mode.\n\nExample: .think analyze the ethical implications of artificial intelligence in healthcare');
                 }
-            }, {
-                quoted: m
-            });
-        } else {
-            throw new Error('Invalid response from Copilot Deep Thinking API');
-        }
 
-    } catch (error) {
-        console.error('Error in think command:', error);
-        
-        if (error.code === 'ECONNABORTED') {
-            await reply('❌ Request timeout. Deep thinking is taking longer than expected. Please try again.');
-        } else if (error.response?.status === 429) {
-            await reply('❌ Rate limit exceeded. Please wait before another deep thinking request.');
-        } else {
-            await reply('❌ Failed to get deep thinking response. Please try again later.');
+                await reply('🧠 Microsoft Copilot is thinking deeply... This may take a moment.');
+
+                const response = await axios.get(`https://malvin-api.vercel.app/ai/copilot-think?text=${encodeURIComponent(query)}`);
+                
+                if (response.data && response.data.result) {
+                    const answer = response.data.result;
+                    
+                    await kelvin.sendMessage(m.chat, {
+                        text: `🧠 *Microsoft Copilot - Deep Thinking:*\n\n${answer}\n\n💭 *Deep analysis completed*`
+                    }, { quoted: m });
+                } else {
+                    throw new Error('Invalid response from Copilot Deep Thinking API');
+                }
+
+            } catch (error) {
+                console.error('Error in think command:', error);
+                
+                if (error.code === 'ECONNABORTED') {
+                    await reply('❌ Request timeout. Deep thinking is taking longer than expected. Please try again.');
+                } else if (error.response?.status === 429) {
+                    await reply('❌ Rate limit exceeded. Please wait before another deep thinking request.');
+                } else {
+                    await reply('❌ Failed to get deep thinking response. Please try again later.');
+                }
+            }
         }
-    }
- }
-},
+    },
+
     {
         command: ['venice', 'vai'],
         operate: async ({ kelvin, m, reply, args, text }) => {
@@ -345,80 +331,79 @@ module.exports = [
             await claudeAICommand(kelvin, m.chat, text, m);
         }
     },
-{
-  command: ['gemini', 'geminai'],
-  operate: async ({ m, reply, args, kelvin }) => {
-    const text = args.join(' ');
-    
-    if (!text) return reply("*Please provide a question. Example: `.gemini Explain quantum physics*`");
-    
-    try {
-      await reply("🤔 Thinking...");
-      
-      const response = await fetch(`${global.siputzx}/api/ai/gemini?text=${encodeURIComponent(text)}&promptSystem=Act+as+a+helpful+assistant`);
-      const data = await response.json();
-      
-      if (!data.status || !data.data?.response) {
-        return reply("❌ Failed to get response from Gemini.");
-      }
-      
-      reply(data.data.response);
-      
-    } catch (error) {
-      console.error('Gemini error:', error);
-      reply("❌ Error communicating with Gemini AI.");
+    {
+        command: ['gemini', 'geminai'],
+        operate: async ({ m, reply, args, kelvin }) => {
+            const text = args.join(' ');
+            
+            if (!text) return reply("*Please provide a question. Example: `.gemini Explain quantum physics*`");
+            
+            try {
+                await reply("🤔 Thinking...");
+                
+                const response = await fetch(`${global.siputzx}/api/ai/gemini?text=${encodeURIComponent(text)}&promptSystem=Act+as+a+helpful+assistant`);
+                const data = await response.json();
+                
+                if (!data.status || !data.data?.response) {
+                    return reply("❌ Failed to get response from Gemini.");
+                }
+                
+                reply(data.data.response);
+                
+            } catch (error) {
+                console.error('Gemini error:', error);
+                reply("❌ Error communicating with Gemini AI.");
+            }
+        }
+    },
+    {
+        command: ['glm', 'glm47', 'glmflash'],
+        operate: async ({ m, reply, args, kelvin }) => {
+            const text = args.join(' ');
+            
+            if (!text) return reply("*Please provide a question. Example: `.glm Introduction to JavaScript*`");
+            
+            try {
+                await reply("🤔 Thinking...");
+                
+                const response = await fetch(`${global.siputzx}/api/ai/glm47flash?prompt=${encodeURIComponent(text)}&system=You+are+a+helpful+assistant&temperature=0.7`);
+                const data = await response.json();
+                
+                if (!data.status || !data.data?.response) {
+                    return reply("❌ Failed to get response from GLM.");
+                }
+                
+                reply(data.data.response);
+                
+            } catch (error) {
+                console.error('GLM error:', error);
+                reply("❌ Error communicating with GLM AI.");
+            }
+        }
+    },
+    {
+        command: ['phi2', 'phiai'],
+        operate: async ({ m, reply, args, kelvin }) => {
+            const text = args.join(' ');
+            
+            if (!text) return reply("*Please provide a question. Example: `.phi2 How are you*`");
+            
+            try {
+                await reply("🤔 Thinking...");
+                
+                const response = await fetch(`${global.siputzx}/api/ai/phi2?prompt=${encodeURIComponent(text)}&system=You+are+a+helpful+assistant&temperature=0.7`);
+                const data = await response.json();
+                
+                if (!data.status || !data.data?.response) {
+                    return reply("❌ Failed to get response from PHI2.");
+                }
+                
+                reply(data.data.response);
+                
+            } catch (error) {
+                console.error('PHI2 error:', error);
+                reply("❌ Error communicating with PHI2 AI.");
+            }
+        }
     }
-  }
-},
-{
-  command: ['glm', 'glm47', 'glmflash'],
-  operate: async ({ m, reply, args, kelvin }) => {
-    const text = args.join(' ');
-    
-    if (!text) return reply("*Please provide a question. Example: `.glm Introduction to JavaScript*`");
-    
-    try {
-      await reply("🤔 Thinking...");
-      
-      const response = await fetch(`${global.siputzx}/api/ai/glm47flash?prompt=${encodeURIComponent(text)}&system=You+are+a+helpful+assistant&temperature=0.7`);
-      const data = await response.json();
-      
-      if (!data.status || !data.data?.response) {
-        return reply("❌ Failed to get response from GLM.");
-      }
-      
-      reply(data.data.response);
-      
-    } catch (error) {
-      console.error('GLM error:', error);
-      reply("❌ Error communicating with GLM AI.");
-    }
-  }
-},
-{
-  command: ['phi2', 'phiai'],
-  operate: async ({ m, reply, args, kelvin }) => {
-    const text = args.join(' ');
-    
-    if (!text) return reply("*Please provide a question. Example: `.phi2 How are you*`");
-    
-    try {
-      await reply("🤔 Thinking...");
-      
-      const response = await fetch(`${global.siputzx}/api/ai/phi2?prompt=${encodeURIComponent(text)}&system=You+are+a+helpful+assistant&temperature=0.7`);
-      const data = await response.json();
-      
-      if (!data.status || !data.data?.response) {
-        return reply("❌ Failed to get response from PHI2.");
-      }
-      
-      reply(data.data.response);
-      
-    } catch (error) {
-      console.error('PHI2 error:', error);
-      reply("❌ Error communicating with PHI2 AI.");
-    }
-  }
-}
-    
 ];
