@@ -1,364 +1,264 @@
 const axios = require('axios');
+const sharp = require('sharp');
 
-const fetchReactionImage = async ({ kelvin, m, reply, command }) => {
-  try {
-    const { data } = await axios.get(`https://api.waifu.pics/sfw/${command}`);
-    await kelvin.sendImageAsSticker(m.chat, data.url, m, {
-      packname: global.packname,
-      author: global.author,
-    });
-  } catch (error) {
-      reply(global.mess.error);
-  }
-};
+const ANIMU_BASE = 'https://api.some-random-api.com/animu';
+const WAIFU_BASE = 'https://api.waifu.pics/sfw';
+
+async function convertToSticker(mediaBuffer) {
+    try {
+        const sticker = await sharp(mediaBuffer)
+            .resize(512, 512, { fit: 'cover' })
+            .webp()
+            .toBuffer();
+        return sticker;
+    } catch (error) {
+        console.error('Error converting to sticker:', error);
+        return null;
+    }
+}
+
+async function fetchAndSendSticker(kelvin, from, endpoint, m) {
+    try {
+        const { data } = await axios.get(endpoint);
+        
+        if (data.link || data.url) {
+            const imageUrl = data.link || data.url;
+            const resp = await axios.get(imageUrl, {
+                responseType: 'arraybuffer',
+                timeout: 15000
+            });
+            const mediaBuf = Buffer.from(resp.data);
+            const stickerBuf = await convertToSticker(mediaBuf);
+            
+            if (stickerBuf) {
+                await kelvin.sendMessage(from, { sticker: stickerBuf }, { quoted: m });
+                return true;
+            }
+        }
+        return false;
+    } catch (error) {
+        console.error('Error fetching sticker:', error);
+        return false;
+    }
+}
+
+async function sendAnimu(kelvin, from, type, m) {
+    await fetchAndSendSticker(kelvin, from, `${ANIMU_BASE}/${type}`, m);
+}
+
+async function sendWaifu(kelvin, from, type, m) {
+    await fetchAndSendSticker(kelvin, from, `${WAIFU_BASE}/${type}`, m);
+}
 
 module.exports = [
+    // Animu commands
+    {
+        command: ['animu', 'animequote'],
+        operate: async ({ kelvin, m, args }) => {
+            const type = args[0]?.toLowerCase() || 'quote';
+            let normalized = type;
+            if (type === 'facepalm' || type === 'face_palm') normalized = 'face-palm';
+            if (type === 'quote') normalized = 'quote';
+            await sendAnimu(kelvin, m.chat, normalized, m);
+        }
+    },
+    {
+        command: ['animuwink'],
+        operate: async ({ kelvin, m }) => {
+            await sendAnimu(kelvin, m.chat, 'wink', m);
+        }
+    },
+    {
+        command: ['animupat'],
+        operate: async ({ kelvin, m }) => {
+            await sendAnimu(kelvin, m.chat, 'pat', m);
+        }
+    },
+    {
+        command: ['animuhug'],
+        operate: async ({ kelvin, m }) => {
+            await sendAnimu(kelvin, m.chat, 'hug', m);
+        }
+    },
+    // Waifu.pics commands (all send as stickers)
     {
         command: ['kiss', 'cium', 'beso'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'kiss' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'kiss', m);
         }
     },
     {
         command: ['cry'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'cry' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'cry', m);
         }
     },
     {
         command: ['blush'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'blush' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'blush', m);
         }
     },
     {
         command: ['dance'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'dance' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'dance', m);
         }
     },
     {
         command: ['kill'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'kill' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'kill', m);
         }
     },
     {
         command: ['hug'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'hug' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'hug', m);
         }
     },
     {
-        command: ['kick', 'kick3'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'kick3' });
+        command: ['kick'],
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'kick', m);
         }
     },
     {
         command: ['slap'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'slap' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'slap', m);
         }
     },
     {
         command: ['happy'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'happy' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'happy', m);
         }
     },
     {
         command: ['bully'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'bully' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'bully', m);
         }
     },
     {
         command: ['pat', 'headpat'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'pat' });
-        }
-    },
-    {
-        command: ['wink'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'wink' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'pat', m);
         }
     },
     {
         command: ['poke'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'poke' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'poke', m);
         }
     },
     {
         command: ['cuddle'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'cuddle' });
-        }
-    },
-    {
-        command: ['highfive', 'hi5'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'highfive' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'cuddle', m);
         }
     },
     {
         command: ['smile'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'smile' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'smile', m);
         }
     },
     {
         command: ['wave'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'wave' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'wave', m);
         }
     },
     {
         command: ['bite'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'bite' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'bite', m);
         }
     },
     {
         command: ['lick'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'lick' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'lick', m);
         }
     },
     {
         command: ['bonk'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'bonk' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'bonk', m);
         }
     },
     {
         command: ['yeet'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'yeet' });
-        }
-    },
-    {
-        command: ['glomp'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'glomp' });
-        }
-    },
-    {
-        command: ['stab'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'stab' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'yeet', m);
         }
     },
     {
         command: ['nom'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'nom' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'nom', m);
         }
     },
     {
         command: ['tickle'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'tickle' });
-        }
-    },
-    {
-        command: ['throw'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'throw' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'tickle', m);
         }
     },
     {
         command: ['facepalm'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'facepalm' });
-        }
-    },
-    {
-        command: ['feed'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'feed' });
-        }
-    },
-    {
-        command: ['spank'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'spank' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'facepalm', m);
         }
     },
     {
         command: ['handhold', 'holdhands'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'handhold' });
-        }
-    },
-    {
-        command: ['shoot'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'shoot' });
-        }
-    },
-    {
-        command: ['punch'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'punch' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'handhold', m);
         }
     },
     {
         command: ['stare'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'stare' });
-        }
-    },
-    {
-        command: ['comfort'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'comfort' });
-        }
-    },
-    {
-        command: ['boop', 'boopnose'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'boop' });
-        }
-    },
-    {
-        command: ['sleep'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'sleep' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'stare', m);
         }
     },
     {
         command: ['shrug'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'shrug' });
-        }
-    },
-    {
-        command: ['sip'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'sip' });
-        }
-    },
-    {
-        command: ['clap'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'clap' });
-        }
-    },
-    {
-        command: ['nervous'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'nervous' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'shrug', m);
         }
     },
     {
         command: ['scream'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'scream' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'scream', m);
         }
     },
     {
         command: ['pout'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'pout' });
-        }
-    },
-    {
-        command: ['bored'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'bored' });
-        }
-    },
-    {
-        command: ['laugh'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'laugh' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'pout', m);
         }
     },
     {
         command: ['shy'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'shy' });
-        }
-    },
-    {
-        command: ['confused'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'confused' });
-        }
-    },
-    {
-        command: ['angry'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'angry' });
-        }
-    },
-    {
-        command: ['excited'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'excited' });
-        }
-    },
-    {
-        command: ['fear'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'fear' });
-        }
-    },
-    {
-        command: ['surprised'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'surprised' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'shy', m);
         }
     },
     {
         command: ['thinking'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'thinking' });
-        }
-    },
-    {
-        command: ['embarrassed'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'embarrassed' });
-        }
-    },
-    {
-        command: ['tired'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'tired' });
-        }
-    },
-    {
-        command: ['sad'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'sad' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'thinking', m);
         }
     },
     {
         command: ['love'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'love' });
-        }
-    },
-    {
-        command: ['peace'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'peace' });
-        }
-    },
-    {
-        command: ['victory', 'victorysign'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'victory' });
-        }
-    },
-    {
-        command: ['point'],
-        operate: async ({ kelvin, command, m, reply }) => {
-            await fetchReactionImage({ kelvin, m, reply, command: 'point' });
+        operate: async ({ kelvin, m }) => {
+            await sendWaifu(kelvin, m.chat, 'love', m);
         }
     }
-]
+];
