@@ -352,6 +352,29 @@ if (!Access) return reply(global.mess.owner);
     }
 },
 {
+    command: ['goodbye', 'goodbyemsg'],
+    operate: async ({ m, reply, prefix, args, Access, botNumber, db, kelvin, mess }) => {
+        if (!m.isGroup) return reply(mess.group);
+        if (!m.isAdmin && !Access) return reply(mess.notadmin);
+        
+        const mode = args[0]?.toLowerCase();
+        
+        if (!mode || !['on', 'off'].includes(mode)) {
+            const current = await db.getGroupSetting(botNumber, m.chat, 'goodbye', false);
+            return reply(`*GOODBYE SETTINGS*\n\nUsage: ${prefix}goodbye <on/off>\n\nCurrent: ${current ? 'ON ✅' : 'OFF ❌'}`);
+        }
+        
+        const boolValue = mode === 'on';
+        await db.setGroupSetting(botNumber, m.chat, 'goodbye', boolValue);
+        
+        if (boolValue) {
+            reply(`✅ goodbye message has been enabled for this group`);
+        } else {
+            reply(`❌ goodbye message has been disabled for this group`);
+        }
+    }
+},
+{
     command: ['adminevent'],
     operate: async ({ kelvin, m, reply, prefix, args, Access, db, mess, botNumber }) => {
         if (!Access) return reply(global.mess.owner);
