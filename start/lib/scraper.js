@@ -24,45 +24,46 @@ async function tryRequest(getter, attempts = 3) {
 	throw lastError;
 }
 
-// PuruBoy API for Audio
-async function getPuruBoyAudioByUrl(youtubeUrl) {
-    const apiUrl = 'https://puruboy-api.vercel.app/api/downloader/ytmp3';
-    const res = await axios.post(apiUrl, {
-        url: youtubeUrl
-    }, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 60000
-    });
+// ScrapeIntel API
+async function getScrapeIntelDownloadUrl(youtubeUrl, type = 'mp3') {
+    const apiUrl = `https://scrapeintel.42web.io/api2.php?url=${encodeURIComponent(youtubeUrl)}`;
+    const res = await axios.get(apiUrl, { timeout: 60000 });
     
-    if (res?.data?.success && res?.data?.result?.download_url) {
-        return {
-            download: res.data.result.download_url,
-            title: res.data.result.title
-        };
+    if (res?.data?.data?.formats) {
+        const formats = res.data.data.formats;
+        const title = res.data.data.title || 'Media';
+        const thumbnail = res.data.data.thumbnail;
+        
+        if (type === 'mp3') {
+            // Find audio-only format
+            const audioFormat = formats.find(f => f.is_audio === true);
+            if (audioFormat && audioFormat.url) {
+                return {
+                    download: audioFormat.url,
+                    title: title,
+                    thumbnail: thumbnail
+                };
+            }
+        }
+        
+        if (type === 'mp4') {
+            // Find best video format (prefer 360p or 480p)
+            const videoFormats = formats.filter(f => f.is_audio === false && f.resolution !== 'audio only');
+            const preferredFormat = videoFormats.find(f => f.resolution === '640x360' || f.resolution === '854x480');
+            const bestFormat = preferredFormat || videoFormats[0];
+            
+            if (bestFormat && bestFormat.url) {
+                return {
+                    download: bestFormat.url,
+                    title: title,
+                    thumbnail: thumbnail,
+                    quality: bestFormat.format_note || bestFormat.resolution,
+                    size: bestFormat.filesize || 'N/A'
+                };
+            }
+        }
     }
-    throw new Error('PuruBoy API returned no download');
-}
-
-// PuruBoy API for Video
-async function getPuruBoyVideoByUrl(youtubeUrl) {
-    const apiUrl = 'https://puruboy-api.vercel.app/api/downloader/youtube';
-    const res = await axios.post(apiUrl, {
-        url: youtubeUrl
-    }, {
-        headers: { 'Content-Type': 'application/json' },
-        timeout: 60000
-    });
-    
-    if (res?.data?.success && res?.data?.result?.downloadUrl) {
-        return {
-            download: res.data.result.downloadUrl,
-            title: res.data.result.title,
-            quality: res.data.result.quality,
-            size: res.data.result.size,
-            thumbnail: res.data.result.thumbnail
-        };
-    }
-    throw new Error('PuruBoy API returned no download');
+    throw new Error('ScrapeIntel API returned no download URL');
 }
 
 // Main fetchMp3 function (Audio)
@@ -75,14 +76,10 @@ async function fetchMp3(kelvin, chatId, message) {
         }
 
         let video;
-        let searchQuery = text;
-
-        // Check if it's a YouTube URL or search query
         if (text.includes('youtube.com') || text.includes('youtu.be')) {
             video = { url: text };
         } else {
-            // Search using yts
-            const search = await yts(searchQuery);
+            const search = await yts(text);
             if (!search || !search.videos.length) {
                 await kelvin.sendMessage(chatId, { text: 'No results found.' }, { quoted: message });
                 return;
@@ -90,17 +87,15 @@ async function fetchMp3(kelvin, chatId, message) {
             video = search.videos[0];
         }
 
-        // Send thumbnail preview
         await kelvin.sendMessage(chatId, {
             image: { url: video.thumbnail },
             caption: `🎵 *${video.title}*\n⏱ Duration: ${video.timestamp}\n\n📥 Downloading audio...`
         }, { quoted: message });
 
-        // Get download URL from PuruBoy API
-        const audioData = await getPuruBoyAudioByUrl(video.url);
+        // Get download URL from ScrapeIntel API
+        const audioData = await getScrapeIntelDownloadUrl(video.url, 'mp3');
         const audioUrl = audioData.download;
         
-        // Download audio buffer
         const audioResponse = await axios.get(audioUrl, {
             responseType: 'arraybuffer',
             timeout: 90000,
@@ -115,7 +110,6 @@ async function fetchMp3(kelvin, chatId, message) {
             throw new Error('No audio data received');
         }
 
-        // Send audio file
         await kelvin.sendMessage(chatId, {
             audio: audioBuffer,
             mimetype: 'audio/mpeg',
@@ -131,7 +125,7 @@ async function fetchMp3(kelvin, chatId, message) {
     }
 }
 
-// Main fetchVideo function
+// Main fetchVideo function (Video)
 async function fetchVideo(kelvin, chatId, message) {
     try {
         const text = message.message?.conversation || message.message?.extendedTextMessage?.text || '';
@@ -141,14 +135,10 @@ async function fetchVideo(kelvin, chatId, message) {
         }
 
         let video;
-        let searchQuery = text;
-
-        // Check if it's a YouTube URL or search query
         if (text.includes('youtube.com') || text.includes('youtu.be')) {
             video = { url: text };
         } else {
-            // Search using yts
-            const search = await yts(searchQuery);
+            const search = await yts(text);
             if (!search || !search.videos.length) {
                 await kelvin.sendMessage(chatId, { text: 'No results found.' }, { quoted: message });
                 return;
@@ -156,17 +146,15 @@ async function fetchVideo(kelvin, chatId, message) {
             video = search.videos[0];
         }
 
-        // Send thumbnail preview
         await kelvin.sendMessage(chatId, {
             image: { url: video.thumbnail },
             caption: `🎬 *${video.title}*\n⏱ Duration: ${video.timestamp}\n👁 Views: ${video.views?.toLocaleString() || 'N/A'}\n\n📥 Downloading video...`
         }, { quoted: message });
 
-        // Get download URL from PuruBoy API
-        const videoData = await getPuruBoyVideoByUrl(video.url);
+        // Get download URL from ScrapeIntel API
+        const videoData = await getScrapeIntelDownloadUrl(video.url, 'mp4');
         const videoUrl = videoData.download;
         
-        // Download video buffer
         const videoResponse = await axios.get(videoUrl, {
             responseType: 'arraybuffer',
             timeout: 120000,
@@ -181,7 +169,6 @@ async function fetchVideo(kelvin, chatId, message) {
             throw new Error('No video data received');
         }
 
-        // Send video file
         await kelvin.sendMessage(chatId, {
             video: videoBuffer,
             mimetype: 'video/mp4',
