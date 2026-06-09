@@ -5,68 +5,12 @@ const yts = require('yt-search');
 const fs = require('fs');
 const path = require('path');
 const fileTypeFromBuffer = require('file-type')
+const { ytdl } = require('ytdl-plus');
 const randomarray = async (array) => {
 	return array[Math.floor(Math.random() * array.length)]
 }
 
-async function tryRequest(getter, attempts = 3) {
-	let lastError;
-	for (let attempt = 1; attempt <= attempts; attempt++) {
-		try {
-			return await getter();
-		} catch (err) {
-			lastError = err;
-			if (attempt < attempts) {
-				await new Promise(r => setTimeout(r, 1000 * attempt));
-			}
-		}
-	}
-	throw lastError;
-}
-
-// ScrapeIntel API
-async function getScrapeIntelDownloadUrl(youtubeUrl, type = 'mp3') {
-    const apiUrl = `https://scrapeintel.42web.io/api2.php?url=${encodeURIComponent(youtubeUrl)}`;
-    const res = await axios.get(apiUrl, { timeout: 60000 });
-    
-    if (res?.data?.data?.formats) {
-        const formats = res.data.data.formats;
-        const title = res.data.data.title || 'Media';
-        const thumbnail = res.data.data.thumbnail;
-        
-        if (type === 'mp3') {
-            // Find audio-only format
-            const audioFormat = formats.find(f => f.is_audio === true);
-            if (audioFormat && audioFormat.url) {
-                return {
-                    download: audioFormat.url,
-                    title: title,
-                    thumbnail: thumbnail
-                };
-            }
-        }
-        
-        if (type === 'mp4') {
-            // Find best video format (prefer 360p or 480p)
-            const videoFormats = formats.filter(f => f.is_audio === false && f.resolution !== 'audio only');
-            const preferredFormat = videoFormats.find(f => f.resolution === '640x360' || f.resolution === '854x480');
-            const bestFormat = preferredFormat || videoFormats[0];
-            
-            if (bestFormat && bestFormat.url) {
-                return {
-                    download: bestFormat.url,
-                    title: title,
-                    thumbnail: thumbnail,
-                    quality: bestFormat.format_note || bestFormat.resolution,
-                    size: bestFormat.filesize || 'N/A'
-                };
-            }
-        }
-    }
-    throw new Error('ScrapeIntel API returned no download URL');
-}
-
-// Main fetchMp3 function (Audio)
+// fetchMp3 function (Audio using ytdl-plus)
 async function fetchMp3(kelvin, chatId, message) {
     try {
         const text = message.message?.conversation || message.message?.extendedTextMessage?.text || '';
@@ -75,36 +19,41 @@ async function fetchMp3(kelvin, chatId, message) {
             return;
         }
 
-        let video;
+        let videoUrl;
+        let videoTitle;
+        let videoThumbnail;
+
         if (text.includes('youtube.com') || text.includes('youtu.be')) {
-            video = { url: text };
+            // Get video info from URL
+            const info = await ytdl.getInfo(text);
+            videoUrl = text;
+            videoTitle = info.videoDetails.title;
+            videoThumbnail = info.videoDetails.thumbnails[0]?.url || '';
         } else {
+            // Search using yts first
             const search = await yts(text);
             if (!search || !search.videos.length) {
                 await kelvin.sendMessage(chatId, { text: 'No results found.' }, { quoted: message });
                 return;
             }
-            video = search.videos[0];
+            videoUrl = search.videos[0].url;
+            videoTitle = search.videos[0].title;
+            videoThumbnail = search.videos[0].thumbnail;
         }
 
         await kelvin.sendMessage(chatId, {
-            image: { url: video.thumbnail },
-            caption: `🎵 *${video.title}*\n⏱ Duration: ${video.timestamp}\n\n📥 Downloading audio...`
+            image: { url: videoThumbnail },
+            caption: `🎵 *${videoTitle}*\n\n📥 Downloading audio...`
         }, { quoted: message });
 
-        // Get download URL from ScrapeIntel API
-        const audioData = await getScrapeIntelDownloadUrl(video.url, 'mp3');
-        const audioUrl = audioData.download;
-        
-        const audioResponse = await axios.get(audioUrl, {
-            responseType: 'arraybuffer',
-            timeout: 90000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
+        // Download audio using ytdl-plus
+        const result = await ytdl.downloadAudio(videoUrl, {
+            format: 'mp3',
+            quality: 'highestaudio'
         });
-        
-        const audioBuffer = Buffer.from(audioResponse.data);
+
+        // Read the downloaded file
+        const audioBuffer = fs.readFileSync(result.outputPath);
         
         if (!audioBuffer || audioBuffer.length === 0) {
             throw new Error('No audio data received');
@@ -113,9 +62,16 @@ async function fetchMp3(kelvin, chatId, message) {
         await kelvin.sendMessage(chatId, {
             audio: audioBuffer,
             mimetype: 'audio/mpeg',
-            fileName: `${(audioData.title || video.title || 'song').replace(/[^\w\s-]/g, '')}.mp3`,
+            fileName: `${videoTitle.replace(/[^\w\s-]/g, '')}.mp3`,
             ptt: false
         }, { quoted: message });
+
+        // Clean up temp file
+        try {
+            if (fs.existsSync(result.outputPath)) {
+                fs.unlinkSync(result.outputPath);
+            }
+        } catch (e) {}
 
     } catch (err) {
         console.error('fetchMp3 error:', err);
@@ -125,7 +81,7 @@ async function fetchMp3(kelvin, chatId, message) {
     }
 }
 
-// Main fetchVideo function (Video)
+// fetchVideo function (Video using ytdl-plus)
 async function fetchVideo(kelvin, chatId, message) {
     try {
         const text = message.message?.conversation || message.message?.extendedTextMessage?.text || '';
@@ -134,36 +90,44 @@ async function fetchVideo(kelvin, chatId, message) {
             return;
         }
 
-        let video;
+        let videoUrl;
+        let videoTitle;
+        let videoThumbnail;
+        let videoViews;
+
         if (text.includes('youtube.com') || text.includes('youtu.be')) {
-            video = { url: text };
+            // Get video info from URL
+            const info = await ytdl.getInfo(text);
+            videoUrl = text;
+            videoTitle = info.videoDetails.title;
+            videoThumbnail = info.videoDetails.thumbnails[0]?.url || '';
+            videoViews = info.videoDetails.viewCount;
         } else {
+            // Search using yts first
             const search = await yts(text);
             if (!search || !search.videos.length) {
                 await kelvin.sendMessage(chatId, { text: 'No results found.' }, { quoted: message });
                 return;
             }
-            video = search.videos[0];
+            videoUrl = search.videos[0].url;
+            videoTitle = search.videos[0].title;
+            videoThumbnail = search.videos[0].thumbnail;
+            videoViews = search.videos[0].views;
         }
 
         await kelvin.sendMessage(chatId, {
-            image: { url: video.thumbnail },
-            caption: `🎬 *${video.title}*\n⏱ Duration: ${video.timestamp}\n👁 Views: ${video.views?.toLocaleString() || 'N/A'}\n\n📥 Downloading video...`
+            image: { url: videoThumbnail },
+            caption: `🎬 *${videoTitle}*\n👁 Views: ${videoViews?.toLocaleString() || 'N/A'}\n\n📥 Downloading video...`
         }, { quoted: message });
 
-        // Get download URL from ScrapeIntel API
-        const videoData = await getScrapeIntelDownloadUrl(video.url, 'mp4');
-        const videoUrl = videoData.download;
-        
-        const videoResponse = await axios.get(videoUrl, {
-            responseType: 'arraybuffer',
-            timeout: 120000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
+        // Download video using ytdl-plus
+        const result = await ytdl.download(videoUrl, {
+            quality: 'highest',
+            format: 'mp4'
         });
-        
-        const videoBuffer = Buffer.from(videoResponse.data);
+
+        // Read the downloaded file
+        const videoBuffer = fs.readFileSync(result.outputPath);
         
         if (!videoBuffer || videoBuffer.length === 0) {
             throw new Error('No video data received');
@@ -172,9 +136,16 @@ async function fetchVideo(kelvin, chatId, message) {
         await kelvin.sendMessage(chatId, {
             video: videoBuffer,
             mimetype: 'video/mp4',
-            fileName: `${(videoData.title || video.title || 'video').replace(/[^\w\s-]/g, '')}.mp4`,
-            caption: `🎬 *${videoData.title || video.title}*\n📦 Size: ${videoData.size || 'N/A'}\n🎚 Quality: ${videoData.quality || 'HD'}`
+            fileName: `${videoTitle.replace(/[^\w\s-]/g, '')}.mp4`,
+            caption: `🎬 *${videoTitle}*`
         }, { quoted: message });
+
+        // Clean up temp file
+        try {
+            if (fs.existsSync(result.outputPath)) {
+                fs.unlinkSync(result.outputPath);
+            }
+        } catch (e) {}
 
     } catch (err) {
         console.error('fetchVideo error:', err);
@@ -182,6 +153,43 @@ async function fetchVideo(kelvin, chatId, message) {
             text: '❌ Failed to download video. Please try again later.' 
         }, { quoted: message });
     }
+}
+
+// Keep other functions as they are (instagram, pinterest, spotify, etc.)
+async function instagramDownload(url) {
+    const apiUrl = `https://go-api-six.vercel.app/instagram/stream?url=${encodeURIComponent(url)}`;
+    const res = await axios.get(apiUrl, { timeout: 30000 });
+    return res.data;
+}
+
+async function pinterestDownload(url) {
+    const apiUrl = `https://go-api-six.vercel.app/pinterest/stream?url=${encodeURIComponent(url)}`;
+    const res = await axios.get(apiUrl, { timeout: 30000 });
+    return res.data;
+}
+
+async function spotifySearch(query) {
+    const apiUrl = `https://go-api-six.vercel.app/spotify/search?q=${encodeURIComponent(query)}`;
+    const res = await axios.get(apiUrl, { timeout: 30000 });
+    return res.data;
+}
+
+async function spotifyStream(url) {
+    const apiUrl = `https://go-api-six.vercel.app/spotify/stream?url=${encodeURIComponent(url)}`;
+    const res = await axios.get(apiUrl, { timeout: 30000 });
+    return res.data;
+}
+
+async function tiktokDownload(url) {
+    const apiUrl = `https://go-api-six.vercel.app/tiktok/download?url=${encodeURIComponent(url)}`;
+    const res = await axios.get(apiUrl, { timeout: 30000 });
+    return res.data;
+}
+
+async function twitterDownload(url) {
+    const apiUrl = `https://go-api-six.vercel.app/x/download?url=${encodeURIComponent(url)}`;
+    const res = await axios.get(apiUrl, { timeout: 30000 });
+    return res.data;
 }
 
 // Wallpaper function
@@ -259,5 +267,11 @@ module.exports = {
     fetchVideo, 
     wikimedia, 
     ringtone, 
-    styletext 
+    styletext,
+    instagramDownload,
+    pinterestDownload,
+    spotifySearch,
+    spotifyStream,
+    tiktokDownload,
+    twitterDownload
 }
