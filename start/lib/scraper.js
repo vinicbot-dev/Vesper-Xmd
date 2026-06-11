@@ -2,32 +2,9 @@ const cheerio = require('cheerio')
 const axios = require('axios')
 const yts = require('yt-search');
 const fs = require('fs');
-const fg = require('api-dylux');
+const path = require('path');
 
-// Helper function to download and convert audio to proper format
-async function downloadAndPrepareAudio(url, outputPath) {
-    const response = await axios({
-        method: 'GET',
-        url: url,
-        responseType: 'stream',
-        timeout: 60000,
-        headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'audio/webm,audio/ogg,audio/mp4,audio/mpeg,*/*',
-            'Referer': 'https://www.youtube.com/'
-        }
-    });
-    
-    const writer = fs.createWriteStream(outputPath);
-    response.data.pipe(writer);
-    
-    return new Promise((resolve, reject) => {
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-    });
-}
-
-// fetchMp3 function using api-dylux
+// fetchMp3 function using the API (yt-mp3) - sends as document with normal quality
 async function fetchMp3(kelvin, chatId, message) {
     try {
         const text = message.message?.conversation || message.message?.extendedTextMessage?.text || '';
@@ -66,35 +43,46 @@ async function fetchMp3(kelvin, chatId, message) {
             caption: `🎵 *${videoTitle}*\n\n📥 Downloading audio...`
         }, { quoted: message });
 
-        const result = await fg.yta(videoUrl);
-        
-        if (!result || !result.dl_url) {
+        // API call for MP3 (normal quality)
+        const apiUrl = 'https://ktrenqecceeooyrquooc.supabase.co/functions/v1/api-proxy';
+        const requestBody = {
+            apiKey: "guru_x3jr526k5pqbl91wqubhws3y48qj6zbo",
+            action: "yt-mp3",
+            payload: {
+                url: videoUrl,
+                quality: "normal"
+            }
+        };
+
+        const response = await axios.post(apiUrl, requestBody, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 60000
+        });
+
+        const result = response.data;
+
+        if (!result || !result.download || !result.download.url) {
             throw new Error('No download URL received');
         }
 
-        // Create temp file path
-        const tempDir = path.join(__dirname, '../temp');
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-        const tempFile = path.join(tempDir, `${Date.now()}.mp3`);
+        const audioUrl = result.download.url;
+        const audioTitle = result.title || videoTitle;
+
+        // Download audio buffer
+        const audioResponse = await axios.get(audioUrl, {
+            responseType: 'arraybuffer',
+            timeout: 90000
+        });
         
-        // Download audio to temp file
-        await downloadAndPrepareAudio(result.dl_url, tempFile);
-        
-        // Read the downloaded file
-        const audioBuffer = fs.readFileSync(tempFile);
-        
-        // Send audio with proper mimetype
+        const audioBuffer = Buffer.from(audioResponse.data);
+
+        // Send as document
         await kelvin.sendMessage(chatId, {
-            audio: audioBuffer,
+            document: audioBuffer,
             mimetype: 'audio/mpeg',
-            fileName: `${videoTitle.replace(/[^\w\s-]/g, '')}.mp3`,
-            ptt: false
+            fileName: `${audioTitle.replace(/[^\w\s-]/g, '')}.mp3`,
+            caption: `🎵 *${audioTitle}*\n\n> ${global.wm || 'JEXPLOIT'}`
         }, { quoted: message });
-        
-        // Clean up temp file
-        try {
-            fs.unlinkSync(tempFile);
-        } catch (e) {}
 
     } catch (err) {
         console.error('fetchMp3 error:', err);
@@ -104,7 +92,7 @@ async function fetchMp3(kelvin, chatId, message) {
     }
 }
 
-// fetchVideo function using api-dylux
+// fetchVideo function using the API (yt-mp4)
 async function fetchVideo(kelvin, chatId, message) {
     try {
         const text = message.message?.conversation || message.message?.extendedTextMessage?.text || '';
@@ -147,50 +135,45 @@ async function fetchVideo(kelvin, chatId, message) {
             caption: `🎬 *${videoTitle}*\n👁 Views: ${videoViews?.toLocaleString() || 'N/A'}\n\n📥 Downloading video...`
         }, { quoted: message });
 
-        const result = await fg.ytv(videoUrl);
-        
-        if (!result || !result.dl_url) {
+        // API call for MP4
+        const apiUrl = 'https://ktrenqecceeooyrquooc.supabase.co/functions/v1/api-proxy';
+        const requestBody = {
+            apiKey: "guru_x3jr526k5pqbl91wqubhws3y48qj6zbo",
+            action: "yt-mp4",
+            payload: {
+                url: videoUrl
+            }
+        };
+
+        const response = await axios.post(apiUrl, requestBody, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 60000
+        });
+
+        const result = response.data;
+
+        if (!result || !result.download || !result.download.url) {
             throw new Error('No video download URL received');
         }
 
-        // Create temp file path
-        const tempDir = path.join(__dirname, '../temp');
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-        const tempFile = path.join(tempDir, `${Date.now()}.mp4`);
-        
-        // Download video to temp file
-        const response = await axios({
-            method: 'GET',
-            url: result.dl_url,
-            responseType: 'stream',
-            timeout: 120000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
+        const videoDownloadUrl = result.download.url;
+        const videoQuality = result.download.quality || 'HD';
+        const videoFormat = result.download.format || 'mp4';
+
+        // Download video buffer
+        const videoResponse = await axios.get(videoDownloadUrl, {
+            responseType: 'arraybuffer',
+            timeout: 120000
         });
         
-        const writer = fs.createWriteStream(tempFile);
-        response.data.pipe(writer);
-        
-        await new Promise((resolve, reject) => {
-            writer.on('finish', resolve);
-            writer.on('error', reject);
-        });
-        
-        // Read the downloaded file
-        const videoBuffer = fs.readFileSync(tempFile);
-        
+        const videoBuffer = Buffer.from(videoResponse.data);
+
         await kelvin.sendMessage(chatId, {
             video: videoBuffer,
             mimetype: 'video/mp4',
             fileName: `${videoTitle.replace(/[^\w\s-]/g, '')}.mp4`,
-            caption: `🎬 *${videoTitle}*`
+            caption: `🎬 *${videoTitle}*\n🎚 Quality: ${videoQuality}`
         }, { quoted: message });
-        
-        // Clean up temp file
-        try {
-            fs.unlinkSync(tempFile);
-        } catch (e) {}
 
     } catch (err) {
         console.error('fetchVideo error:', err);
@@ -305,8 +288,6 @@ async function styletext(teks) {
         return [];
     }
 }
-
-const path = require('path');
 
 module.exports = { 
     wallpaper,
