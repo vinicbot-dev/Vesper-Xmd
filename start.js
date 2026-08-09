@@ -30,8 +30,6 @@ function logMessage(message) {
 }
 
 function start() {
-  process.env.NODE_OPTIONS = '--no-deprecation';
-
   const args = [path.join(__dirname, 'index.js'), ...process.argv.slice(2)];
   
   logMessage('Starting Vesper-Xmd Bot...');
@@ -43,8 +41,7 @@ function start() {
     stdio: ['inherit', 'inherit', 'pipe', 'ipc'],
     env: {
       ...process.env,
-      // Still limit memory to prevent crashes
-      NODE_OPTIONS: '--max-old-space-size=512'
+      // Memory limit removed
     }
   });
 
