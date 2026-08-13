@@ -27,7 +27,7 @@ global.author = 'Bot';
 global.wm = '©Vesper-Xmd is awesome 🔥';
 
 // === For only developer ============
-global.api = "https://apiskeith2-production-3020.up.railway.app/ai";
+global.api = "https://apiskeith2-production-3020.up.railway.app";
 global.KevinApi = "mvn_988e8fc44c89ad6e537bb683e681afe6";
 global.wwe = "https://www.wwe.com/api/news";
 global.wwe1 = "https://www.thesportsdb.com/api/v1/json/3/searchfilename.php?e=wwe";
