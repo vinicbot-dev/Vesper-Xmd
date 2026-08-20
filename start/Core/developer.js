@@ -12,10 +12,14 @@ global.allowedSubSessions = [
     // "2567xxxxxxxx",
 ];
 global.maxSubSessions = 3;
-global.versions = "v1.2.8";
+global.versions = "v1.3.0";
 global.botname = "Vesper-Xmd"; 
 global.prefixz = "."; 
 global.timezones = "Africa/Kampala"; 
+
+// =========== Channel settings ==========
+global.idchannel = "120363405241240098@newsletter";
+global.linkchannel = "https://whatsapp.com/channel/0029Vb725SbIyPtOEG92nA04";
 
 // ========= Other Global Settings ========= //
 global.SESSION_ID = process.env.SESSION_ID || '';
@@ -27,7 +31,7 @@ global.author = 'Bot';
 global.wm = '©Vesper-Xmd is awesome 🔥';
 
 // === For only developer ============
-global.api = "https://apiskeith2-production-3020.up.railway.app";
+global.api = "https://apiskeith2-production-ec66.up.railway.app";
 global.KevinApi = "mvn_988e8fc44c89ad6e537bb683e681afe6";
 global.wwe = "https://www.wwe.com/api/news";
 global.wwe1 = "https://www.thesportsdb.com/api/v1/json/3/searchfilename.php?e=wwe";
