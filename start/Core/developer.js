@@ -12,7 +12,7 @@ global.allowedSubSessions = [
     // "2567xxxxxxxx",
 ];
 global.maxSubSessions = 3;
-global.versions = "v1.3.0";
+global.versions = "v1.3.2";
 global.botname = "Vesper-Xmd"; 
 global.prefixz = "."; 
 global.timezones = "Africa/Kampala"; 
