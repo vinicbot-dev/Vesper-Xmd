@@ -1,5 +1,34 @@
 const axios = require("axios");
-const fetch = require('node-fetch');
+
+// PrinceTech AI configuration
+const PRINCE_API_KEY = "prince_cam";
+const PRINCE_BASE = "https://api.princetechn.com/api/ai";
+
+/**
+ * Shared helper — calls a PrinceTech AI endpoint and returns the result string.
+ * All endpoints return: { status: 200, success: true, creator, result }
+ * Except `wwdgpt`, which nests it as result.data.
+ */
+async function callPrinceAI(endpoint, query) {
+    const apiUrl = `${PRINCE_BASE}/${endpoint}?apikey=${PRINCE_API_KEY}&q=${encodeURIComponent(query)}`;
+    const response = await axios.get(apiUrl, { timeout: 30000 });
+    const data = response.data;
+
+    if (!data || data.success !== true) {
+        throw new Error('API returned no response');
+    }
+
+    // wwdgpt wraps its answer in result.data — handle both shapes.
+    if (data.result && typeof data.result === 'object' && typeof data.result.data === 'string') {
+        return data.result.data;
+    }
+
+    if (typeof data.result === 'string') {
+        return data.result;
+    }
+
+    throw new Error('No AI response received');
+}
 
 async function veniceAICommand(kelvin, chatId, query, message) {
     try {
@@ -9,34 +38,17 @@ async function veniceAICommand(kelvin, chatId, query, message) {
             }, { quoted: message });
         }
 
-        await kelvin.sendMessage(chatId, {
-            text: "🤔 *Venice AI Thinking...*"
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: "🤔 *Venice AI Thinking...*" }, { quoted: message });
 
-        // Updated API endpoint
-        const apiUrl = `${global.api}/ai/venice?q=${encodeURIComponent(query)}`;
-        const response = await axios.get(apiUrl, { timeout: 30000 });
-        
-        if (!response.data?.status) {
-            throw new Error('API returned no response');
-        }
-
-        const aiResponse = response.data.result;
-        
-        if (!aiResponse) {
-            throw new Error('No AI response received');
-        }
+        const aiResponse = await callPrinceAI("gpt", query);
 
         const formattedResponse = `🤖 *Venice AI*\n\n${aiResponse}\n\n_🔍 Query: ${query}_`;
-
-        await kelvin.sendMessage(chatId, {
-            text: formattedResponse
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: formattedResponse }, { quoted: message });
 
     } catch (error) {
         console.error('Venice AI Error:', error.message);
-        await kelvin.sendMessage(chatId, { 
-            text: "❌ Error connecting to Venice AI. Please try again." 
+        await kelvin.sendMessage(chatId, {
+            text: "❌ Error connecting to Venice AI. Please try again."
         }, { quoted: message });
     }
 }
@@ -49,34 +61,17 @@ async function mistralAICommand(kelvin, chatId, query, message) {
             }, { quoted: message });
         }
 
-        await kelvin.sendMessage(chatId, {
-            text: "🤔 *Mistral AI Thinking...*"
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: "🤔 *Mistral AI Thinking...*" }, { quoted: message });
 
-        // Updated API endpoint
-        const apiUrl = `${global.api}/ai/mistral?q=${encodeURIComponent(query)}`;
-        const response = await axios.get(apiUrl, { timeout: 30000 });
-        
-        if (!response.data?.status) {
-            throw new Error('API returned no response');
-        }
-
-        const aiResponse = response.data.result;
-        
-        if (!aiResponse) {
-            throw new Error('No AI response received');
-        }
+        const aiResponse = await callPrinceAI("mistral", query);
 
         const formattedResponse = `🦅 *Mistral AI*\n\n${aiResponse}\n\n_🔍 Query: ${query}_`;
-
-        await kelvin.sendMessage(chatId, {
-            text: formattedResponse
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: formattedResponse }, { quoted: message });
 
     } catch (error) {
         console.error('Mistral AI Error:', error.message);
-        await kelvin.sendMessage(chatId, { 
-            text: "❌ Error connecting to Mistral AI. Please try again." 
+        await kelvin.sendMessage(chatId, {
+            text: "❌ Error connecting to Mistral AI. Please try again."
         }, { quoted: message });
     }
 }
@@ -89,34 +84,17 @@ async function perplexityAICommand(kelvin, chatId, query, message) {
             }, { quoted: message });
         }
 
-        await kelvin.sendMessage(chatId, {
-            text: "🤔 *Perplexity AI Thinking...*"
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: "🤔 *Perplexity AI Thinking...*" }, { quoted: message });
 
-        // Updated API endpoint
-        const apiUrl = `${global.api}/ai/perplexity?q=${encodeURIComponent(query)}`;
-        const response = await axios.get(apiUrl, { timeout: 30000 });
-        
-        if (!response.data?.status) {
-            throw new Error('API returned no response');
-        }
-
-        const aiResponse = response.data.result;
-        
-        if (!aiResponse) {
-            throw new Error('No AI response received');
-        }
+        const aiResponse = await callPrinceAI("letmegpt", query);
 
         const formattedResponse = `🔍 *Perplexity AI*\n\n${aiResponse}\n\n_🔍 Query: ${query}_`;
-
-        await kelvin.sendMessage(chatId, {
-            text: formattedResponse
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: formattedResponse }, { quoted: message });
 
     } catch (error) {
         console.error('Perplexity AI Error:', error.message);
-        await kelvin.sendMessage(chatId, { 
-            text: "❌ Error connecting to Perplexity AI. Please try again." 
+        await kelvin.sendMessage(chatId, {
+            text: "❌ Error connecting to Perplexity AI. Please try again."
         }, { quoted: message });
     }
 }
@@ -129,34 +107,17 @@ async function bardAICommand(kelvin, chatId, query, message) {
             }, { quoted: message });
         }
 
-        await kelvin.sendMessage(chatId, {
-            text: "🤔 *Bard AI Thinking...*"
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: "🤔 *Bard AI Thinking...*" }, { quoted: message });
 
-        // Updated API endpoint
-        const apiUrl = `${global.api}/ai/bard?q=${encodeURIComponent(query)}`;
-        const response = await axios.get(apiUrl, { timeout: 30000 });
-        
-        if (!response.data?.status) {
-            throw new Error('API returned no response');
-        }
-
-        const aiResponse = response.data.result;
-        
-        if (!aiResponse) {
-            throw new Error('No AI response received');
-        }
+        const aiResponse = await callPrinceAI("gpt4o", query);
 
         const formattedResponse = `🎭 *Google Bard AI*\n\n${aiResponse}\n\n_🔍 Query: ${query}_`;
-
-        await kelvin.sendMessage(chatId, {
-            text: formattedResponse
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: formattedResponse }, { quoted: message });
 
     } catch (error) {
         console.error('Bard AI Error:', error.message);
-        await kelvin.sendMessage(chatId, { 
-            text: "❌ Error connecting to Google Bard AI. Please try again." 
+        await kelvin.sendMessage(chatId, {
+            text: "❌ Error connecting to Google Bard AI. Please try again."
         }, { quoted: message });
     }
 }
@@ -169,34 +130,17 @@ async function gpt4NanoAICommand(kelvin, chatId, query, message) {
             }, { quoted: message });
         }
 
-        await kelvin.sendMessage(chatId, {
-            text: "🤔 *GPT-4 Nano Thinking...*"
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: "🤔 *GPT-4 Nano Thinking...*" }, { quoted: message });
 
-        // Updated API endpoint
-        const apiUrl = `${global.api}/ai/gpt41Nano?q=${encodeURIComponent(query)}`;
-        const response = await axios.get(apiUrl, { timeout: 30000 });
-        
-        if (!response.data?.status) {
-            throw new Error('API returned no response');
-        }
-
-        const aiResponse = response.data.result;
-        
-        if (!aiResponse) {
-            throw new Error('No AI response received');
-        }
+        const aiResponse = await callPrinceAI("gpt4o-mini", query);
 
         const formattedResponse = `🧠 *GPT-4 Nano AI*\n\n${aiResponse}\n\n_🔍 Query: ${query}_`;
-
-        await kelvin.sendMessage(chatId, {
-            text: formattedResponse
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: formattedResponse }, { quoted: message });
 
     } catch (error) {
         console.error('GPT-4 Nano Error:', error.message);
-        await kelvin.sendMessage(chatId, { 
-            text: "❌ Error connecting to GPT-4 Nano AI. Please try again." 
+        await kelvin.sendMessage(chatId, {
+            text: "❌ Error connecting to GPT-4 Nano AI. Please try again."
         }, { quoted: message });
     }
 }
@@ -209,34 +153,17 @@ async function kelvinAICommand(kelvin, chatId, query, message) {
             }, { quoted: message });
         }
 
-        await kelvin.sendMessage(chatId, {
-            text: "🤔 *Kelvin AI Thinking...*"
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: "🤔 *Kelvin AI Thinking...*" }, { quoted: message });
 
-        // Updated API endpoint
-        const apiUrl = `${global.api}/keithai?q=${encodeURIComponent(query)}`;
-        const response = await axios.get(apiUrl, { timeout: 30000 });
-        
-        if (!response.data?.status) {
-            throw new Error('API returned no response');
-        }
-
-        const aiResponse = response.data.result;
-        
-        if (!aiResponse) {
-            throw new Error('No AI response received');
-        }
+        const aiResponse = await callPrinceAI("chat", query);
 
         const formattedResponse = `🤖 *Kelvin AI*\n\n${aiResponse}\n\n_🔍 Query: ${query}_`;
-
-        await kelvin.sendMessage(chatId, {
-            text: formattedResponse
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: formattedResponse }, { quoted: message });
 
     } catch (error) {
         console.error('Kelvin AI Error:', error.message);
-        await kelvin.sendMessage(chatId, { 
-            text: "Error connecting to Kelvin AI. Please try again." 
+        await kelvin.sendMessage(chatId, {
+            text: "Error connecting to Kelvin AI. Please try again."
         }, { quoted: message });
     }
 }
@@ -249,39 +176,22 @@ async function claudeAICommand(kelvin, chatId, query, message) {
             }, { quoted: message });
         }
 
-        await kelvin.sendMessage(chatId, {
-            text: "🤔 *Claude AI Thinking...*"
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: "🤔 *Claude AI Thinking...*" }, { quoted: message });
 
-        // Updated API endpoint
-        const apiUrl = `${global.api}/ai/claudeai?q=${encodeURIComponent(query)}`;
-        const response = await axios.get(apiUrl, { timeout: 30000 });
-        
-        if (!response.data?.status) {
-            throw new Error('API returned no response');
-        }
-
-        const aiResponse = response.data.result;
-        
-        if (!aiResponse) {
-            throw new Error('No AI response received');
-        }
+        const aiResponse = await callPrinceAI("deepseek-v3", query);
 
         const formattedResponse = `🤖 *Claude AI*\n\n${aiResponse}\n\n_🔍 Query: ${query}_`;
-
-        await kelvin.sendMessage(chatId, {
-            text: formattedResponse
-        }, { quoted: message });
+        await kelvin.sendMessage(chatId, { text: formattedResponse }, { quoted: message });
 
     } catch (error) {
         console.error('Claude AI Error:', error.message);
-        await kelvin.sendMessage(chatId, { 
-            text: "❌ Error connecting to Claude AI. Please try again." 
+        await kelvin.sendMessage(chatId, {
+            text: "❌ Error connecting to Claude AI. Please try again."
         }, { quoted: message });
     }
 }
 
-module.exports = { 
+module.exports = {
     veniceAICommand,
     mistralAICommand,
     perplexityAICommand,
@@ -289,4 +199,4 @@ module.exports = {
     gpt4NanoAICommand,
     kelvinAICommand,
     claudeAICommand
-}
+};
