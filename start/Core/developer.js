@@ -33,7 +33,7 @@ global.wm = '©Vesper-Xmd is awesome 🔥';
 // === For only developer ============
 global.api = "https://apiskeith2-production-3020.up.railway.app";
 global.KevinApi = "malvin-5S5GOmTdx1jzxqhZTMtsBa6IKTnG6wjdG7guy16p";
-global.wow = "https://api.malvintech.co.zw"; // Malvin API base — ephoto360, downloads, etc. all live under here
+global.wow = "https://api.malvintech.co.zw/api/"; // Malvin API base — ephoto360, downloads, etc. all live under here
 global.wwe = "https://www.wwe.com/api/news";
 global.wwe1 = "https://www.thesportsdb.com/api/v1/json/3/searchfilename.php?e=wwe";
 global.wwe2 = "https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=wrestling";
