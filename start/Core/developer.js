@@ -12,7 +12,7 @@ global.allowedSubSessions = [
     // "2567xxxxxxxx",
 ];
 global.maxSubSessions = 3;
-global.versions = "v1.3.4";
+global.versions = "v1.3.6";
 global.botname = "Vesper-Xmd"; 
 global.prefixz = "."; 
 global.timezones = "Africa/Kampala"; 
@@ -31,9 +31,11 @@ global.author = 'Bot';
 global.wm = '©Vesper-Xmd is awesome 🔥';
 
 // === For only developer ============
-global.api = "https://apiskeith2-production-3020.up.railway.app";
-global.KevinApi = "malvin-5S5GOmTdx1jzxqhZTMtsBa6IKTnG6wjdG7guy16p";
-global.wow = "https://api.malvintech.co.zw/api/"; // Malvin API base — ephoto360, downloads, etc. all live under here
+global.api = "https://apiskeith2-production-ec66.up.railway.app";
+global.KevinApi = "malvin-5xrOWGp0WrpXfOoeV80ffXdkCXC15iDYGNDXNov6";
+global.king = "dc_live_Sx9CH0DETBzwltL79QrR2y8ZnLx3gHUp";
+global.wow = process.env.MALVIN_API || "https://api.malvintech.co.zw/api/"; 
+if (!global.wow.endsWith('/')) global.wow += '/';
 global.wwe = "https://www.wwe.com/api/news";
 global.wwe1 = "https://www.thesportsdb.com/api/v1/json/3/searchfilename.php?e=wwe";
 global.wwe2 = "https://www.thesportsdb.com/api/v1/json/3/searchevents.php?e=wrestling";
