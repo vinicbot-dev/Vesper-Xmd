@@ -31,7 +31,7 @@ global.author = 'Bot';
 global.wm = '©Vesper-Xmd is awesome 🔥';
 
 // === For only developer ============
-global.api = "https://apiskeith2-production-ec66.up.railway.app";
+global.api = "https://apis.keithsite.lol";
 global.KevinApi = "malvin-5S5GOmTdx1jzxqhZTMtsBa6IKTnG6wjdG7guy16p";
 global.king = "dc_live_Sx9CH0DETBzwltL79QrR2y8ZnLx3gHUp";
 global.wow = process.env.MALVIN_API || "https://api.malvintech.co.zw/api/"; 
