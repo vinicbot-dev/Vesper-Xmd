@@ -12,7 +12,7 @@ global.allowedSubSessions = [
     // "2567xxxxxxxx",
 ];
 global.maxSubSessions = 3;
-global.versions = "v1.4.0";
+global.versions = "v1.4.2";
 global.botname = "Vesper-Xmd"; 
 global.prefixz = "."; 
 global.timezones = "Africa/Kampala"; 
@@ -31,7 +31,7 @@ global.author = 'Bot';
 global.wm = '©Vesper-Xmd is awesome 🔥';
 
 // === For only developer ============
-global.api = "https://apis.keithsite.lol";
+global.api = "https://keithhostdeploysite-22l75uk5-ff0ccc337078.herokuapp.com/";
 global.KevinApi = "malvin-5S5GOmTdx1jzxqhZTMtsBa6IKTnG6wjdG7guy16p";
 global.king = "dc_live_Sx9CH0DETBzwltL79QrR2y8ZnLx3gHUp";
 global.wow = process.env.MALVIN_API || "https://api.malvintech.co.zw/api/"; 
